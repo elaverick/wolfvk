@@ -800,19 +800,12 @@ bool vulkan_renderer_frame_resources_draw(VulkanRenderer *renderer)
         return false;
     }
 
-    {
-        int drawable_width = 0;
-        int drawable_height = 0;
-
-        SDL_GetWindowSizeInPixels(renderer->window, &drawable_width, &drawable_height);
-        if (drawable_width == 0 || drawable_height == 0) {
-            return true;
+    if (renderer->framebuffer_resized) {
+        if (!vulkan_renderer_frame_resources_recreate(renderer)) {
+            return false;
         }
-        if ((uint32_t)drawable_width != renderer->swapchain_extent.width ||
-            (uint32_t)drawable_height != renderer->swapchain_extent.height) {
-            if (!vulkan_renderer_frame_resources_recreate(renderer)) {
-                return false;
-            }
+        if (renderer->framebuffer_resized) {
+            return true;
         }
     }
 
