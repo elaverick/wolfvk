@@ -14,6 +14,8 @@ void test_surface_format_prefers_srgb(void);
 void test_surface_format_falls_back_to_first_supported_format(void);
 void test_present_mode_prefers_mailbox(void);
 void test_present_mode_falls_back_to_fifo(void);
+void test_surface_format_handles_undefined_single_format(void);
+void test_swapchain_selection_handles_empty_lists(void);
 
 int main(void)
 {
@@ -32,5 +34,7 @@ int main(void)
     RUN_TEST(test_surface_format_falls_back_to_first_supported_format);
     RUN_TEST(test_present_mode_prefers_mailbox);
     RUN_TEST(test_present_mode_falls_back_to_fifo);
+    RUN_TEST(test_surface_format_handles_undefined_single_format);
+    RUN_TEST(test_swapchain_selection_handles_empty_lists);
     return UNITY_END();
 }
