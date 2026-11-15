@@ -3,6 +3,7 @@
 #include "wolfvk/input.h"
 #include "wolfvk/level.h"
 #include "wolfvk/level_geometry.h"
+#include "wolfvk/player_controller.h"
 #include "wolfvk/vulkan_renderer.h"
 
 #include <stdio.h>
@@ -114,6 +115,8 @@ int main(int argc, char *argv[])
     uint16_t spawn_y = 0u;
     char error_message[256];
     char window_title[128];
+    Uint64 performance_frequency;
+    Uint64 previous_counter;
     int running = 1;
 
     if (!wolf_parse_command_line(
@@ -207,12 +210,29 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if (!SDL_SetWindowRelativeMouseMode(window, true)) {
+        fprintf(stderr, "Could not capture the mouse for relative mouse-look: %s\\n",
+            SDL_GetError());
+    }
+
+    performance_frequency = SDL_GetPerformanceFrequency();
+    previous_counter = SDL_GetPerformanceCounter();
+
     while (running) {
+        Uint64 current_counter;
+        float delta_seconds;
+
         wolf_input_begin_frame(input);
         while (SDL_PollEvent(&event)) {
             wolf_input_handle_event(input, &event);
-            if (event.type == SDL_EVENT_QUIT) {
+            if (event.type == SDL_EVENT_QUIT ||
+                (event.type == SDL_EVENT_KEY_DOWN &&
+                 event.key.scancode == SDL_SCANCODE_ESCAPE)) {
                 running = 0;
+            } else if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) {
+                (void)SDL_SetWindowRelativeMouseMode(window, false);
+            } else if (event.type == SDL_EVENT_WINDOW_FOCUS_GAINED) {
+                (void)SDL_SetWindowRelativeMouseMode(window, true);
             } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
                 vulkan_renderer_notify_resize(renderer);
                 if (!update_camera_projection(window, renderer, &camera)) {
@@ -221,7 +241,20 @@ int main(int argc, char *argv[])
                 }
             }
         }
-        if (!vulkan_renderer_draw_frame(renderer)) {
+        current_counter = SDL_GetPerformanceCounter();
+        delta_seconds = performance_frequency > 0u
+            ? (float)((double)(current_counter - previous_counter) /
+                (double)performance_frequency)
+            : 0.0f;
+        previous_counter = current_counter;
+
+        if (!wolf_player_update(&camera, input, &level, delta_seconds) ||
+            !update_camera_projection(window, renderer, &camera)) {
+            fprintf(stderr, "Player update or camera projection failed.\\n");
+            running = 0;
+        }
+
+        if (running && !vulkan_renderer_draw_frame(renderer)) {
             fprintf(stderr, "Vulkan frame rendering failed.\n");
             running = 0;
         }
