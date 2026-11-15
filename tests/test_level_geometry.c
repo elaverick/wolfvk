@@ -99,7 +99,7 @@ void test_level_geometry_rejects_invalid_arguments(void)
     TEST_ASSERT_FALSE(wolf_level_build_wall_quads(&level, &quads, NULL));
     TEST_ASSERT_FALSE(wolf_level_find_open_tile(NULL, NULL, NULL));
 
-    level.width = WOLF_LEVEL_PLANE_WIDTH + 1u;
+    level.width = (uint16_t)(WOLF_LEVEL_PLANE_WIDTH + 1u);
     level.height = 1u;
     TEST_ASSERT_FALSE(wolf_level_build_wall_quads(&level, &quads, &quad_count));
 }
