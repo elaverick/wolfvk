@@ -34,6 +34,7 @@ add_executable(wolfvk
     src/main.c
     src/camera.c
     src/input.c
+    src/level.c
     src/vulkan_renderer_geometry.c
     src/vulkan_renderer.c
     src/vulkan_renderer_frame.c
@@ -111,6 +112,7 @@ if(BUILD_TESTING)
         tests/test_vulkan_renderer.c
         src/camera.c
         src/input.c
+        src/level.c
         src/vulkan_renderer_geometry.c
         src/vulkan_renderer.c
         src/vulkan_renderer_frame.c
