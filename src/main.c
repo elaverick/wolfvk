@@ -35,6 +35,10 @@ int main(void)
                 running = 0;
             }
         }
+        if (!vulkan_renderer_draw_frame(renderer)) {
+            fprintf(stderr, "Vulkan frame rendering failed.\n");
+            running = 0;
+        }
         SDL_Delay(1);
     }
 
