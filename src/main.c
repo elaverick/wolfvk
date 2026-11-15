@@ -30,7 +30,7 @@ static bool update_camera_projection(
 
 static void print_usage(const char *program_name)
 {
-    printf("Usage: %s [--level NUMBER] [--help]\\n", program_name);
+    printf("Usage: %s [--level NUMBER] [--help]\n", program_name);
     printf("Level numbers are one-based; if omitted, the first level is loaded.\\n");
     printf("Place MAPHEAD.WL6 and GAMEMAPS.WL6 in the working directory.\\n");
 }
@@ -43,15 +43,15 @@ int main(int argc, char *argv[])
     const VulkanQuad environment_quads[] = {
         {{
             {{-10000.0f, 0.0f, -10000.0f}, {0.16f, 0.20f, 0.24f}},
-            {{1000.0f, 0.0f, -1000.0f}, {0.16f, 0.20f, 0.24f}},
-            {{1000.0f, 0.0f, 1000.0f}, {0.16f, 0.20f, 0.24f}},
-            {{-1000.0f, 0.0f, 1000.0f}, {0.16f, 0.20f, 0.24f}}
+            {{10000.0f, 0.0f, -10000.0f}, {0.16f, 0.20f, 0.24f}},
+            {{10000.0f, 0.0f, 10000.0f}, {0.16f, 0.20f, 0.24f}},
+            {{-10000.0f, 0.0f, 10000.0f}, {0.16f, 0.20f, 0.24f}}
         }},
         {{
-            {{-1000.0f, 3.2f, -1000.0f}, {0.11f, 0.14f, 0.20f}},
-            {{1000.0f, 3.2f, -1000.0f}, {0.11f, 0.14f, 0.20f}},
-            {{1000.0f, 3.2f, 1000.0f}, {0.11f, 0.14f, 0.20f}},
-            {{-1000.0f, 3.2f, 1000.0f}, {0.11f, 0.14f, 0.20f}}
+            {{-10000.0f, 3.2f, -10000.0f}, {0.11f, 0.14f, 0.20f}},
+            {{10000.0f, 3.2f, -10000.0f}, {0.11f, 0.14f, 0.20f}},
+            {{10000.0f, 3.2f, 10000.0f}, {0.11f, 0.14f, 0.20f}},
+            {{-10000.0f, 3.2f, 10000.0f}, {0.11f, 0.14f, 0.20f}}
         }}
     };
     VulkanRenderer *renderer = NULL;
@@ -87,7 +87,8 @@ int main(int argc, char *argv[])
         window_title, sizeof(window_title), "WolfVK - Level %u: %.16s",
         options.level_index + 1u, level.name);
     printf("Loaded level %u: %s (%u x %u).\\n",
-        options.level_index + 1u, level.name, level.width, level.height);
+        (unsigned int)(options.level_index + 1u), level.name,
+        (unsigned int)level.width, (unsigned int)level.height);
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "SDL video initialisation failed: %s\n", SDL_GetError());
