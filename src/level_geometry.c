@@ -1,25 +1,8 @@
 #include "wolfvk/level_geometry.h"
+#include "wolfvk/wall_textures.h"
 #include "wolfvk/world.h"
 
 #include <stdlib.h>
-
-
-typedef struct WallColour {
-    float red;
-    float green;
-    float blue;
-} WallColour;
-
-static const WallColour wall_palette[] = {
-    {0.56f, 0.36f, 0.25f},
-    {0.43f, 0.47f, 0.52f},
-    {0.37f, 0.48f, 0.38f},
-    {0.62f, 0.49f, 0.29f},
-    {0.42f, 0.39f, 0.57f},
-    {0.58f, 0.32f, 0.34f},
-    {0.48f, 0.48f, 0.43f},
-    {0.35f, 0.43f, 0.52f}
-};
 
 /* Out-of-map neighbours are empty so perimeter walls expose their outside faces. */
 static uint16_t get_wall_tile(const WolfLevel *level, int x, int y)
@@ -41,30 +24,37 @@ static bool is_open_space_for_geometry(const WolfLevel *level, int x, int y)
         wolf_level_is_omitted_door_cell(level, x, y);
 }
 
-/* Convert one world-space corner into the renderer's interleaved vertex format. */
+/* Store one textured vertex; colour remains a subtle face-lighting multiplier. */
 static void set_vertex(
     VulkanVertex *vertex,
-    float x,
-    float y,
-    float z,
-    const WallColour *colour,
+    const float position[3],
+    const float texcoord[2],
+    uint16_t texture_page,
     float shade)
 {
-    vertex->position[0] = x;
-    vertex->position[1] = y;
-    vertex->position[2] = z;
-    vertex->colour[0] = colour->red * shade;
-    vertex->colour[1] = colour->green * shade;
-    vertex->colour[2] = colour->blue * shade;
+    vertex->position[0] = position[0];
+    vertex->position[1] = position[1];
+    vertex->position[2] = position[2];
+    vertex->colour[0] = shade;
+    vertex->colour[1] = shade;
+    vertex->colour[2] = shade;
+    vertex->texcoord[0] = texcoord[0];
+    vertex->texcoord[1] = texcoord[1];
+    vertex->texture_layer = texture_page;
+    vertex->use_texture = 1u;
 }
 
-/* Append a consistently shaded wall quad without writing beyond the precomputed capacity. */
+/*
+ * Add a face using its original VSWAP page and a consistent top-to-bottom UV
+ * convention. The array capacity is precomputed from the maximum faces per cell.
+ */
 static bool append_wall_face(
     VulkanQuad *quads,
     size_t capacity,
     size_t *quad_count,
     const float positions[4][3],
-    const WallColour *colour,
+    const float texcoords[4][2],
+    uint16_t texture_page,
     float shade)
 {
     if (*quad_count >= capacity) {
@@ -74,10 +64,9 @@ static bool append_wall_face(
     for (size_t vertex_index = 0u; vertex_index < 4u; ++vertex_index) {
         set_vertex(
             &quads[*quad_count].vertices[vertex_index],
-            positions[vertex_index][0],
-            positions[vertex_index][1],
-            positions[vertex_index][2],
-            colour,
+            positions[vertex_index],
+            texcoords[vertex_index],
+            texture_page,
             shade);
     }
 
@@ -85,12 +74,19 @@ static bool append_wall_face(
     return true;
 }
 
-/* Build square wall panels at the map's tile scale; open cells and unimplemented doors remain traversable. */
+/* Build square wall panels using the original horizontal/vertical VSWAP page pairing. */
 bool wolf_level_build_wall_quads(
     const WolfLevel *level,
+    uint16_t texture_page_count,
     VulkanQuad **quads,
     uint32_t *quad_count)
 {
+    static const float horizontal_uvs[4][2] = {
+        {0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}
+    };
+    static const float reversed_horizontal_uvs[4][2] = {
+        {1.0f, 1.0f}, {0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 0.0f}
+    };
     size_t capacity;
     size_t generated_count = 0u;
     VulkanQuad *generated_quads;
@@ -118,14 +114,28 @@ bool wolf_level_build_wall_quads(
     for (int y = 0; y < level->height; ++y) {
         for (int x = 0; x < level->width; ++x) {
             uint16_t tile = get_wall_tile(level, x, y);
+            uint16_t horizontal_page;
+            uint16_t vertical_page;
             float x0;
             float x1;
             float z0;
             float z1;
-            const WallColour *colour;
 
             if (tile == 0u || wolf_level_is_omitted_door_cell(level, x, y)) {
                 continue;
+            }
+
+            /*
+             * A map wall ID selects two directional panels in the original
+             * renderer. Fail rather than silently substituting a plausible but
+             * incorrect image if the archive does not contain the required page.
+             */
+            if (!wolf_wall_texture_page_for_tile(
+                    tile, false, texture_page_count, &horizontal_page) ||
+                !wolf_wall_texture_page_for_tile(
+                    tile, true, texture_page_count, &vertical_page)) {
+                free(generated_quads);
+                return false;
             }
 
             x0 = -((float)level->width * WOLF_WORLD_TILE_SIZE) * 0.5f +
@@ -134,16 +144,16 @@ bool wolf_level_build_wall_quads(
             z0 = -((float)level->height * WOLF_WORLD_TILE_SIZE) * 0.5f +
                 (float)y * WOLF_WORLD_TILE_SIZE;
             z1 = z0 + WOLF_WORLD_TILE_SIZE;
-            colour = &wall_palette[tile % (sizeof(wall_palette) / sizeof(wall_palette[0]))];
 
-            /* Only emit faces bordering empty space; shared wall faces can never be seen. */
+            /* Only emit faces bordering open space; shared wall faces can never be seen. */
             if (is_open_space_for_geometry(level, x, y - 1)) {
                 const float face[4][3] = {
                     {x0, 0.0f, z0}, {x1, 0.0f, z0},
                     {x1, WOLF_WORLD_WALL_HEIGHT, z0}, {x0, WOLF_WORLD_WALL_HEIGHT, z0}
                 };
                 if (!append_wall_face(
-                        generated_quads, capacity, &generated_count, face, colour, 0.82f)) {
+                        generated_quads, capacity, &generated_count,
+                        face, horizontal_uvs, horizontal_page, 0.82f)) {
                     free(generated_quads);
                     return false;
                 }
@@ -155,7 +165,8 @@ bool wolf_level_build_wall_quads(
                     {x0, WOLF_WORLD_WALL_HEIGHT, z1}, {x1, WOLF_WORLD_WALL_HEIGHT, z1}
                 };
                 if (!append_wall_face(
-                        generated_quads, capacity, &generated_count, face, colour, 0.95f)) {
+                        generated_quads, capacity, &generated_count,
+                        face, reversed_horizontal_uvs, horizontal_page, 0.95f)) {
                     free(generated_quads);
                     return false;
                 }
@@ -167,7 +178,8 @@ bool wolf_level_build_wall_quads(
                     {x0, WOLF_WORLD_WALL_HEIGHT, z0}, {x0, WOLF_WORLD_WALL_HEIGHT, z1}
                 };
                 if (!append_wall_face(
-                        generated_quads, capacity, &generated_count, face, colour, 0.72f)) {
+                        generated_quads, capacity, &generated_count,
+                        face, reversed_horizontal_uvs, vertical_page, 0.72f)) {
                     free(generated_quads);
                     return false;
                 }
@@ -179,7 +191,8 @@ bool wolf_level_build_wall_quads(
                     {x1, WOLF_WORLD_WALL_HEIGHT, z1}, {x1, WOLF_WORLD_WALL_HEIGHT, z0}
                 };
                 if (!append_wall_face(
-                        generated_quads, capacity, &generated_count, face, colour, 0.88f)) {
+                        generated_quads, capacity, &generated_count,
+                        face, horizontal_uvs, vertical_page, 0.88f)) {
                     free(generated_quads);
                     return false;
                 }
