@@ -293,7 +293,7 @@ bool vulkan_renderer_create(SDL_Window *window, VulkanRenderer **renderer_out)
     result = vkCreateInstance(&instance_info, NULL, &renderer->instance);
     if (result != VK_SUCCESS) {
         fprintf(stderr, "Vulkan instance creation failed (%d).\n", result);
-        free(renderer);
+        vulkan_renderer_destroy(renderer);
         return false;
     }
 
