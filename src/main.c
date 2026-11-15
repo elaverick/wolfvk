@@ -38,7 +38,7 @@ int main(void)
     }
 
     if (!vulkan_renderer_set_quads(renderer, &demo_quad, 1)) {
-        fprintf(stderr, "Could not upload demo quad geometry.\\n");
+        fprintf(stderr, "Could not upload demo quad geometry.\n");
         vulkan_renderer_destroy(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
