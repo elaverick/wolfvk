@@ -11,7 +11,6 @@ struct VulkanRenderer {
     VkDevice device;
     VkQueue graphics_queue;
     VkQueue present_queue;
-    bool vulkan_library_loaded;
 };
 
 bool vulkan_renderer_find_queue_families(
@@ -264,13 +263,6 @@ bool vulkan_renderer_create(SDL_Window *window, VulkanRenderer **renderer_out)
         return false;
     }
 
-    if (!SDL_Vulkan_LoadLibrary(NULL)) {
-        fprintf(stderr, "SDL could not load the Vulkan loader: %s\n", SDL_GetError());
-        free(renderer);
-        return false;
-    }
-    renderer->vulkan_library_loaded = true;
-
     required_extensions = SDL_Vulkan_GetInstanceExtensions(&extension_count);
     if (required_extensions == NULL || extension_count == 0u) {
         fprintf(stderr, "SDL could not provide Vulkan instance extensions: %s\n", SDL_GetError());
@@ -328,9 +320,5 @@ void vulkan_renderer_destroy(VulkanRenderer *renderer)
     if (renderer->instance != VK_NULL_HANDLE) {
         vkDestroyInstance(renderer->instance, NULL);
     }
-    if (renderer->vulkan_library_loaded) {
-        SDL_Vulkan_UnloadLibrary();
-    }
-
     free(renderer);
 }
