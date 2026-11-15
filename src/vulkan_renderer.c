@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Prefer dedicated graphics hardware while retaining integrated and software devices as fallbacks. */
 uint32_t vulkan_renderer_score_device_type(VkPhysicalDeviceType device_type)
 {
     switch (device_type) {
@@ -20,6 +21,7 @@ uint32_t vulkan_renderer_score_device_type(VkPhysicalDeviceType device_type)
     }
 }
 
+/* Rendering and window presentation may use different queue families on the selected adapter. */
 bool vulkan_renderer_find_queue_families(
     const VkQueueFamilyProperties *queue_families,
     const VkBool32 *present_support,
@@ -56,6 +58,7 @@ bool vulkan_renderer_find_queue_families(
     return false;
 }
 
+/* A graphics-capable device is insufficient unless it also exposes the presentation extension. */
 static bool device_supports_swapchain(VkPhysicalDevice physical_device)
 {
     uint32_t extension_count = 0;
@@ -92,6 +95,7 @@ static bool device_supports_swapchain(VkPhysicalDevice physical_device)
     return found_swapchain;
 }
 
+/* Choose the highest-ranked adapter that can render and present to this SDL window surface. */
 static bool select_physical_device(VulkanRenderer *renderer)
 {
     uint32_t device_count = 0;
@@ -186,6 +190,7 @@ static bool select_physical_device(VulkanRenderer *renderer)
     return selected;
 }
 
+/* Request only the queue families WolfVK uses, avoiding duplicate requests when they are shared. */
 static bool create_logical_device(VulkanRenderer *renderer)
 {
     VkDeviceQueueCreateInfo queue_create_infos[2] = {0};
@@ -230,6 +235,7 @@ static bool create_logical_device(VulkanRenderer *renderer)
     return true;
 }
 
+/* Build Vulkan objects in dependency order; the shared destroy path also handles partial failures. */
 bool vulkan_renderer_create(SDL_Window *window, VulkanRenderer **renderer_out)
 {
     VulkanRenderer *renderer;
@@ -301,6 +307,7 @@ bool vulkan_renderer_create(SDL_Window *window, VulkanRenderer **renderer_out)
     return true;
 }
 
+/* Wait for GPU work to finish, then release dependent resources before their parent device/instance. */
 void vulkan_renderer_destroy(VulkanRenderer *renderer)
 {
     if (renderer == NULL) {
@@ -322,6 +329,7 @@ void vulkan_renderer_destroy(VulkanRenderer *renderer)
     free(renderer);
 }
 
+/* Replace the static level mesh through the geometry owner, which manages its GPU buffers. */
 bool vulkan_renderer_set_quads(
     VulkanRenderer *renderer,
     const VulkanQuad *quads,
@@ -330,6 +338,7 @@ bool vulkan_renderer_set_quads(
     return vulkan_renderer_geometry_set_quads(renderer, quads, quad_count);
 }
 
+/* Store the latest camera matrix for the next submitted frame without rebuilding the pipeline. */
 bool vulkan_renderer_set_view_projection(
     VulkanRenderer *renderer,
     const float view_projection[16])
@@ -342,6 +351,7 @@ bool vulkan_renderer_set_view_projection(
     return true;
 }
 
+/* Keep swapchain acquisition, command submission and presentation in the frame-resource module. */
 bool vulkan_renderer_draw_frame(VulkanRenderer *renderer)
 {
     if (renderer == NULL) {
@@ -350,6 +360,7 @@ bool vulkan_renderer_draw_frame(VulkanRenderer *renderer)
     return vulkan_renderer_frame_resources_draw(renderer);
 }
 
+/* Defer swapchain replacement until frame code can safely rebuild all size-dependent resources. */
 void vulkan_renderer_notify_resize(VulkanRenderer *renderer)
 {
     if (renderer != NULL) {
