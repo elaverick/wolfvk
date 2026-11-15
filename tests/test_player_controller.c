@@ -19,25 +19,27 @@ static void set_key(WolfInput *input, SDL_Scancode key, bool pressed)
     wolf_input_handle_event(input, &event);
 }
 
-static void create_open_test_level(WolfLevel *level)
+static bool create_open_test_world(WolfWorldState *world)
 {
-    *level = (WolfLevel){0};
-    level->width = 5u;
-    level->height = 5u;
+    WolfLevel level = {0};
+
+    level.width = 5u;
+    level.height = 5u;
+    return wolf_world_state_init(world, &world, 98u);
 }
 
 void test_player_moves_forward_relative_to_camera(void)
 {
     WolfCamera camera;
-    WolfLevel level;
+    WolfWorldState world = {0};
     WolfInput *input = create_test_input();
 
     TEST_ASSERT_NOT_NULL(input);
     wolf_camera_initialize(&camera);
-    create_open_test_level(&level);
+    TEST_ASSERT_TRUE(create_open_test_world(&world));
     set_key(input, SDL_SCANCODE_W, true);
 
-    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.05f));
+    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &world, 0.05f));
     TEST_ASSERT_EQUAL_FLOAT(0.0f, camera.position[0]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, -0.56f, camera.position[2]);
 
@@ -47,15 +49,15 @@ void test_player_moves_forward_relative_to_camera(void)
 void test_player_strafe_uses_camera_right_vector(void)
 {
     WolfCamera camera;
-    WolfLevel level;
+    WolfWorldState world = {0};
     WolfInput *input = create_test_input();
 
     TEST_ASSERT_NOT_NULL(input);
     wolf_camera_initialize(&camera);
-    create_open_test_level(&level);
+    TEST_ASSERT_TRUE(create_open_test_world(&world));
     set_key(input, SDL_SCANCODE_D, true);
 
-    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.05f));
+    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &world, 0.05f));
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.56f, camera.position[0]);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, camera.position[2]);
 
@@ -65,17 +67,17 @@ void test_player_strafe_uses_camera_right_vector(void)
 void test_player_normalizes_diagonal_movement_speed(void)
 {
     WolfCamera camera;
-    WolfLevel level;
+    WolfWorldState world = {0};
     WolfInput *input = create_test_input();
     float distance;
 
     TEST_ASSERT_NOT_NULL(input);
     wolf_camera_initialize(&camera);
-    create_open_test_level(&level);
+    TEST_ASSERT_TRUE(create_open_test_world(&world));
     set_key(input, SDL_SCANCODE_W, true);
     set_key(input, SDL_SCANCODE_D, true);
 
-    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.05f));
+    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &world, 0.05f));
     distance = sqrtf(
         camera.position[0] * camera.position[0] +
         camera.position[2] * camera.position[2]);
@@ -87,20 +89,20 @@ void test_player_normalizes_diagonal_movement_speed(void)
 void test_player_mouse_motion_changes_yaw_and_pitch(void)
 {
     WolfCamera camera;
-    WolfLevel level;
+    WolfWorldState world = {0};
     WolfInput *input = create_test_input();
     SDL_Event event = {0};
 
     TEST_ASSERT_NOT_NULL(input);
     wolf_camera_initialize(&camera);
-    create_open_test_level(&level);
+    TEST_ASSERT_TRUE(create_open_test_world(&world));
 
     event.type = SDL_EVENT_MOUSE_MOTION;
     event.motion.xrel = 40.0f;
     event.motion.yrel = -20.0f;
     wolf_input_handle_event(input, &event);
 
-    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.0f));
+    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &world, 0.0f));
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.1f, camera.yaw_radians);
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.05f, camera.pitch_radians);
 
@@ -110,16 +112,16 @@ void test_player_mouse_motion_changes_yaw_and_pitch(void)
 void test_player_cannot_walk_through_wall_tiles(void)
 {
     WolfCamera camera;
-    WolfLevel level;
+    WolfWorldState world = {0};
     WolfInput *input = create_test_input();
 
     TEST_ASSERT_NOT_NULL(input);
     wolf_camera_initialize(&camera);
-    create_open_test_level(&level);
-    level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 1u;
+    TEST_ASSERT_TRUE(create_open_test_world(&world));
+    world.level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 1u;
     set_key(input, SDL_SCANCODE_D, true);
 
-    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.1f));
+    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &world, 0.1f));
     TEST_ASSERT_TRUE(camera.position[0] > 0.85f);
     TEST_ASSERT_TRUE(camera.position[0] < 0.97f);
 
@@ -129,18 +131,18 @@ void test_player_cannot_walk_through_wall_tiles(void)
 void test_player_slides_along_wall_when_forward_motion_is_blocked(void)
 {
     WolfCamera camera;
-    WolfLevel level;
+    WolfWorldState world = {0};
     WolfInput *input = create_test_input();
 
     TEST_ASSERT_NOT_NULL(input);
     wolf_camera_initialize(&camera);
-    create_open_test_level(&level);
+    TEST_ASSERT_TRUE(create_open_test_world(&world));
     camera.position[0] = 0.2f * WOLF_WORLD_TILE_SIZE;
-    level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 1u;
+    world.level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 1u;
     set_key(input, SDL_SCANCODE_W, true);
     set_key(input, SDL_SCANCODE_D, true);
 
-    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.1f));
+    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &world, 0.1f));
     TEST_ASSERT_TRUE(camera.position[0] < 0.97f);
     TEST_ASSERT_TRUE(camera.position[2] < -0.20f);
 
@@ -150,16 +152,16 @@ void test_player_slides_along_wall_when_forward_motion_is_blocked(void)
 void test_player_forward_direction_tracks_camera_yaw(void)
 {
     WolfCamera camera;
-    WolfLevel level;
+    WolfWorldState world = {0};
     WolfInput *input = create_test_input();
 
     TEST_ASSERT_NOT_NULL(input);
     wolf_camera_initialize(&camera);
     camera.yaw_radians = 1.57079633f;
-    create_open_test_level(&level);
+    TEST_ASSERT_TRUE(create_open_test_world(&world));
     set_key(input, SDL_SCANCODE_W, true);
 
-    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.05f));
+    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &world, 0.05f));
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.56f, camera.position[0]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, camera.position[2]);
 
@@ -169,88 +171,121 @@ void test_player_forward_direction_tracks_camera_yaw(void)
 void test_player_mouse_look_clamps_pitch(void)
 {
     WolfCamera camera;
-    WolfLevel level;
+    WolfWorldState world = {0};
     WolfInput *input = create_test_input();
     SDL_Event event = {0};
 
     TEST_ASSERT_NOT_NULL(input);
     wolf_camera_initialize(&camera);
-    create_open_test_level(&level);
+    TEST_ASSERT_TRUE(create_open_test_world(&world));
 
     event.type = SDL_EVENT_MOUSE_MOTION;
     event.motion.yrel = -10000.0f;
     wolf_input_handle_event(input, &event);
-    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.0f));
+    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &world, 0.0f));
     TEST_ASSERT_TRUE(camera.pitch_radians > 1.4f);
     TEST_ASSERT_TRUE(camera.pitch_radians < 1.5f);
 
     wolf_input_begin_frame(input);
     event.motion.yrel = 10000.0f;
     wolf_input_handle_event(input, &event);
-    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.0f));
+    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &world, 0.0f));
     TEST_ASSERT_TRUE(camera.pitch_radians < -1.4f);
     TEST_ASSERT_TRUE(camera.pitch_radians > -1.5f);
 
     wolf_input_destroy(input);
 }
 
-void test_player_can_move_through_omitted_door_cells(void)
+void test_player_opens_door_before_crossing_and_door_closes_on_original_timer(void)
 {
     WolfCamera camera;
-    WolfLevel level;
+    WolfWorldState world = {0};
     WolfInput *input = create_test_input();
 
     TEST_ASSERT_NOT_NULL(input);
     wolf_camera_initialize(&camera);
-    create_open_test_level(&level);
+    TEST_ASSERT_TRUE(create_open_test_world(&world));
 
-    /* Approach the door from the west; the ordinary wall beyond it remains blocking. */
+    /* Approach the vertical normal door from the west, as the original Use action expects. */
     camera.position[0] = -2.0f;
     camera.position[2] = 0.0f;
     camera.yaw_radians = 1.57079633f;
-    level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] =
-        WOLF_LEVEL_DOOR_TILE_FIRST;
-    level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 1u;
+    world.level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 90u;
+    TEST_ASSERT_TRUE(wolf_world_state_init(&world, &world.level, 98u));
+
     set_key(input, SDL_SCANCODE_W, true);
+    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &world, 0.1f));
+    TEST_ASSERT_TRUE(camera.position[0] < -2.0f);
 
-    for (int frame = 0; frame < 16; ++frame) {
-        TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.1f));
+    /* A single Use press starts the 70 Hz, tics<<10 opening animation. */
+    TEST_ASSERT_TRUE(wolf_world_state_use(
+        &world, camera.position[0], camera.position[2], camera.yaw_radians));
+    TEST_ASSERT_EQUAL_UINT8(WOLF_DOOR_OPENING, world.doors[0].action);
+
+    for (int frame = 0; frame < 10; ++frame) {
+        bool geometry_changed = false;
+        TEST_ASSERT_TRUE(wolf_world_state_update(
+            &world, 0.1f, camera.position[0], camera.position[2], &geometry_changed));
     }
+    TEST_ASSERT_EQUAL_UINT8(WOLF_DOOR_OPEN, world.doors[0].action);
+    TEST_ASSERT_EQUAL_UINT32(WOLF_WORLD_DOOR_OPEN_POSITION, world.doors[0].position);
 
-    /* The player must cross the door cell and stop at the solid wall behind it. */
+    /* The player now passes through the fully-open door and stops at the next wall. */
+    for (int frame = 0; frame < 16; ++frame) {
+        bool geometry_changed = false;
+        TEST_ASSERT_TRUE(wolf_world_state_update(
+            &world, 0.1f, camera.position[0], camera.position[2], &geometry_changed));
+        TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &world, 0.1f));
+    }
     TEST_ASSERT_TRUE(camera.position[0] > 0.85f);
     TEST_ASSERT_TRUE(camera.position[0] < 0.97f);
 
     wolf_input_destroy(input);
 }
 
-void test_player_can_move_through_secret_door_cells(void)
+void test_player_pushes_secret_wall_in_facing_direction_at_original_speed(void)
 {
     WolfCamera camera;
-    WolfLevel level;
+    WolfWorldState world = {0};
     WolfInput *input = create_test_input();
+    bool geometry_changed = false;
 
     TEST_ASSERT_NOT_NULL(input);
     wolf_camera_initialize(&camera);
-    create_open_test_level(&level);
+    TEST_ASSERT_TRUE(create_open_test_world(&world));
 
-    /* A pushwall marker in the info plane makes its ordinary wall tile an omitted secret door. */
     camera.position[0] = -2.0f;
     camera.position[2] = 0.0f;
     camera.yaw_radians = 1.57079633f;
-    level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 1u;
-    level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] =
+    world.level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 1u;
+    world.level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] =
         WOLF_LEVEL_INFO_PUSHWALL_MARKER;
-    level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 1u;
-    set_key(input, SDL_SCANCODE_W, true);
+    TEST_ASSERT_TRUE(wolf_world_state_init(&world, &world.level, 98u));
 
-    for (int frame = 0; frame < 16; ++frame) {
-        TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.1f));
-    }
+    /* The P marker is actionable only when the player faces the marked wall. */
+    TEST_ASSERT_TRUE(wolf_world_state_use(
+        &world, camera.position[0], camera.position[2], camera.yaw_radians));
+    TEST_ASSERT_TRUE(world.pushwall.active);
+    TEST_ASSERT_EQUAL_INT8(1, world.pushwall.direction_x);
+    TEST_ASSERT_EQUAL_INT8(0, world.pushwall.direction_y);
 
-    /* The player crosses the marked cell but remains blocked by the next ordinary wall. */
-    TEST_ASSERT_TRUE(camera.position[0] > 0.85f);
-    TEST_ASSERT_TRUE(camera.position[0] < 0.97f);
+    /* One original tile takes 128 tics at 70 tics per second (about 1.83 seconds). */
+    TEST_ASSERT_TRUE(wolf_world_state_update(
+        &world, 128.0f / 70.0f, camera.position[0], camera.position[2],
+        &geometry_changed));
+    TEST_ASSERT_TRUE(geometry_changed);
+    TEST_ASSERT_TRUE(world.pushwall.active);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 128.0f, world.pushwall.elapsed_ticks);
+
+    /* A clear second tile allows the original two-cell push to finish at 256 tics. */
+    TEST_ASSERT_TRUE(wolf_world_state_update(
+        &world, 128.0f / 70.0f, camera.position[0], camera.position[2],
+        &geometry_changed));
+    TEST_ASSERT_FALSE(world.pushwall.active);
+    TEST_ASSERT_EQUAL_UINT16(
+        1u, world.level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 4u]);
+    TEST_ASSERT_EQUAL_UINT16(
+        0u, world.level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u]);
 
     wolf_input_destroy(input);
 }
@@ -258,17 +293,17 @@ void test_player_can_move_through_secret_door_cells(void)
 void test_player_rejects_invalid_state_and_frame_time(void)
 {
     WolfCamera camera;
-    WolfLevel level;
+    WolfWorldState world = {0};
     WolfInput *input = create_test_input();
 
     TEST_ASSERT_NOT_NULL(input);
     wolf_camera_initialize(&camera);
-    create_open_test_level(&level);
+    TEST_ASSERT_TRUE(create_open_test_world(&world));
 
-    TEST_ASSERT_FALSE(wolf_player_update(NULL, input, &level, 0.016f));
+    TEST_ASSERT_FALSE(wolf_player_update(NULL, input, &world, 0.016f));
     TEST_ASSERT_FALSE(wolf_player_update(&camera, input, NULL, 0.016f));
-    TEST_ASSERT_FALSE(wolf_player_update(&camera, input, &level, -0.01f));
-    TEST_ASSERT_FALSE(wolf_player_update(&camera, input, &level, NAN));
+    TEST_ASSERT_FALSE(wolf_player_update(&camera, input, &world, -0.01f));
+    TEST_ASSERT_FALSE(wolf_player_update(&camera, input, &world, NAN));
 
     wolf_input_destroy(input);
 }
