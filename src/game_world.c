@@ -393,6 +393,11 @@ bool wolf_world_state_use(
         return true;
     }
 
+    door_index = door_index_at(world, target_x, target_y);
+    if (door_index < 0) {
+        return false;
+    }
+
     {
         WolfDoor *door = &world->doors[door_index];
 
