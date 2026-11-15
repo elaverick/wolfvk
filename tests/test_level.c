@@ -212,7 +212,7 @@ void test_level_loader_reads_original_map_header_and_planes(void)
     char error_message[256];
 
     TEST_ASSERT_TRUE(create_test_map_files(
-        maphead_path, sizeof(maphead_path), gamemaps_path, sizeof(gamemaps_path), 0u));
+        maphead_path, sizeof(maphead_path), gamemaps_path, sizeof(gamemaps_path), 5u));
 
     TEST_ASSERT_TRUE_MESSAGE(
         wolf_level_load(
@@ -223,8 +223,8 @@ void test_level_loader_reads_original_map_header_and_planes(void)
     TEST_ASSERT_EQUAL_UINT16(WOLF_LEVEL_PLANE_WIDTH, level.width);
     TEST_ASSERT_EQUAL_UINT16(WOLF_LEVEL_PLANE_HEIGHT, level.height);
     TEST_ASSERT_EQUAL_STRING("TEST LEVEL", level.name);
-    TEST_ASSERT_EQUAL_UINT16(0u, level.wall_tiles[0]);
-    TEST_ASSERT_EQUAL_UINT16(0u, level.wall_tiles[WOLF_LEVEL_PLANE_WORDS - 1u]);
+    TEST_ASSERT_EQUAL_UINT16(5u, level.wall_tiles[0]);
+    TEST_ASSERT_EQUAL_UINT16(5u, level.wall_tiles[WOLF_LEVEL_PLANE_WORDS - 1u]);
     TEST_ASSERT_EQUAL_UINT16(0u, level.object_tiles[0]);
     TEST_ASSERT_EQUAL_UINT16(0u, level.object_tiles[WOLF_LEVEL_PLANE_WORDS - 1u]);
 
