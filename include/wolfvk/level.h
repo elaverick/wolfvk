@@ -10,6 +10,8 @@
 #define WOLF_LEVEL_PLANE_WIDTH 64u
 #define WOLF_LEVEL_PLANE_HEIGHT 64u
 #define WOLF_LEVEL_PLANE_WORDS (WOLF_LEVEL_PLANE_WIDTH * WOLF_LEVEL_PLANE_HEIGHT)
+#define WOLF_LEVEL_DOOR_TILE_FIRST 90u
+#define WOLF_LEVEL_DOOR_TILE_LAST 101u
 #define WOLF_LEVEL_AREA_TILE_FIRST 107u
 
 typedef struct WolfLevel {
@@ -17,9 +19,12 @@ typedef struct WolfLevel {
     uint16_t height;
     char name[17];
     uint16_t wall_tiles[WOLF_LEVEL_PLANE_WORDS];
-    /* Original plane 1 is the info plane (player, actors, and statics). */
+    /* Original plane 1 is the info plane (player starts, actors, statics and pushwall markers). */
     uint16_t object_tiles[WOLF_LEVEL_PLANE_WORDS];
 } WolfLevel;
+
+/* Door cells are omitted from the pre-door milestone so they do not become invisible barriers. */
+bool wolf_level_is_door_tile(uint16_t wall_tile);
 
 /* Decode the length-prefixed Carmack stream used by original Wolf3D map planes. */
 bool wolf_level_decode_carmack(
