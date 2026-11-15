@@ -14,6 +14,7 @@ static void write_error(char *error_message, size_t error_message_size, const ch
     }
 }
 
+/* Validate the one-based user option, then convert it once to the loader's zero-based map index. */
 bool wolf_parse_command_line(
     int argc,
     char *argv[],
