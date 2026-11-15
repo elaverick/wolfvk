@@ -102,6 +102,7 @@ if(BUILD_TESTING)
         tests/test_window.c
         tests/test_vulkan_renderer.c
         src/vulkan_renderer.c
+        src/vulkan_renderer_frame.c
     )
     target_include_directories(wolfvk_tests PRIVATE include)
     target_link_libraries(wolfvk_tests PRIVATE SDL3::SDL3 Vulkan::Vulkan unity)
