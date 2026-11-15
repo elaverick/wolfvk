@@ -51,7 +51,7 @@ static uint8_t *create_vswap_fixture(size_t *file_size)
         size_t page_start = page_offset;
 
         write_u32_le(data + offset_entry, page_offset);
-        write_u16_le(data + length_table + (size_t)page * 2u, TEST_VSWAP_PAGE_BYTES);
+        write_u16_le(data + length_table + (size_t)page * 2u, (uint16_t)TEST_VSWAP_PAGE_BYTES);
 
         /* Original wall-page texels are stored as 64 vertical columns. */
         for (uint32_t column = 0u; column < 64u; ++column) {
