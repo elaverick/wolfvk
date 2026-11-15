@@ -205,7 +205,7 @@ void test_player_can_move_through_omitted_door_cells(void)
     create_open_test_level(&level);
 
     /* Approach the door from the west; the ordinary wall beyond it remains blocking. */
-    camera.position[0] = -1.0f;
+    camera.position[0] = -2.0f;
     camera.position[2] = 0.0f;
     camera.yaw_radians = 1.57079633f;
     level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] =
@@ -235,7 +235,7 @@ void test_player_can_move_through_secret_door_cells(void)
     create_open_test_level(&level);
 
     /* A pushwall marker in the info plane makes its ordinary wall tile an omitted secret door. */
-    camera.position[0] = -1.0f;
+    camera.position[0] = -2.0f;
     camera.position[2] = 0.0f;
     camera.yaw_radians = 1.57079633f;
     level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 1u;
