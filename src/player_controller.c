@@ -10,7 +10,7 @@
 #define WOLF_PLAYER_MAX_STEP_DISTANCE 0.08f
 #define WOLF_PLAYER_TWO_PI 6.28318531f
 
-/* Collision mirrors the pre-door scene: omitted door cells are open, while real walls stay solid. */
+/* Collision mirrors the pre-door scene: omitted ordinary and secret doors cannot become invisible blockers. */
 static bool position_overlaps_wall(
     const WolfLevel *level,
     float world_x,
@@ -53,7 +53,8 @@ static bool position_overlaps_wall(
                 uint16_t wall_tile = level->wall_tiles[
                     (size_t)tile_z * WOLF_LEVEL_PLANE_WIDTH + (size_t)tile_x];
 
-                if (wall_tile == 0u || wolf_level_is_door_tile(wall_tile)) {
+                if (wall_tile == 0u ||
+                    wolf_level_is_omitted_door_cell(level, tile_x, tile_z)) {
                     continue;
                 }
             }
