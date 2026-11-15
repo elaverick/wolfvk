@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Match Vulkan's allowed memory types with the visibility/coherency needed for direct uploads. */
 static bool find_memory_type(
     VulkanRenderer *renderer,
     uint32_t type_filter,
@@ -32,6 +33,7 @@ static bool find_memory_type(
     return false;
 }
 
+/* Buffer and backing memory form one owned resource and must be released together. */
 static void destroy_buffer(
     VulkanRenderer *renderer,
     VkBuffer *buffer,
@@ -110,6 +112,7 @@ static bool create_host_buffer(
     return true;
 }
 
+/* Upload a complete replacement mesh before retiring the previous buffers, preserving valid geometry on failure. */
 bool vulkan_renderer_geometry_set_quads(
     VulkanRenderer *renderer,
     const VulkanQuad *quads,
@@ -191,6 +194,7 @@ bool vulkan_renderer_geometry_set_quads(
     return true;
 }
 
+/* Clear both geometry buffers and the draw count so teardown is safe to call more than once. */
 void vulkan_renderer_geometry_destroy(VulkanRenderer *renderer)
 {
     if (renderer == NULL || renderer->device == VK_NULL_HANDLE) {
