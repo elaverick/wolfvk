@@ -307,6 +307,7 @@ static bool find_depth_memory_type(
     return false;
 }
 
+/* One shared depth image is safe while the renderer limits itself to one frame in flight. */
 static bool create_depth_resources(VulkanRenderer *renderer)
 {
     static const VkFormat depth_candidates[] = {
