@@ -9,11 +9,13 @@
 #define WOLF_CARMACK_NEAR_TAG 0xa7u
 #define WOLF_CARMACK_FAR_TAG 0xa8u
 
+/* Map headers are little-endian regardless of the host platform's native byte order. */
 static uint16_t read_u16_le(const uint8_t *data)
 {
     return (uint16_t)((uint16_t)data[0] | ((uint16_t)data[1] << 8));
 }
 
+/* Decode 32-bit MAPHEAD offsets without relying on alignment or host endianness. */
 static uint32_t read_u32_le(const uint8_t *data)
 {
     return (uint32_t)data[0] |
@@ -22,6 +24,7 @@ static uint32_t read_u32_le(const uint8_t *data)
         ((uint32_t)data[3] << 24);
 }
 
+/* Preserve a useful failure reason when the caller provides a writable diagnostic buffer. */
 static void write_error(char *error_message, size_t error_message_size, const char *message)
 {
     if (error_message != NULL && error_message_size > 0u) {
@@ -29,6 +32,7 @@ static void write_error(char *error_message, size_t error_message_size, const ch
     }
 }
 
+/* Identify the original wall-plane IDs used for sliding doors, including their lock variants. */
 bool wolf_level_is_door_tile(uint16_t wall_tile)
 {
     /* Retail Wolf3D reserves this inclusive wall-plane range for oriented and locked doors. */
@@ -36,6 +40,7 @@ bool wolf_level_is_door_tile(uint16_t wall_tile)
         wall_tile <= WOLF_LEVEL_DOOR_TILE_LAST;
 }
 
+/* Secret pushwalls retain a normal wall texture, so their identity comes from the info plane. */
 bool wolf_level_is_secret_door_cell(
     const WolfLevel *level,
     int tile_x,
@@ -56,6 +61,7 @@ bool wolf_level_is_secret_door_cell(
     return level->object_tiles[tile_index] == WOLF_LEVEL_INFO_PUSHWALL_MARKER;
 }
 
+/* Give geometry, spawn selection and collision one shared definition of omitted door cells. */
 bool wolf_level_is_omitted_door_cell(
     const WolfLevel *level,
     int tile_x,
