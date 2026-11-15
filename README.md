@@ -16,7 +16,7 @@ The player can move with **WASD** and look with the mouse. Movement is relative 
 
 The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the working directory. Those original game files are not included in this repository or demo package; copy them from your own WL6 installation. The user-supplied retail map files were inspected: all 60 playable maps decode as 64×64 maps, each with exactly one valid player-start marker on a floor cell. Level 1 starts at tile (29, 57), facing east.
 
-**Textured demo:** the Windows x64 build, the SwiftShader-backed Vulkan renderer test, packaging and artifact upload passed in [Actions run 43740769232](https://github.com/elaverick/WolfVK/actions/runs/43740769232) on the earlier textured-wall milestone. The current door and secret-wall implementation has 95 registered Unity test cases. The latest Windows CI run is [43752002088](https://github.com/elaverick/WolfVK/actions/runs/43752002088) and is pending; its build and test result will supersede the earlier baseline once complete. The `WolfVK-textured-demo-windows-x64` artifact contains `wolfvk.exe`, the compiled shader files, third-party notices and setup instructions. Copy the three original WL6 files above beside the executable before launching it.
+**Textured demo:** the Windows x64 build, all 95 registered Unity test cases (including the SwiftShader-backed Vulkan renderer test), packaging and artifact upload passed in [Actions run 43756633501](https://github.com/elaverick/WolfVK/actions/runs/43756633501) on 15 November 2026. The `WolfVK-textured-demo-windows-x64` artifact contains `wolfvk.exe`, the compiled shader files, third-party notices and setup instructions. Copy the three original WL6 files above beside the executable before launching it. The `WolfVK-textured-demo-windows-x64` artifact contains `wolfvk.exe`, the compiled shader files, third-party notices and setup instructions. Copy the three original WL6 files above beside the executable before launching it.
 
 ## Automated tests
 
@@ -37,7 +37,7 @@ CTest runs the suite in Windows CI. The world-state tests cover original door or
 
 | Feature | Status |
 |---|---|
-| Windows x64 build | Current door/pushwall implementation pending in [Actions run 43752002088](https://github.com/elaverick/WolfVK/actions/runs/43752002088) |
+| Windows x64 build | Passed in [Actions run 43756633501](https://github.com/elaverick/WolfVK/actions/runs/43756633501); 95 Unity tests, packaging and artifact upload succeeded |
 | SDL3 window and input | Implemented and tested |
 | Vulkan renderer and swapchain | Implemented and tested in Windows CI |
 | Indexed quad rendering and depth testing | Implemented and tested |
