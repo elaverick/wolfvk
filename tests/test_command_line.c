@@ -37,7 +37,7 @@ void test_command_line_accepts_first_level_explicitly(void)
 {
     char program[] = "wolfvk";
     char option[] = "--level";
-    char level[] = "1";
+    char level[16] = "1";
     char *arguments[] = {program, option, level};
     WolfOptions options;
     char error_message[128];
