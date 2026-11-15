@@ -385,6 +385,21 @@ bool wolf_level_load(
             write_error(error_message, error_message_size, "A map plane failed Carmack or RLEW decompression.");
             goto cleanup;
         }
+
+        if (plane_index == 0u) {
+            /*
+             * Wolf3D uses values >= AREATILE (107) as floor-area markers,
+             * not walls. The original engine converts these cells to zero
+             * before exposing the wall map to its renderer.
+             */
+            for (size_t tile_index = 0u;
+                 tile_index < WOLF_LEVEL_PLANE_WORDS;
+                 ++tile_index) {
+                if (destination[tile_index] >= WOLF_LEVEL_AREA_TILE_FIRST) {
+                    destination[tile_index] = 0u;
+                }
+            }
+        }
     }
 
     *level = decoded_level;
