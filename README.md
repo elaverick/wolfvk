@@ -16,7 +16,7 @@ The player can move with **WASD** and look with the mouse. Movement is relative 
 
 The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the working directory. Those original game files are not included in this repository or demo package; copy them from your own WL6 installation. The user-supplied retail map files were inspected: all 60 playable maps decode as 64×64 maps, each with exactly one valid player-start marker on a floor cell. Level 1 starts at tile (29, 57), facing east.
 
-**Textured demo:** the Windows x64 build, all 97 registered Unity test cases (including the SwiftShader-backed Vulkan renderer test), packaging and artifact upload passed in [Actions run 43756633501](https://github.com/elaverick/WolfVK/actions/runs/43756633501) on 15 November 2026. The `WolfVK-textured-demo-windows-x64` artifact contains `wolfvk.exe`, the compiled shader files, third-party notices and setup instructions. Copy the three original WL6 files above beside the executable before launching it.
+**Textured demo:** the preceding code snapshot passed the Windows x64 build, all 95 then-registered Unity test cases (including the SwiftShader-backed Vulkan renderer test), packaging and artifact upload in [Actions run 43756633501](https://github.com/elaverick/WolfVK/actions/runs/43756633501) on 15 November 2026. The current branch adds two Level 1 secret-wall page regressions and the reference floor/ceiling colour adjustment; those changes are being validated by Windows CI. The `WolfVK-textured-demo-windows-x64` artifact contains `wolfvk.exe`, the compiled shader files, third-party notices and setup instructions. Copy the three original WL6 files above beside the executable before launching it.
 
 ## Automated tests
 
