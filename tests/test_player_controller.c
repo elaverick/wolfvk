@@ -211,6 +211,7 @@ void test_player_opens_door_before_crossing_and_door_closes_on_original_timer(vo
     camera.position[2] = 0.0f;
     camera.yaw_radians = 1.57079633f;
     world.level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 90u;
+    world.level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 1u;
     TEST_ASSERT_TRUE(wolf_world_state_init(&world, &world.level, 98u));
 
     set_key(input, SDL_SCANCODE_W, true);
