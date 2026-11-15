@@ -81,7 +81,7 @@ static bool build_scene_geometry(
                         (size_t)tile_y * WOLF_LEVEL_PLANE_WIDTH + tile_x;
 
                     if (level->wall_tiles[tile_index] == 0u ||
-                        wolf_level_is_door_tile(level->wall_tiles[tile_index])) {
+                        wolf_level_is_omitted_door_cell(level, tile_x, tile_y)) {
                         ++open_tile_count;
                     } else {
                         ++solid_tile_count;
