@@ -1,8 +1,8 @@
 #include "wolfvk/level_geometry.h"
+#include "wolfvk/world.h"
 
 #include <stdlib.h>
 
-#define WOLF_WALL_HEIGHT 3.2f
 
 typedef struct WallColour {
     float red;
@@ -85,7 +85,7 @@ static bool append_wall_face(
     return true;
 }
 
-/* Build only visible wall boundaries; open cells and unimplemented doors remain traversable. */
+/* Build square wall panels at the map's tile scale; open cells and unimplemented doors remain traversable. */
 bool wolf_level_build_wall_quads(
     const WolfLevel *level,
     VulkanQuad **quads,
@@ -128,17 +128,19 @@ bool wolf_level_build_wall_quads(
                 continue;
             }
 
-            x0 = -(float)level->width * 0.5f + (float)x;
-            x1 = x0 + 1.0f;
-            z0 = -(float)level->height * 0.5f + (float)y;
-            z1 = z0 + 1.0f;
+            x0 = -((float)level->width * WOLF_WORLD_TILE_SIZE) * 0.5f +
+                (float)x * WOLF_WORLD_TILE_SIZE;
+            x1 = x0 + WOLF_WORLD_TILE_SIZE;
+            z0 = -((float)level->height * WOLF_WORLD_TILE_SIZE) * 0.5f +
+                (float)y * WOLF_WORLD_TILE_SIZE;
+            z1 = z0 + WOLF_WORLD_TILE_SIZE;
             colour = &wall_palette[tile % (sizeof(wall_palette) / sizeof(wall_palette[0]))];
 
             /* Only emit faces bordering empty space; shared wall faces can never be seen. */
             if (is_open_space_for_geometry(level, x, y - 1)) {
                 const float face[4][3] = {
                     {x0, 0.0f, z0}, {x1, 0.0f, z0},
-                    {x1, WOLF_WALL_HEIGHT, z0}, {x0, WOLF_WALL_HEIGHT, z0}
+                    {x1, WOLF_WORLD_WALL_HEIGHT, z0}, {x0, WOLF_WALL_HEIGHT, z0}
                 };
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count, face, colour, 0.82f)) {
