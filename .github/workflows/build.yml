@@ -19,10 +19,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Vulkan SDK
-        uses: humbletim/install-vulkan-sdk@v1.2
+        uses: jakoch/install-vulkan-sdk-action@v1
         with:
-          version: 1.4.309.0
+          vulkan_version: 1.4.309.0
+          install_runtime: true
+          install_swiftshader: true
           cache: true
+          stripdown: true
 
       - name: Configure
         run: cmake -S . -B build -A x64 -DBUILD_TESTING=ON
@@ -31,4 +34,7 @@ jobs:
         run: cmake --build build --config Release --parallel
 
       - name: Run tests
-        run: ctest --test-dir build -C Release --output-on-failure
+        shell: pwsh
+        run: |
+          $env:VK_ICD_FILENAMES = "C:\swiftshader\vk_swiftshader_icd.json"
+          ctest --test-dir build -C Release --output-on-failure
