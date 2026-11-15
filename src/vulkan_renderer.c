@@ -1,17 +1,8 @@
-#include "wolfvk/vulkan_renderer.h"
+#include "vulkan_renderer_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-struct VulkanRenderer {
-    VkInstance instance;
-    VkSurfaceKHR surface;
-    VkPhysicalDevice physical_device;
-    VkDevice device;
-    VkQueue graphics_queue;
-    VkQueue present_queue;
-};
 
 bool vulkan_renderer_find_queue_families(
     const VkQueueFamilyProperties *queue_families,
@@ -152,8 +143,8 @@ static bool select_physical_device(VulkanRenderer *renderer)
                     devices[device_index], renderer->surface, &present_mode_count, NULL) == VK_SUCCESS &&
                 format_count > 0u && present_mode_count > 0u) {
                 renderer->physical_device = devices[device_index];
-                renderer->graphics_queue = VK_NULL_HANDLE;
-                renderer->present_queue = VK_NULL_HANDLE;
+                renderer->graphics_queue_family = indices.graphics_family;
+                renderer->present_queue_family = indices.present_family;
                 selected = true;
             }
         }
@@ -172,10 +163,6 @@ static bool select_physical_device(VulkanRenderer *renderer)
 
 static bool create_logical_device(VulkanRenderer *renderer)
 {
-    uint32_t family_count = 0;
-    VkQueueFamilyProperties *families = NULL;
-    VkBool32 *present_support = NULL;
-    VulkanQueueFamilyIndices indices;
     VkDeviceQueueCreateInfo queue_create_infos[2] = {0};
     uint32_t unique_families[2];
     uint32_t unique_family_count = 0;
@@ -186,37 +173,9 @@ static bool create_logical_device(VulkanRenderer *renderer)
     uint32_t family_index;
     VkResult result;
 
-    vkGetPhysicalDeviceQueueFamilyProperties(renderer->physical_device, &family_count, NULL);
-    families = calloc(family_count, sizeof(*families));
-    present_support = calloc(family_count, sizeof(*present_support));
-    if (families == NULL || present_support == NULL) {
-        free(families);
-        free(present_support);
-        return false;
-    }
-
-    vkGetPhysicalDeviceQueueFamilyProperties(renderer->physical_device, &family_count, families);
-    for (family_index = 0; family_index < family_count; ++family_index) {
-        if (vkGetPhysicalDeviceSurfaceSupportKHR(
-                renderer->physical_device, family_index, renderer->surface,
-                &present_support[family_index]) != VK_SUCCESS) {
-            present_support[family_index] = VK_FALSE;
-        }
-    }
-
-    if (!vulkan_renderer_find_queue_families(
-            families, present_support, family_count, &indices)) {
-        free(families);
-        free(present_support);
-        return false;
-    }
-
-    free(families);
-    free(present_support);
-
-    unique_families[unique_family_count++] = indices.graphics_family;
-    if (indices.present_family != indices.graphics_family) {
-        unique_families[unique_family_count++] = indices.present_family;
+    unique_families[unique_family_count++] = renderer->graphics_queue_family;
+    if (renderer->present_queue_family != renderer->graphics_queue_family) {
+        unique_families[unique_family_count++] = renderer->present_queue_family;
     }
 
     for (family_index = 0; family_index < unique_family_count; ++family_index) {
@@ -239,8 +198,10 @@ static bool create_logical_device(VulkanRenderer *renderer)
         return false;
     }
 
-    vkGetDeviceQueue(renderer->device, indices.graphics_family, 0, &renderer->graphics_queue);
-    vkGetDeviceQueue(renderer->device, indices.present_family, 0, &renderer->present_queue);
+    vkGetDeviceQueue(
+        renderer->device, renderer->graphics_queue_family, 0, &renderer->graphics_queue);
+    vkGetDeviceQueue(
+        renderer->device, renderer->present_queue_family, 0, &renderer->present_queue);
     return true;
 }
 
@@ -300,7 +261,8 @@ bool vulkan_renderer_create(SDL_Window *window, VulkanRenderer **renderer_out)
         return false;
     }
 
-    if (!select_physical_device(renderer) || !create_logical_device(renderer)) {
+    if (!select_physical_device(renderer) || !create_logical_device(renderer) ||
+        !vulkan_renderer_frame_resources_create(renderer)) {
         vulkan_renderer_destroy(renderer);
         return false;
     }
@@ -317,6 +279,7 @@ void vulkan_renderer_destroy(VulkanRenderer *renderer)
 
     if (renderer->device != VK_NULL_HANDLE) {
         vkDeviceWaitIdle(renderer->device);
+        vulkan_renderer_frame_resources_destroy(renderer);
         vkDestroyDevice(renderer->device, NULL);
     }
     if (renderer->surface != VK_NULL_HANDLE && renderer->instance != VK_NULL_HANDLE) {
@@ -326,4 +289,12 @@ void vulkan_renderer_destroy(VulkanRenderer *renderer)
         vkDestroyInstance(renderer->instance, NULL);
     }
     free(renderer);
+}
+
+bool vulkan_renderer_draw_frame(VulkanRenderer *renderer)
+{
+    if (renderer == NULL) {
+        return false;
+    }
+    return vulkan_renderer_frame_resources_draw(renderer);
 }
