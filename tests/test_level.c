@@ -27,13 +27,18 @@ static void write_u32_le(uint8_t *destination, uint32_t value)
     destination[3] = (uint8_t)(value >> 24);
 }
 
-static void write_zero_plane(uint8_t *destination)
+static void write_uniform_plane(uint8_t *destination, uint16_t value)
 {
     write_u16_le(destination, 8u);
     write_u16_le(destination + 2u, (uint16_t)(WOLF_LEVEL_PLANE_WORDS * sizeof(uint16_t)));
     write_u16_le(destination + 4u, (uint16_t)TEST_RLEW_TAG);
     write_u16_le(destination + 6u, (uint16_t)WOLF_LEVEL_PLANE_WORDS);
-    write_u16_le(destination + 8u, 0u);
+    write_u16_le(destination + 8u, value);
+}
+
+static void write_zero_plane(uint8_t *destination)
+{
+    write_uniform_plane(destination, 0u);
 }
 
 static bool write_test_file(const char *path, const uint8_t *data, size_t data_size)
@@ -60,7 +65,8 @@ static bool write_test_file(const char *path, const uint8_t *data, size_t data_s
 }
 
 static bool create_test_map_files(char *maphead_path, size_t maphead_path_size,
-                                  char *gamemaps_path, size_t gamemaps_path_size)
+                                  char *gamemaps_path, size_t gamemaps_path_size,
+                                  uint16_t wall_plane_value)
 {
     const char *base_path = SDL_GetBasePath();
     uint8_t maphead[TEST_MAPHEAD_SIZE];
@@ -93,7 +99,7 @@ static bool create_test_map_files(char *maphead_path, size_t maphead_path_size,
     write_u16_le(gamemaps + 20u, (uint16_t)WOLF_LEVEL_PLANE_HEIGHT);
     memcpy(gamemaps + 22u, "TEST LEVEL", 10u);
 
-    write_zero_plane(gamemaps + TEST_MAP_HEADER_SIZE);
+    write_uniform_plane(gamemaps + TEST_MAP_HEADER_SIZE, wall_plane_value);
     write_zero_plane(gamemaps + TEST_MAP_HEADER_SIZE + TEST_PLANE_CHUNK_SIZE);
 
     return write_test_file(maphead_path, maphead, sizeof(maphead)) &&
@@ -206,7 +212,7 @@ void test_level_loader_reads_original_map_header_and_planes(void)
     char error_message[256];
 
     TEST_ASSERT_TRUE(create_test_map_files(
-        maphead_path, sizeof(maphead_path), gamemaps_path, sizeof(gamemaps_path)));
+        maphead_path, sizeof(maphead_path), gamemaps_path, sizeof(gamemaps_path), 0u));
 
     TEST_ASSERT_TRUE_MESSAGE(
         wolf_level_load(
@@ -226,6 +232,33 @@ void test_level_loader_reads_original_map_header_and_planes(void)
     remove(gamemaps_path);
 }
 
+void test_level_loader_converts_area_markers_to_open_cells(void)
+{
+    char maphead_path[1024];
+    char gamemaps_path[1024];
+    WolfLevel level = {0};
+    char error_message[256];
+
+    TEST_ASSERT_TRUE(create_test_map_files(
+        maphead_path, sizeof(maphead_path), gamemaps_path, sizeof(gamemaps_path),
+        (uint16_t)WOLF_LEVEL_AREA_TILE_FIRST));
+
+    TEST_ASSERT_TRUE_MESSAGE(
+        wolf_level_load(
+            maphead_path, gamemaps_path, 0u,
+            &level, error_message, sizeof(error_message)),
+        error_message);
+
+    for (size_t tile_index = 0u;
+         tile_index < WOLF_LEVEL_PLANE_WORDS;
+         ++tile_index) {
+        TEST_ASSERT_EQUAL_UINT16(0u, level.wall_tiles[tile_index]);
+    }
+
+    remove(maphead_path);
+    remove(gamemaps_path);
+}
+
 void test_level_loader_rejects_sparse_map_entries(void)
 {
     char maphead_path[1024];
@@ -234,7 +267,7 @@ void test_level_loader_rejects_sparse_map_entries(void)
     char error_message[256];
 
     TEST_ASSERT_TRUE(create_test_map_files(
-        maphead_path, sizeof(maphead_path), gamemaps_path, sizeof(gamemaps_path)));
+        maphead_path, sizeof(maphead_path), gamemaps_path, sizeof(gamemaps_path), 0u));
 
     TEST_ASSERT_FALSE(wolf_level_load(
         maphead_path, gamemaps_path, 1u,
