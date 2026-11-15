@@ -74,7 +74,7 @@ jobs:
           part of this milestone. Integer scaling is a separate follow-on step.
           '@
           Set-Content -LiteralPath (Join-Path $packageDir "README.txt") -Value $instructions -Encoding utf8
-          Compress-Archive -Path (Join-Path $packageDir "*") -DestinationPath "build\WolfVK-demo-windows-x64.zip" -Force
+          Compress-Archive -Path (Join-Path $packageDir "*") -DestinationPath "build\WolfVK-textured-demo-windows-x64.zip" -Force
 
       - name: Upload textured Windows demo
         if: success()
