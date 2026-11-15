@@ -331,12 +331,27 @@ static bool create_render_pass(VulkanRenderer *renderer)
     return true;
 }
 
+static FILE *open_shader_file(const char *path)
+{
+    FILE *shader_file = NULL;
+
+#if defined(_MSC_VER)
+    if (fopen_s(&shader_file, path, "rb") != 0) {
+        return NULL;
+    }
+#else
+    shader_file = fopen(path, "rb");
+#endif
+
+    return shader_file;
+}
+
 static bool load_shader_module(
     VulkanRenderer *renderer,
     const char *shader_filename,
     VkShaderModule *shader_module)
 {
-    char *base_path = SDL_GetBasePath();
+    const char *base_path = SDL_GetBasePath();
     char shader_path[1024];
     FILE *shader_file = NULL;
     long shader_size;
@@ -349,13 +364,12 @@ static bool load_shader_module(
         return false;
     }
 
-    if (snprintf(shader_path, sizeof(shader_path), "%sshaders/%s", base_path, shader_filename) < 0) {
-        SDL_free(base_path);
+    if (snprintf(shader_path, sizeof(shader_path), "%sshaders/%s", base_path, shader_filename) < 0 ||
+        strlen(shader_path) >= sizeof(shader_path)) {
         return false;
     }
-    SDL_free(base_path);
 
-    shader_file = fopen(shader_path, "rb");
+    shader_file = open_shader_file(shader_path);
     if (shader_file == NULL) {
         fprintf(stderr, "Could not open compiled shader: %s\n", shader_path);
         return false;
