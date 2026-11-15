@@ -33,16 +33,15 @@ int main(void)
 
     input = wolf_input_create();
     if (input == NULL) {
-        fprintf(stderr, "Input initialisation failed: %s\\n", SDL_GetError());
-        wolf_input_destroy(input);
-    vulkan_renderer_destroy(renderer);
+        fprintf(stderr, "Input initialisation failed: %s\n", SDL_GetError());
+        vulkan_renderer_destroy(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
         return 1;
     }
 
     if (!SDL_SetWindowRelativeMouseMode(window, true)) {
-        fprintf(stderr, "Could not enable relative mouse mode: %s\\n", SDL_GetError());
+        fprintf(stderr, "Could not enable relative mouse mode: %s\n", SDL_GetError());
     }
 
     while (running) {
@@ -62,6 +61,7 @@ int main(void)
         SDL_Delay(1);
     }
 
+    wolf_input_destroy(input);
     vulkan_renderer_destroy(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
