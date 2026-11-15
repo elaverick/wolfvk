@@ -1,5 +1,7 @@
 #include "wolfvk/camera.h"
+#include "wolfvk/command_line.h"
 #include "wolfvk/input.h"
+#include "wolfvk/level.h"
 #include "wolfvk/vulkan_renderer.h"
 
 #include <stdio.h>
@@ -26,7 +28,14 @@ static bool update_camera_projection(
     return vulkan_renderer_set_view_projection(renderer, view_projection);
 }
 
-int main(void)
+static void print_usage(const char *program_name)
+{
+    printf("Usage: %s [--level NUMBER] [--help]\\n", program_name);
+    printf("Level numbers are one-based; if omitted, the first level is loaded.\\n");
+    printf("Place MAPHEAD.WL6 and GAMEMAPS.WL6 in the working directory.\\n");
+}
+
+int main(int argc, char *argv[])
 {
     SDL_Window *window;
     SDL_Event event;
@@ -48,7 +57,37 @@ int main(void)
     VulkanRenderer *renderer = NULL;
     WolfInput *input = NULL;
     WolfCamera camera;
+    WolfOptions options;
+    WolfLevel level;
+    char error_message[256];
+    char window_title[128];
     int running = 1;
+
+    if (!wolf_parse_command_line(
+            argc, argv, &options, error_message, sizeof(error_message))) {
+        fprintf(stderr, "Command line error: %s\\n", error_message);
+        print_usage(argv != NULL && argv[0] != NULL ? argv[0] : "wolfvk");
+        return 1;
+    }
+
+    if (options.show_help) {
+        print_usage(argv != NULL && argv[0] != NULL ? argv[0] : "wolfvk");
+        return 0;
+    }
+
+    if (!wolf_level_load(
+            "MAPHEAD.WL6", "GAMEMAPS.WL6", options.level_index,
+            &level, error_message, sizeof(error_message))) {
+        fprintf(stderr, "Could not load level %u: %s\\n",
+            options.level_index + 1u, error_message);
+        return 1;
+    }
+
+    (void)snprintf(
+        window_title, sizeof(window_title), "WolfVK - Level %u: %.16s",
+        options.level_index + 1u, level.name);
+    printf("Loaded level %u: %s (%u x %u).\\n",
+        options.level_index + 1u, level.name, level.width, level.height);
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "SDL video initialisation failed: %s\n", SDL_GetError());
