@@ -9,6 +9,7 @@ void test_queue_selection_rejects_missing_graphics_queue(void);
 void test_queue_selection_rejects_missing_present_queue(void);
 void test_queue_selection_rejects_null_arguments(void);
 void test_queue_selection_ignores_empty_queue_families(void);
+void test_renderer_rejects_window_without_vulkan_support(void);
 
 int main(void)
 {
@@ -22,5 +23,6 @@ int main(void)
     RUN_TEST(test_queue_selection_rejects_missing_present_queue);
     RUN_TEST(test_queue_selection_rejects_null_arguments);
     RUN_TEST(test_queue_selection_ignores_empty_queue_families);
+    RUN_TEST(test_renderer_rejects_window_without_vulkan_support);
     return UNITY_END();
 }
