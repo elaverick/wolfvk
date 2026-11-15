@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
     if (!build_scene_geometry(
             &level, environment_quads, &scene_quads, &scene_quad_count,
             &spawn_x, &spawn_y)) {
-        fprintf(stderr, "Could not build level geometry or find an empty spawn tile.\n");
+        fprintf(stderr, "Level geometry initialisation failed; see the diagnostic above.\n");
         return 1;
     }
 
