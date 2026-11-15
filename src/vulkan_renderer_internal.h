@@ -35,6 +35,14 @@ struct VulkanRenderer {
     bool framebuffer_resized;
 };
 
+bool vulkan_renderer_choose_surface_format(
+    const VkSurfaceFormatKHR *available_formats,
+    uint32_t format_count,
+    VkSurfaceFormatKHR *chosen_format);
+VkPresentModeKHR vulkan_renderer_choose_present_mode(
+    const VkPresentModeKHR *available_modes,
+    uint32_t mode_count);
+
 bool vulkan_renderer_frame_resources_create(VulkanRenderer *renderer);
 void vulkan_renderer_frame_resources_destroy(VulkanRenderer *renderer);
 bool vulkan_renderer_frame_resources_recreate(VulkanRenderer *renderer);
