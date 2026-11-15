@@ -2,9 +2,12 @@
 #include "wolfvk/command_line.h"
 #include "wolfvk/input.h"
 #include "wolfvk/level.h"
+#include "wolfvk/level_geometry.h"
 #include "wolfvk/vulkan_renderer.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 static bool update_camera_projection(
     SDL_Window *window,
@@ -35,6 +38,52 @@ static void print_usage(const char *program_name)
     printf("Place MAPHEAD.WL6 and GAMEMAPS.WL6 in the working directory.\n");
 }
 
+static bool build_scene_geometry(
+    const WolfLevel *level,
+    const VulkanQuad environment_quads[2],
+    VulkanQuad **scene_quads,
+    uint32_t *scene_quad_count,
+    uint16_t *spawn_x,
+    uint16_t *spawn_y)
+{
+    VulkanQuad *wall_quads = NULL;
+    uint32_t wall_quad_count = 0u;
+    VulkanQuad *combined_quads;
+    uint32_t combined_quad_count;
+
+    if (scene_quads == NULL || scene_quad_count == NULL ||
+        spawn_x == NULL || spawn_y == NULL ||
+        !wolf_level_build_wall_quads(level, &wall_quads, &wall_quad_count)) {
+        return false;
+    }
+
+    if (!wolf_level_find_open_tile(level, spawn_x, spawn_y) ||
+        wall_quad_count > UINT32_MAX - 2u) {
+        free(wall_quads);
+        return false;
+    }
+
+    combined_quad_count = wall_quad_count + 2u;
+    combined_quads = malloc((size_t)combined_quad_count * sizeof(VulkanQuad));
+    if (combined_quads == NULL) {
+        free(wall_quads);
+        return false;
+    }
+
+    combined_quads[0] = environment_quads[0];
+    combined_quads[1] = environment_quads[1];
+    if (wall_quad_count > 0u) {
+        memcpy(
+            combined_quads + 2u, wall_quads,
+            (size_t)wall_quad_count * sizeof(VulkanQuad));
+    }
+
+    free(wall_quads);
+    *scene_quads = combined_quads;
+    *scene_quad_count = combined_quad_count;
+    return true;
+}
+
 int main(int argc, char *argv[])
 {
     SDL_Window *window;
@@ -59,6 +108,10 @@ int main(int argc, char *argv[])
     WolfCamera camera;
     WolfOptions options;
     WolfLevel level;
+    VulkanQuad *scene_quads = NULL;
+    uint32_t scene_quad_count = 0u;
+    uint16_t spawn_x = 0u;
+    uint16_t spawn_y = 0u;
     char error_message[256];
     char window_title[128];
     int running = 1;
@@ -83,6 +136,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if (!build_scene_geometry(
+            &level, environment_quads, &scene_quads, &scene_quad_count,
+            &spawn_x, &spawn_y)) {
+        fprintf(stderr, "Could not build level geometry or find an empty spawn tile.\n");
+        return 1;
+    }
+
     (void)snprintf(
         window_title, sizeof(window_title), "WolfVK - Level %u: %.16s",
         options.level_index + 1u, level.name);
@@ -92,6 +152,7 @@ int main(int argc, char *argv[])
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "SDL video initialisation failed: %s\n", SDL_GetError());
+        free(scene_quads);
         return 1;
     }
 
@@ -99,35 +160,43 @@ int main(int argc, char *argv[])
         window_title, 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
     if (window == NULL) {
         fprintf(stderr, "SDL Vulkan window creation failed: %s\n", SDL_GetError());
+        free(scene_quads);
         SDL_Quit();
         return 1;
     }
 
     if (!vulkan_renderer_create(window, &renderer)) {
         fprintf(stderr, "Vulkan renderer initialisation failed.\n");
+        free(scene_quads);
         SDL_DestroyWindow(window);
         SDL_Quit();
         return 1;
     }
 
     wolf_camera_initialize(&camera);
+    camera.position[0] =
+        -(float)level.width * 0.5f + (float)spawn_x + 0.5f;
+    camera.position[2] =
+        -(float)level.height * 0.5f + (float)spawn_y + 0.5f;
     if (!update_camera_projection(window, renderer, &camera)) {
         fprintf(stderr, "Could not initialise the camera projection.\n");
+        free(scene_quads);
         vulkan_renderer_destroy(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
         return 1;
     }
 
-    if (!vulkan_renderer_set_quads(
-            renderer, environment_quads,
-            (uint32_t)(sizeof(environment_quads) / sizeof(environment_quads[0])))) {
-        fprintf(stderr, "Could not upload floor and roof geometry.\n");
+    if (!vulkan_renderer_set_quads(renderer, scene_quads, scene_quad_count)) {
+        fprintf(stderr, "Could not upload level geometry.\n");
+        free(scene_quads);
         vulkan_renderer_destroy(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
         return 1;
     }
+    free(scene_quads);
+    scene_quads = NULL;
 
     input = wolf_input_create();
     if (input == NULL) {
