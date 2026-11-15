@@ -2,6 +2,7 @@
 #define WOLfVK_VULKAN_RENDERER_H
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 #include <vulkan/vulkan.h>
 
 #include <stdbool.h>
