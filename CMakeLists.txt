@@ -104,6 +104,7 @@ if(BUILD_TESTING)
         src/vulkan_renderer.c
         src/vulkan_renderer_frame.c
     )
+    add_dependencies(wolfvk_tests wolfvk_shaders)
     target_include_directories(wolfvk_tests PRIVATE include src)
     target_link_libraries(wolfvk_tests PRIVATE SDL3::SDL3 Vulkan::Vulkan unity)
     add_custom_command(TARGET wolfvk_tests POST_BUILD
