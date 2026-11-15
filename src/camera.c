@@ -94,6 +94,7 @@ bool wolf_camera_build_view_projection(
         return false;
     }
 
+    /* Build an orthonormal camera basis; yaw zero faces down negative Z. */
     pitch_cosine = cosf(camera->pitch_radians);
     forward[0] = sinf(camera->yaw_radians) * pitch_cosine;
     forward[1] = sinf(camera->pitch_radians);
@@ -121,6 +122,7 @@ bool wolf_camera_build_view_projection(
     view[14] = vector_dot(forward, camera->position);
     view[15] = 1.0f;
 
+    /* Vulkan clip space uses a 0..1 depth range and a downward framebuffer Y axis. */
     projection_scale = 1.0f / tanf(camera->vertical_fov_radians * 0.5f);
     projection[0] = projection_scale / aspect_ratio;
     projection[5] = -projection_scale;
