@@ -10,9 +10,9 @@ Development follows the ordered, approval-gated steps in [roadmap.md](roadmap.md
 
 The player can move with **WASD** and look with the mouse. Movement is relative to camera yaw, diagonal movement is normalised, and the player is kept out of wall tiles with sliding collision resolution. Relative mouse capture is released when the window loses focus and restored when it regains focus. Press **Escape** to quit.
 
-The level loader expects `MAPHEAD.WL6` and `GAMEMAPS.WL6` in the working directory. Those original game files are not included in this repository. The uploaded retail WL6 files have been inspected: all 60 playable maps decode as 64×64 maps, each with exactly one valid player-start marker on a floor cell. Level 1 starts at tile (29, 57), facing east. This data inspection validates the map structure and spawn interpretation; the live Vulkan rendering still needs visual confirmation.
+The level loader expects `MAPHEAD.WL6` and `GAMEMAPS.WL6` in the working directory. Those original game files are not included in this repository or demo package; copy them from your own WL6 installation beside `wolfvk.exe`. The user-supplied retail WL6 files were inspected: all 60 playable maps decode as 64×64 maps, each with exactly one valid player-start marker on a floor cell. Level 1 starts at tile (29, 57), facing east. The player spawn uses this original marker and direction. The actual untextured Windows demo is packaged and ready for visual review.
 
-The approval gate before texture work is the next milestone: build and present a Windows demo for review. Textures must not be added until that demo has been confirmed.
+**Demo review:** the Windows x64 pre-texture demo has been built, passed the complete Windows CI test suite, and is available from the [latest successful Actions run](https://github.com/elaverick/WolfVK/actions/runs/43726924265) under **Artifacts** (`WolfVK-demo-windows-x64`). A copy is also provided with this handoff. Please review the untextured level and movement. Original texture loading and integer scaling remain blocked until you explicitly approve this demo.
 
 ## Automated tests
 
@@ -32,7 +32,7 @@ CTest runs the suite in Windows CI.
 
 | Feature | Status |
 |---|---|
-| Windows x64 build | Verified by GitHub Actions |
+| Windows x64 build | Passed on commit `9e76584`; 61/61 tests passed |
 | SDL3 window and input | Implemented and tested |
 | Vulkan renderer and swapchain | Implemented and tested in Windows CI |
 | Indexed quad rendering and depth testing | Implemented and tested |
@@ -40,8 +40,8 @@ CTest runs the suite in Windows CI.
 | Original WL6 map decoding and level selection | Implemented; 60 real WL6 maps inspected and synthetic original-format fixtures tested |
 | Untextured exposed wall faces | Implemented; level 1 geometry data yields 1,016 exposed wall faces; visual check outstanding |
 | WASD movement and mouse-look | Implemented; player collision tests pass |
-| Pre-texture demo | Next approval-gated milestone |
-| Original textures and integer scaling | Not started; wait for demo approval |
+| Pre-texture demo | Packaged and available for visual review; awaiting approval |
+| Original textures and integer scaling | Not started; require explicit demo approval |
 
 [![Windows build and tests](https://github.com/elaverick/WolfVK/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/elaverick/WolfVK/actions/workflows/build.yml)
 
