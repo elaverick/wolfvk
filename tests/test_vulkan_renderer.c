@@ -153,3 +153,24 @@ void test_present_mode_falls_back_to_fifo(void)
         VK_PRESENT_MODE_FIFO_KHR,
         vulkan_renderer_choose_present_mode(modes, 2));
 }
+
+void test_surface_format_handles_undefined_single_format(void)
+{
+    const VkSurfaceFormatKHR formats[] = {
+        {.format = VK_FORMAT_UNDEFINED, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}
+    };
+    VkSurfaceFormatKHR selected = {0};
+
+    TEST_ASSERT_TRUE(vulkan_renderer_choose_surface_format(formats, 1, &selected));
+    TEST_ASSERT_EQUAL_INT(VK_FORMAT_B8G8R8A8_SRGB, selected.format);
+}
+
+void test_swapchain_selection_handles_empty_lists(void)
+{
+    VkSurfaceFormatKHR selected = {0};
+
+    TEST_ASSERT_FALSE(vulkan_renderer_choose_surface_format(NULL, 0, &selected));
+    TEST_ASSERT_EQUAL_INT(
+        VK_PRESENT_MODE_FIFO_KHR,
+        vulkan_renderer_choose_present_mode(NULL, 0));
+}
