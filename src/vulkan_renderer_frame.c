@@ -636,9 +636,45 @@ static bool create_sync_objects(VulkanRenderer *renderer)
     return true;
 }
 
+static bool create_render_finished_semaphores(VulkanRenderer *renderer)
+{
+    uint32_t image_index;
+    VkSemaphoreCreateInfo semaphore_info = {0};
+
+    renderer->render_finished_semaphores = calloc(
+        renderer->swapchain_image_count, sizeof(*renderer->render_finished_semaphores));
+    if (renderer->render_finished_semaphores == NULL) {
+        return false;
+    }
+
+    semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    for (image_index = 0; image_index < renderer->swapchain_image_count; ++image_index) {
+        VkResult result = vkCreateSemaphore(
+            renderer->device, &semaphore_info, NULL,
+            &renderer->render_finished_semaphores[image_index]);
+        if (result != VK_SUCCESS) {
+            fprintf(stderr, "Vulkan render-finished semaphore creation failed (%d).\\n", result);
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static void destroy_swapchain_resources(VulkanRenderer *renderer)
 {
     uint32_t image_index;
+
+    if (renderer->render_finished_semaphores != NULL) {
+        for (image_index = 0; image_index < renderer->swapchain_image_count; ++image_index) {
+            if (renderer->render_finished_semaphores[image_index] != VK_NULL_HANDLE) {
+                vkDestroySemaphore(
+                    renderer->device, renderer->render_finished_semaphores[image_index], NULL);
+            }
+        }
+    }
+    free(renderer->render_finished_semaphores);
+    renderer->render_finished_semaphores = NULL;
 
     if (renderer->command_buffers != NULL && renderer->command_pool != VK_NULL_HANDLE) {
         vkFreeCommandBuffers(
@@ -700,7 +736,8 @@ bool vulkan_renderer_frame_resources_create(VulkanRenderer *renderer)
         !create_framebuffers(renderer) ||
         !create_command_pool(renderer) ||
         !allocate_command_buffers(renderer) ||
-        !create_sync_objects(renderer)) {
+        !create_sync_objects(renderer) ||
+        !create_render_finished_semaphores(renderer)) {
         return false;
     }
 
@@ -722,10 +759,6 @@ void vulkan_renderer_frame_resources_destroy(VulkanRenderer *renderer)
     if (renderer->image_available_semaphore != VK_NULL_HANDLE) {
         vkDestroySemaphore(renderer->device, renderer->image_available_semaphore, NULL);
         renderer->image_available_semaphore = VK_NULL_HANDLE;
-    }
-    if (renderer->render_finished_semaphore != VK_NULL_HANDLE) {
-        vkDestroySemaphore(renderer->device, renderer->render_finished_semaphore, NULL);
-        renderer->render_finished_semaphore = VK_NULL_HANDLE;
     }
     if (renderer->in_flight_fence != VK_NULL_HANDLE) {
         vkDestroyFence(renderer->device, renderer->in_flight_fence, NULL);
@@ -754,7 +787,8 @@ bool vulkan_renderer_frame_resources_recreate(VulkanRenderer *renderer)
         !create_render_pass(renderer) ||
         !create_graphics_pipeline(renderer) ||
         !create_framebuffers(renderer) ||
-        !allocate_command_buffers(renderer)) {
+        !allocate_command_buffers(renderer) ||
+        !create_render_finished_semaphores(renderer)) {
         return false;
     }
 
@@ -859,7 +893,7 @@ bool vulkan_renderer_frame_resources_draw(VulkanRenderer *renderer)
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &command_buffer;
     submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &renderer->render_finished_semaphore;
+    submit_info.pSignalSemaphores = &renderer->render_finished_semaphores[image_index];
 
     result = vkQueueSubmit(
         renderer->graphics_queue, 1, &submit_info, renderer->in_flight_fence);
@@ -870,7 +904,7 @@ bool vulkan_renderer_frame_resources_draw(VulkanRenderer *renderer)
 
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &renderer->render_finished_semaphore;
+    present_info.pWaitSemaphores = &renderer->render_finished_semaphores[image_index];
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &renderer->swapchain;
     present_info.pImageIndices = &image_index;
