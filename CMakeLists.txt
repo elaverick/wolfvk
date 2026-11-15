@@ -32,6 +32,7 @@ endif()
 
 add_executable(wolfvk
     src/main.c
+    src/camera.c
     src/input.c
     src/vulkan_renderer_geometry.c
     src/vulkan_renderer.c
@@ -39,6 +40,9 @@ add_executable(wolfvk
 )
 target_include_directories(wolfvk PRIVATE include)
 target_link_libraries(wolfvk PRIVATE SDL3::SDL3 Vulkan::Vulkan)
+if(NOT MSVC)
+    target_link_libraries(wolfvk PRIVATE m)
+endif()
 
 set(SHADER_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
 set(VERTEX_SHADER_SPIRV "${SHADER_OUTPUT_DIR}/triangle.vert.spv")
@@ -102,8 +106,10 @@ if(BUILD_TESTING)
     add_executable(wolfvk_tests
         tests/test_main.c
         tests/test_window.c
+        tests/test_camera.c
         tests/test_input.c
         tests/test_vulkan_renderer.c
+        src/camera.c
         src/input.c
         src/vulkan_renderer_geometry.c
         src/vulkan_renderer.c
@@ -112,6 +118,9 @@ if(BUILD_TESTING)
     add_dependencies(wolfvk_tests wolfvk_shaders)
     target_include_directories(wolfvk_tests PRIVATE include src)
     target_link_libraries(wolfvk_tests PRIVATE SDL3::SDL3 Vulkan::Vulkan unity)
+    if(NOT MSVC)
+        target_link_libraries(wolfvk_tests PRIVATE m)
+    endif()
     add_custom_command(TARGET wolfvk_tests POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:wolfvk_tests>/shaders"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
