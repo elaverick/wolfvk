@@ -1045,6 +1045,11 @@ static bool record_command_buffer(
     VkDeviceSize vertex_buffer_offset = 0;
     VkResult result;
 
+    if (renderer->wall_texture_descriptor_set == VK_NULL_HANDLE) {
+        fprintf(stderr, "Wall textures must be uploaded before drawing the level.\\n");
+        return false;
+    }
+
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     result = vkBeginCommandBuffer(command_buffer, &begin_info);
     if (result != VK_SUCCESS) {
@@ -1070,11 +1075,6 @@ static bool record_command_buffer(
 
     vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->graphics_pipeline);
-    if (renderer->wall_texture_descriptor_set == VK_NULL_HANDLE) {
-        fprintf(stderr, "Wall textures must be uploaded before drawing the level.\\n");
-        vkCmdEndRenderPass(command_buffer);
-        return false;
-    }
     vkCmdBindDescriptorSets(
         command_buffer,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
