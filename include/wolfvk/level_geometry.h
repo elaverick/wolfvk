@@ -7,9 +7,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* Build exposed wall faces only; callers own and must free the returned quad array. */
+/* Build exposed, textured wall faces; callers own and must free the returned quad array. */
 bool wolf_level_build_wall_quads(
     const WolfLevel *level,
+    uint16_t texture_page_count,
     VulkanQuad **quads,
     uint32_t *quad_count);
 
