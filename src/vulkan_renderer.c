@@ -299,3 +299,10 @@ bool vulkan_renderer_draw_frame(VulkanRenderer *renderer)
     }
     return vulkan_renderer_frame_resources_draw(renderer);
 }
+
+void vulkan_renderer_notify_resize(VulkanRenderer *renderer)
+{
+    if (renderer != NULL) {
+        renderer->framebuffer_resized = true;
+    }
+}
