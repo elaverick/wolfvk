@@ -84,6 +84,7 @@ bool wolf_level_is_omitted_door_cell(
         wolf_level_is_secret_door_cell(level, tile_x, tile_y);
 }
 
+/* Keep binary asset access portable while using the secure CRT on Windows. */
 static FILE *open_binary_file(const char *path)
 {
     FILE *file = NULL;
