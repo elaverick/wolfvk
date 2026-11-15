@@ -212,6 +212,36 @@ void test_level_geometry_keeps_stationary_secret_walls_in_static_geometry(void)
     TEST_ASSERT_NOT_NULL(quads);
 }
 
+void test_level_geometry_uses_original_door_side_pages_on_secret_wall_faces(void)
+{
+    WolfLevel level = {0};
+    VulkanQuad *quads = NULL;
+    uint32_t quad_count = 0u;
+    const size_t wall_index = 2u * WOLF_LEVEL_PLANE_WIDTH + 2u;
+
+    level.width = 5u;
+    level.height = 5u;
+    level.wall_tiles[wall_index] = 7u;
+    level.object_tiles[wall_index] = WOLF_LEVEL_INFO_PUSHWALL_MARKER;
+
+    /* A vertical door to the north and horizontal door to the west mark this wall's side faces. */
+    level.wall_tiles[1u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 90u;
+    level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 1u] = 91u;
+
+    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, 98u, &quads, &quad_count));
+    TEST_ASSERT_EQUAL_UINT32(4u, quad_count);
+
+    /* North/south faces: DOORWALL+2 beside a vertical door, ordinary page otherwise. */
+    TEST_ASSERT_EQUAL_UINT32(92u, quads[0].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(12u, quads[1].vertices[0].texture_layer);
+
+    /* West/east faces: DOORWALL+3 beside a horizontal door, ordinary page otherwise. */
+    TEST_ASSERT_EQUAL_UINT32(93u, quads[2].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(13u, quads[3].vertices[0].texture_layer);
+
+    free(quads);
+}
+
 void test_level_geometry_can_choose_a_door_as_fallback_spawn_cell(void)
 {
     WolfLevel level = {0};

@@ -24,6 +24,36 @@ static bool is_open_space_for_geometry(const WolfLevel *level, int x, int y)
         wolf_level_is_omitted_door_cell(level, x, y);
 }
 
+/*
+ * SpawnDoor marks only the wall cells along its opening axis with bit 0x40.
+ * The original raycaster substitutes DOORWALL+2 on horizontal faces beside
+ * vertical doors and DOORWALL+3 on vertical faces beside horizontal doors.
+ * Reconstruct that runtime marking from the immutable decoded map.
+ */
+static bool adjacent_door_side_page(
+    const WolfLevel *level,
+    int adjacent_x,
+    int adjacent_y,
+    bool horizontal_face,
+    uint16_t texture_page_count,
+    uint16_t *page)
+{
+    uint16_t door_tile = get_wall_tile(level, adjacent_x, adjacent_y);
+    bool vertical_door;
+
+    if (!wolf_level_is_door_tile(door_tile)) {
+        return false;
+    }
+
+    vertical_door = (door_tile & 1u) == 0u;
+    if (vertical_door != horizontal_face || texture_page_count < 8u) {
+        return false;
+    }
+
+    *page = (uint16_t)(texture_page_count - 8u + (horizontal_face ? 2u : 3u));
+    return true;
+}
+
 /* Store one textured vertex; colour remains a subtle face-lighting multiplier. */
 static void set_vertex(
     VulkanVertex *vertex,
@@ -151,52 +181,64 @@ bool wolf_level_build_wall_quads(
 
             /* Only emit faces bordering open space; shared wall faces can never be seen. */
             if (is_open_space_for_geometry(level, x, y - 1)) {
+                uint16_t face_page = horizontal_page;
                 const float face[4][3] = {
                     {x0, 0.0f, z0}, {x1, 0.0f, z0},
                     {x1, WOLF_WORLD_WALL_HEIGHT, z0}, {x0, WOLF_WORLD_WALL_HEIGHT, z0}
                 };
+                (void)adjacent_door_side_page(
+                    level, x, y - 1, true, texture_page_count, &face_page);
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count,
-                        face, wall_uvs, horizontal_page, 0.82f)) {
+                        face, wall_uvs, face_page, 0.82f)) {
                     free(generated_quads);
                     return false;
                 }
             }
 
             if (is_open_space_for_geometry(level, x, y + 1)) {
+                uint16_t face_page = horizontal_page;
                 const float face[4][3] = {
                     {x1, 0.0f, z1}, {x0, 0.0f, z1},
                     {x0, WOLF_WORLD_WALL_HEIGHT, z1}, {x1, WOLF_WORLD_WALL_HEIGHT, z1}
                 };
+                (void)adjacent_door_side_page(
+                    level, x, y + 1, true, texture_page_count, &face_page);
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count,
-                        face, wall_uvs, horizontal_page, 0.95f)) {
+                        face, wall_uvs, face_page, 0.95f)) {
                     free(generated_quads);
                     return false;
                 }
             }
 
             if (is_open_space_for_geometry(level, x - 1, y)) {
+                uint16_t face_page = vertical_page;
                 const float face[4][3] = {
                     {x0, 0.0f, z1}, {x0, 0.0f, z0},
                     {x0, WOLF_WORLD_WALL_HEIGHT, z0}, {x0, WOLF_WORLD_WALL_HEIGHT, z1}
                 };
+                (void)adjacent_door_side_page(
+                    level, x - 1, y, false, texture_page_count, &face_page);
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count,
-                        face, wall_uvs, vertical_page, 0.72f)) {
+                        face, wall_uvs, face_page, 0.72f)) {
                     free(generated_quads);
                     return false;
                 }
             }
 
             if (is_open_space_for_geometry(level, x + 1, y)) {
+                uint16_t face_page = vertical_page;
                 const float face[4][3] = {
                     {x1, 0.0f, z0}, {x1, 0.0f, z1},
                     {x1, WOLF_WORLD_WALL_HEIGHT, z1}, {x1, WOLF_WORLD_WALL_HEIGHT, z0}
                 };
+                (void)adjacent_door_side_page(
+                    level, x + 1, y, false, texture_page_count, &face_page);
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count,
-                        face, wall_uvs, vertical_page, 0.88f)) {
+                        face, wall_uvs, face_page, 0.88f)) {
                     free(generated_quads);
                     return false;
                 }

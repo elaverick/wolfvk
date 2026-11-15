@@ -16,18 +16,18 @@ The player can move with **WASD** and look with the mouse. Movement is relative 
 
 The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the working directory. Those original game files are not included in this repository or demo package; copy them from your own WL6 installation. The user-supplied retail map files were inspected: all 60 playable maps decode as 64×64 maps, each with exactly one valid player-start marker on a floor cell. Level 1 starts at tile (29, 57), facing east.
 
-**Textured demo:** the Windows x64 build, the SwiftShader-backed Vulkan renderer test, packaging and artifact upload passed in [Actions run 43740769232](https://github.com/elaverick/WolfVK/actions/runs/43740769232) on the earlier textured-wall milestone. The current door and secret-wall implementation has 94 registered Unity test cases. The latest Windows CI run is [43752002088](https://github.com/elaverick/WolfVK/actions/runs/43752002088) and is pending; its build and test result will supersede the earlier baseline once complete. The `WolfVK-textured-demo-windows-x64` artifact contains `wolfvk.exe`, the compiled shader files, third-party notices and setup instructions. Copy the three original WL6 files above beside the executable before launching it.
+**Textured demo:** the Windows x64 build, the SwiftShader-backed Vulkan renderer test, packaging and artifact upload passed in [Actions run 43740769232](https://github.com/elaverick/WolfVK/actions/runs/43740769232) on the earlier textured-wall milestone. The current door and secret-wall implementation has 95 registered Unity test cases. The latest Windows CI run is [43752002088](https://github.com/elaverick/WolfVK/actions/runs/43752002088) and is pending; its build and test result will supersede the earlier baseline once complete. The `WolfVK-textured-demo-windows-x64` artifact contains `wolfvk.exe`, the compiled shader files, third-party notices and setup instructions. Copy the three original WL6 files above beside the executable before launching it.
 
 ## Automated tests
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It currently registers 94 Unity test cases (including the SwiftShader-backed renderer integration test):
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It currently registers 95 Unity test cases (including the SwiftShader-backed renderer integration test):
 
 - 3 SDL3 window and event tests
 - 4 camera projection tests
 - 11 player movement, mouse-look and collision tests, including door traversal and secret-wall pushing
 - 8 command-line parser tests
 - 10 Carmack/RLEW decoder and level-loader tests
-- 16 wall-geometry and player-start tests, including original wall-page selection and all four face UV directions
+- 17 wall-geometry and player-start tests, including original wall-page selection, door-side textures and all four face UV directions
 - 7 VSWAP page decoder, palette expansion and wall-page mapping tests
 - 4 keyboard, mouse and gamepad input tests
 - 16 world-state tests for doors, keys, secret pushwalls and their original timing/material behaviour
