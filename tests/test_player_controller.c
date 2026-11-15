@@ -25,7 +25,7 @@ static bool create_open_test_world(WolfWorldState *world)
 
     level.width = 5u;
     level.height = 5u;
-    return wolf_world_state_init(world, &world, 98u);
+    return wolf_world_state_init(world, &level, 98u);
 }
 
 void test_player_moves_forward_relative_to_camera(void)
