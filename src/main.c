@@ -1,3 +1,4 @@
+#include "wolfvk/input.h"
 #include "wolfvk/vulkan_renderer.h"
 
 #include <stdio.h>
@@ -7,6 +8,7 @@ int main(void)
     SDL_Window *window;
     SDL_Event event;
     VulkanRenderer *renderer = NULL;
+    WolfInput *input = NULL;
     int running = 1;
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -29,8 +31,24 @@ int main(void)
         return 1;
     }
 
+    input = wolf_input_create();
+    if (input == NULL) {
+        fprintf(stderr, "Input initialisation failed: %s\\n", SDL_GetError());
+        wolf_input_destroy(input);
+    vulkan_renderer_destroy(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
+    if (!SDL_SetWindowRelativeMouseMode(window, true)) {
+        fprintf(stderr, "Could not enable relative mouse mode: %s\\n", SDL_GetError());
+    }
+
     while (running) {
+        wolf_input_begin_frame(input);
         while (SDL_PollEvent(&event)) {
+            wolf_input_handle_event(input, &event);
             if (event.type == SDL_EVENT_QUIT) {
                 running = 0;
             } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
