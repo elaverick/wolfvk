@@ -1046,7 +1046,7 @@ static bool record_command_buffer(
     VkResult result;
 
     if (renderer->wall_texture_descriptor_set == VK_NULL_HANDLE) {
-        fprintf(stderr, "Wall textures must be uploaded before drawing the level.\\n");
+        fprintf(stderr, "Wall textures must be uploaded before drawing the level.\n");
         return false;
     }
 
