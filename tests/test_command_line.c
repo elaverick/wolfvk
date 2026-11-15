@@ -2,6 +2,7 @@
 
 #include "wolfvk/command_line.h"
 
+#include <stdio.h>
 #include <string.h>
 
 void test_command_line_defaults_to_first_level(void)
