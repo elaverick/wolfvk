@@ -475,29 +475,29 @@ void test_world_state_can_push_level_one_secret_wall_from_cleared_ambush_cell(vo
 {
     WolfLevel level = create_test_level();
     WolfWorldState world = {0};
-    float player_x = tile_center_world(3, 5u);
+    float player_x = tile_center_world(1, 5u);
     float player_z = tile_center_world(2, 5u);
 
     level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 1u;
     level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] =
         WOLF_LEVEL_INFO_PUSHWALL_MARKER;
+    /* The cleared AMBUSHTILE cell is the first destination to the east. */
     level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 0u;
-    level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 1u] = 0u;
-    level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 0u] = 1u;
+    level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 4u] = 1u;
 
     TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 98u));
     TEST_ASSERT_FALSE(wolf_world_state_position_overlaps_solid(
         &world, player_x, player_z, 0.2f));
     TEST_ASSERT_TRUE(wolf_world_state_use(
-        &world, player_x, player_z, 4.71238898038f));
+        &world, player_x, player_z, 1.57079632679f));
     TEST_ASSERT_TRUE(world.pushwall.active);
-    TEST_ASSERT_EQUAL_INT8(-1, world.pushwall.direction_x);
+    TEST_ASSERT_EQUAL_INT8(1, world.pushwall.direction_x);
     TEST_ASSERT_EQUAL_INT8(0, world.pushwall.direction_y);
 
     advance_world_ticks(&world, 128.0f, player_x, player_z);
     TEST_ASSERT_FALSE(world.pushwall.active);
     TEST_ASSERT_EQUAL_UINT16(
-        1u, world.level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 1u]);
+        1u, world.level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u]);
     TEST_ASSERT_EQUAL_UINT16(
         0u, world.level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u]);
 }
