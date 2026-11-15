@@ -75,6 +75,45 @@ void test_level_door_tile_classifier_matches_retail_range(void)
     TEST_ASSERT_FALSE(wolf_level_is_door_tile(WOLF_LEVEL_AREA_TILE_FIRST));
 }
 
+void test_level_geometry_keeps_info_plane_pushwalls_as_solid_walls(void)
+{
+    WolfLevel level = {0};
+    VulkanQuad *quads = NULL;
+    uint32_t quad_count = 0u;
+    size_t wall_index = WOLF_LEVEL_PLANE_WIDTH + 1u;
+
+    level.width = 3u;
+    level.height = 3u;
+    level.wall_tiles[wall_index] = 7u;
+    level.object_tiles[wall_index] = WOLF_LEVEL_INFO_PUSHWALL_MARKER;
+
+    /* A secret pushwall is still an ordinary-looking wall until push interaction exists. */
+    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, &quads, &quad_count));
+    TEST_ASSERT_EQUAL_UINT32(4u, quad_count);
+
+    free(quads);
+}
+
+void test_level_geometry_can_choose_a_door_as_fallback_spawn_cell(void)
+{
+    WolfLevel level = {0};
+    uint16_t tile_x = UINT16_MAX;
+    uint16_t tile_y = UINT16_MAX;
+
+    level.width = 3u;
+    level.height = 3u;
+    for (uint16_t y = 0u; y < level.height; ++y) {
+        for (uint16_t x = 0u; x < level.width; ++x) {
+            level.wall_tiles[(size_t)y * WOLF_LEVEL_PLANE_WIDTH + x] = 1u;
+        }
+    }
+    level.wall_tiles[WOLF_LEVEL_PLANE_WIDTH + 1u] = WOLF_LEVEL_DOOR_TILE_FIRST;
+
+    TEST_ASSERT_TRUE(wolf_level_find_open_tile(&level, &tile_x, &tile_y));
+    TEST_ASSERT_EQUAL_UINT16(1u, tile_x);
+    TEST_ASSERT_EQUAL_UINT16(1u, tile_y);
+}
+
 void test_level_geometry_returns_empty_array_for_empty_map(void)
 {
     WolfLevel level = {0};
