@@ -21,6 +21,7 @@ static const WallColour wall_palette[] = {
     {0.35f, 0.43f, 0.52f}
 };
 
+/* Out-of-map neighbours are empty so perimeter walls expose their outside faces. */
 static uint16_t get_wall_tile(const WolfLevel *level, int x, int y)
 {
     if (x < 0 || y < 0 || x >= level->width || y >= level->height) {
@@ -30,6 +31,18 @@ static uint16_t get_wall_tile(const WolfLevel *level, int x, int y)
     return level->wall_tiles[(size_t)y * WOLF_LEVEL_PLANE_WIDTH + (size_t)x];
 }
 
+/*
+ * Doors are not part of this milestone. Treat their cells as openings in the
+ * static wall mesh rather than drawing a closed panel that the player cannot use.
+ */
+static bool is_open_space_for_geometry(const WolfLevel *level, int x, int y)
+{
+    uint16_t tile = get_wall_tile(level, x, y);
+
+    return tile == 0u || wolf_level_is_door_tile(tile);
+}
+
+/* Convert one world-space corner into the renderer's interleaved vertex format. */
 static void set_vertex(
     VulkanVertex *vertex,
     float x,
@@ -46,6 +59,7 @@ static void set_vertex(
     vertex->colour[2] = colour->blue * shade;
 }
 
+/* Append a consistently shaded wall quad without writing beyond the precomputed capacity. */
 static bool append_wall_face(
     VulkanQuad *quads,
     size_t capacity,
@@ -72,6 +86,7 @@ static bool append_wall_face(
     return true;
 }
 
+/* Build only visible wall boundaries; open cells and unimplemented doors remain traversable. */
 bool wolf_level_build_wall_quads(
     const WolfLevel *level,
     VulkanQuad **quads,
@@ -110,7 +125,7 @@ bool wolf_level_build_wall_quads(
             float z1;
             const WallColour *colour;
 
-            if (tile == 0u) {
+            if (tile == 0u || wolf_level_is_door_tile(tile)) {
                 continue;
             }
 
@@ -121,7 +136,7 @@ bool wolf_level_build_wall_quads(
             colour = &wall_palette[tile % (sizeof(wall_palette) / sizeof(wall_palette[0]))];
 
             /* Only emit faces bordering empty space; shared wall faces can never be seen. */
-            if (get_wall_tile(level, x, y - 1) == 0u) {
+            if (is_open_space_for_geometry(level, x, y - 1)) {
                 const float face[4][3] = {
                     {x0, 0.0f, z0}, {x1, 0.0f, z0},
                     {x1, WOLF_WALL_HEIGHT, z0}, {x0, WOLF_WALL_HEIGHT, z0}
@@ -133,7 +148,7 @@ bool wolf_level_build_wall_quads(
                 }
             }
 
-            if (get_wall_tile(level, x, y + 1) == 0u) {
+            if (is_open_space_for_geometry(level, x, y + 1)) {
                 const float face[4][3] = {
                     {x1, 0.0f, z1}, {x0, 0.0f, z1},
                     {x0, WOLF_WALL_HEIGHT, z1}, {x1, WOLF_WALL_HEIGHT, z1}
@@ -145,7 +160,7 @@ bool wolf_level_build_wall_quads(
                 }
             }
 
-            if (get_wall_tile(level, x - 1, y) == 0u) {
+            if (is_open_space_for_geometry(level, x - 1, y)) {
                 const float face[4][3] = {
                     {x0, 0.0f, z1}, {x0, 0.0f, z0},
                     {x0, WOLF_WALL_HEIGHT, z0}, {x0, WOLF_WALL_HEIGHT, z1}
@@ -157,7 +172,7 @@ bool wolf_level_build_wall_quads(
                 }
             }
 
-            if (get_wall_tile(level, x + 1, y) == 0u) {
+            if (is_open_space_for_geometry(level, x + 1, y)) {
                 const float face[4][3] = {
                     {x1, 0.0f, z0}, {x1, 0.0f, z1},
                     {x1, WOLF_WALL_HEIGHT, z1}, {x1, WOLF_WALL_HEIGHT, z0}
@@ -181,6 +196,7 @@ bool wolf_level_build_wall_quads(
     return true;
 }
 
+/* Preserve the start tile and compass direction encoded by the original info plane. */
 bool wolf_level_find_player_start(const WolfLevel *level, WolfPlayerStart *player_start)
 {
     /* The original engine maps info-plane markers 19..22 to four compass directions. */
@@ -221,6 +237,7 @@ bool wolf_level_find_player_start(const WolfLevel *level, WolfPlayerStart *playe
     return false;
 }
 
+/* Choose a stable fallback spawn near the map centre when no original start marker exists. */
 bool wolf_level_find_open_tile(
     const WolfLevel *level,
     uint16_t *tile_x,
