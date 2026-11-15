@@ -76,7 +76,7 @@ void test_level_geometry_uses_original_vswap_orientation_pages(void)
     TEST_ASSERT_EQUAL_UINT32(1u, quads[0].vertices[0].use_texture);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[0].vertices[0].texcoord[0]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, quads[0].vertices[0].texcoord[1]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, quads[0].vertices[2].texcoord[1]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[0].vertices[2].texcoord[1]);
 
     free(quads);
 }
