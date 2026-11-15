@@ -37,16 +37,33 @@ else()
 endif()
 
 if(BUILD_TESTING)
-    add_executable(wolfvk_window_smoke
-        tests/window_smoke.c
+    # Unity is a small, established C unit-testing framework. Keeping it as a
+    # pinned source dependency makes the test runner reproducible in CI.
+    FetchContent_Declare(
+        Unity
+        GIT_REPOSITORY https://github.com/ThrowTheSwitch/Unity.git
+        GIT_TAG v2.6.1
+        GIT_SHALLOW TRUE
     )
-    target_link_libraries(wolfvk_window_smoke PRIVATE SDL3::SDL3)
-    if(MSVC)
-        target_compile_options(wolfvk_window_smoke PRIVATE /W4 /WX)
-    else()
-        target_compile_options(wolfvk_window_smoke PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    FetchContent_GetProperties(Unity)
+    if(NOT unity_POPULATED)
+        FetchContent_Populate(Unity)
     endif()
 
-    add_test(NAME sdl3_window_creation COMMAND wolfvk_window_smoke)
-    set_tests_properties(sdl3_window_creation PROPERTIES TIMEOUT 30)
+    add_library(unity STATIC ${unity_SOURCE_DIR}/src/unity.c)
+    target_include_directories(unity PUBLIC ${unity_SOURCE_DIR}/src)
+
+    add_executable(wolfvk_tests
+        tests/test_main.c
+        tests/test_window.c
+    )
+    target_link_libraries(wolfvk_tests PRIVATE SDL3::SDL3 unity)
+    if(MSVC)
+        target_compile_options(wolfvk_tests PRIVATE /W4 /WX)
+    else()
+        target_compile_options(wolfvk_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    endif()
+
+    add_test(NAME wolfvk_unit_tests COMMAND wolfvk_tests)
+    set_tests_properties(wolfvk_unit_tests PROPERTIES TIMEOUT 30)
 endif()
