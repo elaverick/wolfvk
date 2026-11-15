@@ -12,6 +12,8 @@ void test_player_normalizes_diagonal_movement_speed(void);
 void test_player_mouse_motion_changes_yaw_and_pitch(void);
 void test_player_cannot_walk_through_wall_tiles(void);
 void test_player_slides_along_wall_when_forward_motion_is_blocked(void);
+void test_player_forward_direction_tracks_camera_yaw(void);
+void test_player_mouse_look_clamps_pitch(void);
 void test_player_rejects_invalid_state_and_frame_time(void);
 void test_carmack_decoder_expands_literal_words(void);
 void test_carmack_decoder_expands_near_and_far_references(void);
@@ -70,6 +72,8 @@ int main(void)
     RUN_TEST(test_player_mouse_motion_changes_yaw_and_pitch);
     RUN_TEST(test_player_cannot_walk_through_wall_tiles);
     RUN_TEST(test_player_slides_along_wall_when_forward_motion_is_blocked);
+    RUN_TEST(test_player_forward_direction_tracks_camera_yaw);
+    RUN_TEST(test_player_mouse_look_clamps_pitch);
     RUN_TEST(test_player_rejects_invalid_state_and_frame_time);
     RUN_TEST(test_carmack_decoder_expands_literal_words);
     RUN_TEST(test_carmack_decoder_expands_near_and_far_references);
