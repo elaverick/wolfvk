@@ -88,8 +88,8 @@ static bool build_scene_geometry(
                     size_t tile_index =
                         (size_t)tile_y * WOLF_LEVEL_PLANE_WIDTH + tile_x;
 
-                    if (level->wall_tiles[tile_index] == 0u ||
-                        wolf_level_is_omitted_door_cell(level, tile_x, tile_y)) {
+                    if (world->level.wall_tiles[tile_index] == 0u ||
+                        wolf_level_is_omitted_door_cell(&world->level, tile_x, tile_y)) {
                         ++open_tile_count;
                     } else {
                         ++solid_tile_count;
@@ -176,9 +176,13 @@ int main(int argc, char *argv[])
     WolfCamera camera;
     WolfOptions options;
     WolfLevel level;
+    WolfWorldState world = {0};
     WolfWallTextures wall_textures = {0};
     VulkanQuad *scene_quads = NULL;
     uint32_t scene_quad_count = 0u;
+    uint32_t base_quad_count = 0u;
+    uint32_t dynamic_quad_count = 0u;
+    uint32_t geometry_revision = 0u;
     WolfPlayerStart player_start = {0};
     char error_message[256];
     char window_title[128];
