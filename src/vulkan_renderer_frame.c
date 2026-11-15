@@ -15,6 +15,12 @@ bool vulkan_renderer_choose_surface_format(
         return false;
     }
 
+    if (format_count == 1u && available_formats[0].format == VK_FORMAT_UNDEFINED) {
+        chosen_format->format = VK_FORMAT_B8G8R8A8_SRGB;
+        chosen_format->colorSpace = available_formats[0].colorSpace;
+        return true;
+    }
+
     for (format_index = 0; format_index < format_count; ++format_index) {
         if (available_formats[format_index].format == VK_FORMAT_B8G8R8A8_SRGB &&
             available_formats[format_index].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
@@ -32,6 +38,10 @@ VkPresentModeKHR vulkan_renderer_choose_present_mode(
     uint32_t mode_count)
 {
     uint32_t mode_index;
+
+    if (available_modes == NULL || mode_count == 0u) {
+        return VK_PRESENT_MODE_FIFO_KHR;
+    }
 
     for (mode_index = 0; mode_index < mode_count; ++mode_index) {
         if (available_modes[mode_index] == VK_PRESENT_MODE_MAILBOX_KHR) {
