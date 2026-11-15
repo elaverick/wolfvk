@@ -197,3 +197,16 @@ void test_renderer_creates_swapchain_and_presents_triangle(void)
     TEST_ASSERT_TRUE_MESSAGE(renderer_created, "Vulkan renderer initialisation failed");
     TEST_ASSERT_TRUE_MESSAGE(frame_rendered, "Vulkan frame submission or presentation failed");
 }
+
+void test_device_scoring_prefers_discrete_gpus(void)
+{
+    TEST_ASSERT_TRUE(
+        vulkan_renderer_score_device_type(VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) >
+        vulkan_renderer_score_device_type(VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU));
+    TEST_ASSERT_TRUE(
+        vulkan_renderer_score_device_type(VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) >
+        vulkan_renderer_score_device_type(VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU));
+    TEST_ASSERT_TRUE(
+        vulkan_renderer_score_device_type(VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU) >
+        vulkan_renderer_score_device_type(VK_PHYSICAL_DEVICE_TYPE_CPU));
+}
