@@ -271,16 +271,27 @@ void test_player_pushes_secret_wall_in_facing_direction_at_original_speed(void)
     TEST_ASSERT_EQUAL_INT8(0, world.pushwall.direction_y);
 
     /* One original tile takes 128 tics at 70 tics per second (about 1.83 seconds). */
+    /* pwallstate starts at one: the first tile boundary is crossed after 127 tics. */
+    for (int tick_frame = 0; tick_frame < 18; ++tick_frame) {
+        TEST_ASSERT_TRUE(wolf_world_state_update(
+            &world, 0.1f, camera.position[0], camera.position[2],
+            &geometry_changed));
+    }
     TEST_ASSERT_TRUE(wolf_world_state_update(
-        &world, 128.0f / 70.0f, camera.position[0], camera.position[2],
+        &world, 1.0f / 70.0f, camera.position[0], camera.position[2],
         &geometry_changed));
     TEST_ASSERT_TRUE(geometry_changed);
     TEST_ASSERT_TRUE(world.pushwall.active);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 128.0f, world.pushwall.elapsed_ticks);
 
-    /* A clear second tile allows the original two-cell push to finish at 256 tics. */
+    /* The second tile takes another original 128 tics, ending at pwallstate 256. */
+    for (int tick_frame = 0; tick_frame < 18; ++tick_frame) {
+        TEST_ASSERT_TRUE(wolf_world_state_update(
+            &world, 0.1f, camera.position[0], camera.position[2],
+            &geometry_changed));
+    }
     TEST_ASSERT_TRUE(wolf_world_state_update(
-        &world, 128.0f / 70.0f, camera.position[0], camera.position[2],
+        &world, 2.0f / 70.0f, camera.position[0], camera.position[2],
         &geometry_changed));
     TEST_ASSERT_FALSE(world.pushwall.active);
     TEST_ASSERT_EQUAL_UINT16(
