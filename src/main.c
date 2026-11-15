@@ -33,6 +33,7 @@ static bool update_camera_projection(
     return vulkan_renderer_set_view_projection(renderer, view_projection);
 }
 
+/* Tell users how level selection works and where the original retail assets must be placed. */
 static void print_usage(const char *program_name)
 {
     printf("Usage: %s [--level NUMBER] [--help]\n", program_name);
