@@ -53,13 +53,54 @@ static bool build_scene_geometry(
     uint32_t combined_quad_count;
 
     if (scene_quads == NULL || scene_quad_count == NULL ||
-        spawn_x == NULL || spawn_y == NULL ||
-        !wolf_level_build_wall_quads(level, &wall_quads, &wall_quad_count)) {
+        spawn_x == NULL || spawn_y == NULL) {
+        fprintf(stderr, "Invalid level geometry output arguments.\\n");
         return false;
     }
 
-    if (!wolf_level_find_open_tile(level, spawn_x, spawn_y) ||
-        wall_quad_count > UINT32_MAX - 2u) {
+    if (!wolf_level_build_wall_quads(level, &wall_quads, &wall_quad_count)) {
+        fprintf(
+            stderr, "Could not generate wall geometry for level %s (%u x %u).\\n",
+            level != NULL ? level->name : "(null)",
+            level != NULL ? level->width : 0u,
+            level != NULL ? level->height : 0u);
+        return false;
+    }
+
+    if (!wolf_level_find_open_tile(level, spawn_x, spawn_y)) {
+        size_t open_tile_count = 0u;
+        size_t solid_tile_count = 0u;
+
+        for (uint16_t tile_y = 0u; tile_y < level->height; ++tile_y) {
+            for (uint16_t tile_x = 0u; tile_x < level->width; ++tile_x) {
+                size_t tile_index =
+                    (size_t)tile_y * WOLF_LEVEL_PLANE_WIDTH + tile_x;
+
+                if (level->wall_tiles[tile_index] == 0u) {
+                    ++open_tile_count;
+                } else {
+                    ++solid_tile_count;
+                }
+            }
+        }
+
+        fprintf(
+            stderr,
+            "No open spawn cell exists in level %s (%u x %u). "
+            "The decoded wall plane contains %zu solid cells and %zu open cells.\\n",
+            level->name, level->width, level->height,
+            solid_tile_count, open_tile_count);
+        fprintf(stderr, "First wall-plane row:");
+        for (uint16_t tile_x = 0u; tile_x < level->width && tile_x < 16u; ++tile_x) {
+            fprintf(stderr, " %04X", level->wall_tiles[tile_x]);
+        }
+        fputc('\\n', stderr);
+        free(wall_quads);
+        return false;
+    }
+
+    if (wall_quad_count > UINT32_MAX - 2u) {
+        fprintf(stderr, "Level generated too many wall quads.\\n");
         free(wall_quads);
         return false;
     }
