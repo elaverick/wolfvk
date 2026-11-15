@@ -153,7 +153,7 @@ bool wolf_level_build_wall_quads(
                 };
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count,
-                        face, horizontal_uvs, horizontal_page, 0.82f)) {
+                        face, reversed_horizontal_uvs, horizontal_page, 0.82f)) {
                     free(generated_quads);
                     return false;
                 }
@@ -179,7 +179,7 @@ bool wolf_level_build_wall_quads(
                 };
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count,
-                        face, reversed_horizontal_uvs, vertical_page, 0.72f)) {
+                        face, horizontal_uvs, vertical_page, 0.72f)) {
                     free(generated_quads);
                     return false;
                 }
