@@ -3,6 +3,9 @@
 void test_window_creation(void);
 void test_window_is_resizable(void);
 void test_window_close_event_can_be_queued(void);
+void test_default_camera_builds_vulkan_projection(void);
+void test_camera_yaw_changes_view_direction(void);
+void test_camera_rejects_invalid_projection_parameters(void);
 void test_keyboard_events_update_key_state(void);
 void test_mouse_motion_accumulates_until_next_frame(void);
 void test_gamepad_axis_normalization_applies_deadzone(void);
@@ -29,6 +32,9 @@ int main(void)
     RUN_TEST(test_window_creation);
     RUN_TEST(test_window_is_resizable);
     RUN_TEST(test_window_close_event_can_be_queued);
+    RUN_TEST(test_default_camera_builds_vulkan_projection);
+    RUN_TEST(test_camera_yaw_changes_view_direction);
+    RUN_TEST(test_camera_rejects_invalid_projection_parameters);
     RUN_TEST(test_keyboard_events_update_key_state);
     RUN_TEST(test_mouse_motion_accumulates_until_next_frame);
     RUN_TEST(test_gamepad_axis_normalization_applies_deadzone);
