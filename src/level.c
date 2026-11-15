@@ -36,6 +36,48 @@ bool wolf_level_is_door_tile(uint16_t wall_tile)
         wall_tile <= WOLF_LEVEL_DOOR_TILE_LAST;
 }
 
+bool wolf_level_is_secret_door_cell(
+    const WolfLevel *level,
+    int tile_x,
+    int tile_y)
+{
+    size_t tile_index;
+
+    if (level == NULL || tile_x < 0 || tile_y < 0 ||
+        tile_x >= level->width || tile_y >= level->height ||
+        level->width > WOLF_LEVEL_PLANE_WIDTH ||
+        level->height > WOLF_LEVEL_PLANE_HEIGHT) {
+        return false;
+    }
+
+    tile_index = (size_t)tile_y * WOLF_LEVEL_PLANE_WIDTH + (size_t)tile_x;
+
+    /* The original info plane marks pushable secret walls independently of their wall texture. */
+    return level->object_tiles[tile_index] == WOLF_LEVEL_INFO_PUSHWALL_MARKER;
+}
+
+bool wolf_level_is_omitted_door_cell(
+    const WolfLevel *level,
+    int tile_x,
+    int tile_y)
+{
+    size_t tile_index;
+    uint16_t wall_tile;
+
+    if (level == NULL || tile_x < 0 || tile_y < 0 ||
+        tile_x >= level->width || tile_y >= level->height ||
+        level->width > WOLF_LEVEL_PLANE_WIDTH ||
+        level->height > WOLF_LEVEL_PLANE_HEIGHT) {
+        return false;
+    }
+
+    tile_index = (size_t)tile_y * WOLF_LEVEL_PLANE_WIDTH + (size_t)tile_x;
+    wall_tile = level->wall_tiles[tile_index];
+
+    return wolf_level_is_door_tile(wall_tile) ||
+        wolf_level_is_secret_door_cell(level, tile_x, tile_y);
+}
+
 static FILE *open_binary_file(const char *path)
 {
     FILE *file = NULL;
