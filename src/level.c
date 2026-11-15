@@ -80,8 +80,11 @@ bool wolf_level_is_omitted_door_cell(
     tile_index = (size_t)tile_y * WOLF_LEVEL_PLANE_WIDTH + (size_t)tile_x;
     wall_tile = level->wall_tiles[tile_index];
 
-    return wolf_level_is_door_tile(wall_tile) ||
-        wolf_level_is_secret_door_cell(level, tile_x, tile_y);
+    /*
+     * Ordinary doors are replaced by animated runtime panels. Secret walls
+     * remain ordinary solid wall geometry until the player pushes them.
+     */
+    return wolf_level_is_door_tile(wall_tile);
 }
 
 /* Keep binary asset access portable while using the secure CRT on Windows. */
