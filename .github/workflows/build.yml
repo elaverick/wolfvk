@@ -25,6 +25,7 @@ jobs:
           install_runtime: true
           install_swiftshader: true
           cache: true
+          github_token: ${{ github.token }}
 
       - name: Configure
         run: cmake -S . -B build -A x64 -DBUILD_TESTING=ON
