@@ -31,8 +31,8 @@ static bool update_camera_projection(
 static void print_usage(const char *program_name)
 {
     printf("Usage: %s [--level NUMBER] [--help]\n", program_name);
-    printf("Level numbers are one-based; if omitted, the first level is loaded.\\n");
-    printf("Place MAPHEAD.WL6 and GAMEMAPS.WL6 in the working directory.\\n");
+    printf("Level numbers are one-based; if omitted, the first level is loaded.\n");
+    printf("Place MAPHEAD.WL6 and GAMEMAPS.WL6 in the working directory.\n");
 }
 
 int main(int argc, char *argv[])
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 
     if (!wolf_parse_command_line(
             argc, argv, &options, error_message, sizeof(error_message))) {
-        fprintf(stderr, "Command line error: %s\\n", error_message);
+        fprintf(stderr, "Command line error: %s\n", error_message);
         print_usage(argv != NULL && argv[0] != NULL ? argv[0] : "wolfvk");
         return 1;
     }
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     if (!wolf_level_load(
             "MAPHEAD.WL6", "GAMEMAPS.WL6", options.level_index,
             &level, error_message, sizeof(error_message))) {
-        fprintf(stderr, "Could not load level %u: %s\\n",
+        fprintf(stderr, "Could not load level %u: %s\n",
             options.level_index + 1u, error_message);
         return 1;
     }
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
     (void)snprintf(
         window_title, sizeof(window_title), "WolfVK - Level %u: %.16s",
         options.level_index + 1u, level.name);
-    printf("Loaded level %u: %s (%u x %u).\\n",
+    printf("Loaded level %u: %s (%u x %u).\n",
         (unsigned int)(options.level_index + 1u), level.name,
         (unsigned int)level.width, (unsigned int)level.height);
 
@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
     }
 
     window = SDL_CreateWindow(
-        "WolfVK", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
+        window_title, 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
     if (window == NULL) {
         fprintf(stderr, "SDL Vulkan window creation failed: %s\n", SDL_GetError());
         SDL_Quit();
