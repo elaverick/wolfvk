@@ -29,12 +29,14 @@ bool vulkan_renderer_find_queue_families(
 
     for (family_index = 0; family_index < queue_family_count; ++family_index) {
         if (!indices->has_graphics_family &&
+            queue_families[family_index].queueCount > 0u &&
             (queue_families[family_index].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0u) {
             indices->graphics_family = family_index;
             indices->has_graphics_family = true;
         }
 
-        if (!indices->has_present_family && present_support[family_index] == VK_TRUE) {
+        if (!indices->has_present_family && queue_families[family_index].queueCount > 0u &&
+            present_support[family_index] == VK_TRUE) {
             indices->present_family = family_index;
             indices->has_present_family = true;
         }
