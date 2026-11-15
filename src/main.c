@@ -7,6 +7,12 @@ int main(void)
 {
     SDL_Window *window;
     SDL_Event event;
+    const VulkanQuad demo_quad = {{
+        {{-0.65f, -0.45f, 0.5f}, {0.95f, 0.28f, 0.16f}},
+        {{0.65f, -0.45f, 0.5f}, {0.20f, 0.75f, 0.92f}},
+        {{0.65f, 0.45f, 0.5f}, {0.95f, 0.78f, 0.22f}},
+        {{-0.65f, 0.45f, 0.5f}, {0.20f, 0.80f, 0.35f}}
+    }};
     VulkanRenderer *renderer = NULL;
     WolfInput *input = NULL;
     int running = 1;
@@ -26,6 +32,14 @@ int main(void)
 
     if (!vulkan_renderer_create(window, &renderer)) {
         fprintf(stderr, "Vulkan renderer initialisation failed.\n");
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
+    if (!vulkan_renderer_set_quads(renderer, &demo_quad, 1)) {
+        fprintf(stderr, "Could not upload demo quad geometry.\\n");
+        vulkan_renderer_destroy(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
         return 1;
