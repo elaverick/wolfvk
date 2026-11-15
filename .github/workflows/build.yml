@@ -39,7 +39,7 @@ jobs:
           $env:VK_ICD_FILENAMES = "C:\swiftshader\vk_swiftshader_icd.json"
           ctest --test-dir build -C Release --output-on-failure
 
-      - name: Package pre-texture Windows demo
+      - name: Package textured Windows demo
         if: success()
         shell: pwsh
         run: |
@@ -50,17 +50,17 @@ jobs:
           Copy-Item -Path "THIRD_PARTY_NOTICES.txt" -Destination $packageDir
 
           $instructions = @'
-          WolfVK - pre-texture Windows demo
-          ==================================
+          WolfVK - textured Windows demo
+          ==============================
 
           Requirements
           - 64-bit Windows
           - A Vulkan-capable graphics device and current graphics driver
-          - Original Wolfenstein 3D WL6 map data (not included)
+          - Original Wolfenstein 3D WL6 map and wall data (not included)
 
           Setup
-          1. Copy MAPHEAD.WL6 and GAMEMAPS.WL6 from your own WL6 installation
-             into this folder, beside wolfvk.exe.
+          1. Copy MAPHEAD.WL6, GAMEMAPS.WL6 and VSWAP.WL6 from your own WL6
+             installation into this folder, beside wolfvk.exe.
           2. Keep the shaders folder beside wolfvk.exe.
           3. Run wolfvk.exe. Use --level N to select a one-based level number.
 
@@ -69,8 +69,9 @@ jobs:
           - Mouse: look
           - Escape: quit
 
-          The mouse is captured while the window is focused. Textures, sprites,
-          enemies, pickups and doors are not part of this pre-texture milestone.
+          The mouse is captured while the window is focused. Wall textures are loaded
+          from VSWAP.WL6. Sprites, enemies, pickups and animated doors are not
+          part of this milestone. Integer scaling is a separate follow-on step.
           '@
           Set-Content -LiteralPath (Join-Path $packageDir "README.txt") -Value $instructions -Encoding utf8
           Compress-Archive -Path (Join-Path $packageDir "*") -DestinationPath "build\WolfVK-demo-windows-x64.zip" -Force
@@ -79,7 +80,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: WolfVK-demo-windows-x64
-          path: build/WolfVK-demo-windows-x64.zip
+          name: WolfVK-textured-demo-windows-x64
+          path: build/WolfVK-textured-demo-windows-x64.zip
           if-no-files-found: error
           retention-days: 30
