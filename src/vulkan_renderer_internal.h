@@ -26,6 +26,18 @@ struct VulkanRenderer {
     VkPipeline graphics_pipeline;
     VkFramebuffer *framebuffers;
 
+    VkImage depth_image;
+    VkDeviceMemory depth_image_memory;
+    VkImageView depth_image_view;
+    VkFormat depth_format;
+
+    VkBuffer vertex_buffer;
+    VkDeviceMemory vertex_buffer_memory;
+    VkBuffer index_buffer;
+    VkDeviceMemory index_buffer_memory;
+    uint32_t index_count;
+    float view_projection[16];
+
     VkCommandPool command_pool;
     VkCommandBuffer *command_buffers;
 
@@ -44,6 +56,12 @@ bool vulkan_renderer_choose_surface_format(
 VkPresentModeKHR vulkan_renderer_choose_present_mode(
     const VkPresentModeKHR *available_modes,
     uint32_t mode_count);
+
+bool vulkan_renderer_geometry_set_quads(
+    VulkanRenderer *renderer,
+    const VulkanQuad *quads,
+    uint32_t quad_count);
+void vulkan_renderer_geometry_destroy(VulkanRenderer *renderer);
 
 bool vulkan_renderer_frame_resources_create(VulkanRenderer *renderer);
 void vulkan_renderer_frame_resources_destroy(VulkanRenderer *renderer);
