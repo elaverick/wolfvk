@@ -76,7 +76,7 @@ jobs:
           Set-Content -LiteralPath (Join-Path $packageDir "README.txt") -Value $instructions -Encoding utf8
           Compress-Archive -Path (Join-Path $packageDir "*") -DestinationPath "build\WolfVK-demo-windows-x64.zip" -Force
 
-      - name: Upload pre-texture Windows demo
+      - name: Upload textured Windows demo
         if: success()
         uses: actions/upload-artifact@v4
         with:
