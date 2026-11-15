@@ -30,7 +30,7 @@ struct VulkanRenderer {
     VkCommandBuffer *command_buffers;
 
     VkSemaphore image_available_semaphore;
-    VkSemaphore render_finished_semaphore;
+    VkSemaphore *render_finished_semaphores;
     VkFence in_flight_fence;
     bool framebuffer_resized;
 };
