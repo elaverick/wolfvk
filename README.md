@@ -10,13 +10,13 @@ Development follows the ordered, approval-gated steps in [roadmap.md](roadmap.md
 
 The SDL3 window, Vulkan renderer and input milestones are complete. The application now creates a Vulkan instance and surface, prefers discrete GPUs when selecting a graphics/presentation device, builds a swapchain and graphics pipeline, and renders indexed, vertex-coloured quads with depth testing and a view-projection matrix. The swapchain is recreated when SDL reports a pixel-size change. This is the renderer bootstrap; Wolfenstein level geometry is not implemented yet.
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It contains 22 Unity test cases: three SDL3 window/event tests, four keyboard/mouse/axis input tests, 14 Vulkan selection and renderer unit tests, and one SwiftShader-backed integration test that creates a swapchain and submits/presents overlapping indexed quads. CTest runs the suite in Windows CI.
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It contains 25 Unity test cases: three SDL3 window/event tests, three camera matrix tests, four keyboard/mouse/axis input tests, 14 Vulkan selection and renderer unit tests, and one SwiftShader-backed integration test that creates a swapchain and submits/presents overlapping indexed quads. CTest runs the suite in Windows CI.
 
 | Check | Current status |
 |---|---|
 | Windows x64 build | Tracked by the Actions badge below |
 | C unit-test framework | Unity |
-| Automated tests | 22 Unity test cases: 3 SDL3, 4 input, 14 Vulkan unit, and 1 SwiftShader swapchain render/present integration |
+| Automated tests | 25 Unity test cases: 3 SDL3, 3 camera, 4 input, 14 Vulkan unit, and 1 SwiftShader quad render/present integration |
 | SDL3 window | Complete |
 | Vulkan swapchain and triangle rendering | Implemented and verified in Windows CI |
 | Input handling | Keyboard, relative mouse and SDL gamepad state; verified in Windows CI |
