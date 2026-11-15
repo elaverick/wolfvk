@@ -43,6 +43,9 @@ add_executable(wolfvk
     src/input.c
     src/level.c
     src/level_geometry.c
+    src/wall_textures.c
+    src/game_palette.c
+    src/vulkan_renderer_texture.c
     src/vulkan_renderer_geometry.c
     src/vulkan_renderer.c
     src/vulkan_renderer_frame.c
@@ -120,6 +123,7 @@ if(BUILD_TESTING)
         tests/test_command_line.c
         tests/test_level.c
         tests/test_level_geometry.c
+        tests/test_wall_textures.c
         tests/test_input.c
         tests/test_vulkan_renderer.c
         src/camera.c
@@ -128,6 +132,9 @@ if(BUILD_TESTING)
         src/input.c
         src/level.c
         src/level_geometry.c
+        src/wall_textures.c
+        src/game_palette.c
+        src/vulkan_renderer_texture.c
         src/vulkan_renderer_geometry.c
         src/vulkan_renderer.c
         src/vulkan_renderer_frame.c
