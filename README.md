@@ -16,18 +16,18 @@ The player can move with **WASD** and look with the mouse. Movement is relative 
 
 The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the working directory. Those original game files are not included in this repository or demo package; copy them from your own WL6 installation. The user-supplied retail map files were inspected: all 60 playable maps decode as 64×64 maps, each with exactly one valid player-start marker on a floor cell. Level 1 starts at tile (29, 57), facing east.
 
-**Textured demo:** the Windows x64 build, all 96 registered Unity test cases (including the SwiftShader-backed Vulkan renderer test), packaging and artifact upload passed in [Actions run 43756633501](https://github.com/elaverick/WolfVK/actions/runs/43756633501) on 15 November 2026. The `WolfVK-textured-demo-windows-x64` artifact contains `wolfvk.exe`, the compiled shader files, third-party notices and setup instructions. Copy the three original WL6 files above beside the executable before launching it.
+**Textured demo:** the Windows x64 build, all 97 registered Unity test cases (including the SwiftShader-backed Vulkan renderer test), packaging and artifact upload passed in [Actions run 43756633501](https://github.com/elaverick/WolfVK/actions/runs/43756633501) on 15 November 2026. The `WolfVK-textured-demo-windows-x64` artifact contains `wolfvk.exe`, the compiled shader files, third-party notices and setup instructions. Copy the three original WL6 files above beside the executable before launching it.
 
 ## Automated tests
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It currently registers 96 Unity test cases (including the SwiftShader-backed renderer integration test):
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It currently registers 97 Unity test cases (including the SwiftShader-backed renderer integration test):
 
 - 3 SDL3 window and event tests
 - 4 camera projection tests
 - 11 player movement, mouse-look and collision tests, including door traversal and secret-wall pushing
 - 8 command-line parser tests
 - 10 Carmack/RLEW decoder and level-loader tests
-- 17 wall-geometry and player-start tests, including original wall-page selection, door-side textures and all four face UV directions
+- 18 wall-geometry and player-start tests, including original wall-page selection, door-side textures and all four face UV directions
 - 7 VSWAP page decoder, palette expansion and wall-page mapping tests
 - 4 keyboard, mouse and gamepad input tests
 - 17 world-state tests for doors, keys, secret pushwalls and their original timing/material behaviour
@@ -37,7 +37,7 @@ CTest runs the suite in Windows CI. The world-state tests cover original door or
 
 | Feature | Status |
 |---|---|
-| Windows x64 build | Passed in [Actions run 43756633501](https://github.com/elaverick/WolfVK/actions/runs/43756633501); 95 Unity tests, packaging and artifact upload succeeded on the preceding code snapshot; the current branch adds one secret-wall material regression test |
+| Windows x64 build | Passed in [Actions run 43756633501](https://github.com/elaverick/WolfVK/actions/runs/43756633501); 95 Unity tests, packaging and artifact upload succeeded on the preceding code snapshot; the current branch adds regression coverage for static and moving Level 1 secret-wall materials |
 | SDL3 window and input | Implemented and tested |
 | Vulkan renderer and swapchain | Implemented and tested in Windows CI |
 | Indexed quad rendering and depth testing | Implemented and tested |

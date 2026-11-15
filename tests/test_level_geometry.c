@@ -212,6 +212,39 @@ void test_level_geometry_keeps_stationary_secret_walls_in_static_geometry(void)
     TEST_ASSERT_NOT_NULL(quads);
 }
 
+/*
+ * The reference Level 1 contains stationary secret walls built from wall
+ * types 1, 4 and 10. Before Use is pressed, they must still show the proper
+ * ordinary wall page on each exposed face.
+ */
+void test_level_geometry_uses_original_level_one_secret_wall_pages(void)
+{
+    static const uint16_t wall_types[] = {1u, 4u, 10u};
+    static const uint16_t horizontal_pages[] = {0u, 6u, 18u};
+    static const uint16_t vertical_pages[] = {1u, 7u, 19u};
+
+    for (size_t index = 0u; index < sizeof(wall_types) / sizeof(wall_types[0]); ++index) {
+        WolfLevel level = {0};
+        VulkanQuad *quads = NULL;
+        uint32_t quad_count = 0u;
+        size_t wall_index = WOLF_LEVEL_PLANE_WIDTH + 1u;
+
+        level.width = 3u;
+        level.height = 3u;
+        level.wall_tiles[wall_index] = wall_types[index];
+        level.object_tiles[wall_index] = WOLF_LEVEL_INFO_PUSHWALL_MARKER;
+
+        TEST_ASSERT_TRUE(wolf_level_build_wall_quads(
+            &level, 98u, &quads, &quad_count));
+        TEST_ASSERT_EQUAL_UINT32(4u, quad_count);
+        TEST_ASSERT_EQUAL_UINT32(horizontal_pages[index], quads[0].vertices[0].texture_layer);
+        TEST_ASSERT_EQUAL_UINT32(horizontal_pages[index], quads[1].vertices[0].texture_layer);
+        TEST_ASSERT_EQUAL_UINT32(vertical_pages[index], quads[2].vertices[0].texture_layer);
+        TEST_ASSERT_EQUAL_UINT32(vertical_pages[index], quads[3].vertices[0].texture_layer);
+        free(quads);
+    }
+}
+
 void test_level_geometry_uses_original_door_side_pages_on_secret_wall_faces(void)
 {
     WolfLevel level = {0};
