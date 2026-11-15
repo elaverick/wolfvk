@@ -286,16 +286,19 @@ void test_level_loader_preserves_original_player_start_marker_in_info_plane(void
     WolfPlayerStart player_start = {0};
     char error_message[256];
     FILE *file = NULL;
-    uint8_t info_plane_stream[6u + WOLF_LEVEL_PLANE_WORDS * 2u];
+    uint8_t info_plane_stream[4u + WOLF_LEVEL_PLANE_WORDS * 2u];
     size_t stream_size = 0u;
 
     TEST_ASSERT_TRUE(create_test_map_files(
         maphead_path, sizeof(maphead_path),
         gamemaps_path, sizeof(gamemaps_path), 0u));
 
-    /* Build a valid, literal RLEW info plane with marker 19 at (4, 0). */
-    write_u16_le(info_plane_stream, (uint16_t)(WOLF_LEVEL_PLANE_WORDS * 2u));
-    stream_size = 2u;
+    /* Build a literal Carmack stream containing an RLEW info plane and marker 19 at (4, 0). */
+    write_u16_le(info_plane_stream,
+        (uint16_t)(WOLF_LEVEL_PLANE_WORDS * 2u + 2u));
+    write_u16_le(info_plane_stream + 2u,
+        (uint16_t)(WOLF_LEVEL_PLANE_WORDS * 2u));
+    stream_size = 4u;
     for (size_t index = 0u; index < WOLF_LEVEL_PLANE_WORDS; ++index) {
         write_u16_le(info_plane_stream + stream_size, index == 4u ? 19u : 0u);
         stream_size += 2u;
@@ -314,8 +317,7 @@ void test_level_loader_preserves_original_player_start_marker_in_info_plane(void
     TEST_ASSERT_EQUAL_UINT(stream_size, fwrite(info_plane_stream, 1u, stream_size, file));
     TEST_ASSERT_EQUAL_INT(0, fclose(file));
 
-    /* The fixture's second plane now has a larger uncompressed RLEW stream,
-       so update its declared compressed byte length in the map header. */
+    /* Update the second plane's compressed byte length in the map header. */
 #if defined(_MSC_VER)
     TEST_ASSERT_EQUAL_INT(0, fopen_s(&file, gamemaps_path, "r+b"));
 #else

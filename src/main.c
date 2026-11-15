@@ -224,7 +224,7 @@ int main(int argc, char *argv[])
         -(float)level.width * 0.5f + (float)player_start.tile_x + 0.5f;
     camera.position[2] =
         -(float)level.height * 0.5f + (float)player_start.tile_y + 0.5f;
-    camera.yaw = player_start.yaw_radians;
+    camera.yaw_radians = player_start.yaw_radians;
     if (!update_camera_projection(window, renderer, &camera)) {
         fprintf(stderr, "Could not initialise the camera projection.\n");
         free(scene_quads);
