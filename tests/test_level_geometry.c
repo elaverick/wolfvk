@@ -42,6 +42,39 @@ void test_level_geometry_omits_shared_faces_between_adjacent_walls(void)
     free(quads);
 }
 
+void test_level_geometry_treats_door_cells_as_openings(void)
+{
+    WolfLevel level = {0};
+    VulkanQuad *quads = NULL;
+    uint32_t quad_count = 0u;
+
+    level.width = 3u;
+    level.height = 3u;
+
+    /* The adjacent door must leave the neighbouring wall face exposed. */
+    level.wall_tiles[WOLF_LEVEL_PLANE_WIDTH + 1u] = 7u;
+    level.wall_tiles[WOLF_LEVEL_PLANE_WIDTH + 2u] = WOLF_LEVEL_DOOR_TILE_FIRST;
+
+    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, &quads, &quad_count));
+    TEST_ASSERT_EQUAL_UINT32(4u, quad_count);
+    TEST_ASSERT_NOT_NULL(quads);
+
+    free(quads);
+}
+
+void test_level_door_tile_classifier_matches_retail_range(void)
+{
+    for (uint16_t tile = WOLF_LEVEL_DOOR_TILE_FIRST;
+         tile <= WOLF_LEVEL_DOOR_TILE_LAST;
+         ++tile) {
+        TEST_ASSERT_TRUE(wolf_level_is_door_tile(tile));
+    }
+
+    TEST_ASSERT_FALSE(wolf_level_is_door_tile(WOLF_LEVEL_DOOR_TILE_FIRST - 1u));
+    TEST_ASSERT_FALSE(wolf_level_is_door_tile(WOLF_LEVEL_DOOR_TILE_LAST + 1u));
+    TEST_ASSERT_FALSE(wolf_level_is_door_tile(WOLF_LEVEL_AREA_TILE_FIRST));
+}
+
 void test_level_geometry_returns_empty_array_for_empty_map(void)
 {
     WolfLevel level = {0};
