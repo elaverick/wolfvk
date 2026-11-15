@@ -1,4 +1,5 @@
 #include "wolfvk/camera.h"
+#include "wolfvk/world.h"
 
 #include <math.h>
 #include <string.h>
@@ -66,7 +67,7 @@ void wolf_camera_initialize(WolfCamera *camera)
     }
 
     memset(camera, 0, sizeof(*camera));
-    camera->position[1] = 1.6f;
+    camera->position[1] = WOLF_WORLD_EYE_HEIGHT;
     camera->vertical_fov_radians = WOLF_CAMERA_DEFAULT_FOV;
     camera->near_clip = 0.1f;
     camera->far_clip = 2000.0f;
