@@ -255,6 +255,10 @@ bool vulkan_renderer_create(SDL_Window *window, VulkanRenderer **renderer_out)
     }
 
     renderer->window = window;
+    renderer->view_projection[0] = 1.0f;
+    renderer->view_projection[5] = 1.0f;
+    renderer->view_projection[10] = 1.0f;
+    renderer->view_projection[15] = 1.0f;
     required_extensions = SDL_Vulkan_GetInstanceExtensions(&extension_count);
     if (required_extensions == NULL || extension_count == 0u) {
         fprintf(stderr, "SDL could not provide Vulkan instance extensions: %s\n", SDL_GetError());
@@ -306,6 +310,7 @@ void vulkan_renderer_destroy(VulkanRenderer *renderer)
     if (renderer->device != VK_NULL_HANDLE) {
         vkDeviceWaitIdle(renderer->device);
         vulkan_renderer_frame_resources_destroy(renderer);
+        vulkan_renderer_geometry_destroy(renderer);
         vkDestroyDevice(renderer->device, NULL);
     }
     if (renderer->surface != VK_NULL_HANDLE && renderer->instance != VK_NULL_HANDLE) {
@@ -315,6 +320,26 @@ void vulkan_renderer_destroy(VulkanRenderer *renderer)
         vkDestroyInstance(renderer->instance, NULL);
     }
     free(renderer);
+}
+
+bool vulkan_renderer_set_quads(
+    VulkanRenderer *renderer,
+    const VulkanQuad *quads,
+    uint32_t quad_count)
+{
+    return vulkan_renderer_geometry_set_quads(renderer, quads, quad_count);
+}
+
+bool vulkan_renderer_set_view_projection(
+    VulkanRenderer *renderer,
+    const float view_projection[16])
+{
+    if (renderer == NULL || view_projection == NULL) {
+        return false;
+    }
+
+    memcpy(renderer->view_projection, view_projection, sizeof(renderer->view_projection));
+    return true;
 }
 
 bool vulkan_renderer_draw_frame(VulkanRenderer *renderer)
