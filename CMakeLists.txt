@@ -29,6 +29,7 @@ endif()
 
 add_executable(wolfvk
     src/main.c
+    src/vulkan_renderer.c
 )
 target_link_libraries(wolfvk PRIVATE SDL3::SDL3 Vulkan::Vulkan)
 if(MSVC)
@@ -57,8 +58,10 @@ if(BUILD_TESTING)
     add_executable(wolfvk_tests
         tests/test_main.c
         tests/test_window.c
+        tests/test_vulkan_renderer.c
+        src/vulkan_renderer.c
     )
-    target_link_libraries(wolfvk_tests PRIVATE SDL3::SDL3 unity)
+    target_link_libraries(wolfvk_tests PRIVATE SDL3::SDL3 Vulkan::Vulkan unity)
     if(MSVC)
         target_compile_options(wolfvk_tests PRIVATE /W4 /WX)
     else()
