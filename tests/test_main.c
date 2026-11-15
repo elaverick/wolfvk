@@ -69,6 +69,13 @@ void test_surface_format_handles_undefined_single_format(void);
 void test_swapchain_selection_handles_empty_lists(void);
 void test_renderer_creates_swapchain_and_presents_quads(void);
 void test_device_scoring_prefers_discrete_gpus(void);
+void test_vswap_decoder_expands_column_major_palette_indices_to_rgba(void);
+void test_vswap_decoder_rejects_truncated_wall_pages(void);
+void test_vswap_decoder_rejects_short_wall_page_lengths(void);
+void test_vswap_decoder_rejects_invalid_page_boundaries(void);
+void test_vswap_decoder_rejects_invalid_arguments_and_nonempty_output(void);
+void test_wall_tile_selects_original_horizontal_and_vertical_pages(void);
+void test_wall_tile_page_selection_rejects_invalid_or_missing_pages(void);
 
 int main(void)
 {
@@ -142,5 +149,12 @@ int main(void)
     RUN_TEST(test_swapchain_selection_handles_empty_lists);
     RUN_TEST(test_renderer_creates_swapchain_and_presents_quads);
     RUN_TEST(test_device_scoring_prefers_discrete_gpus);
+    RUN_TEST(test_vswap_decoder_expands_column_major_palette_indices_to_rgba);
+    RUN_TEST(test_vswap_decoder_rejects_truncated_wall_pages);
+    RUN_TEST(test_vswap_decoder_rejects_short_wall_page_lengths);
+    RUN_TEST(test_vswap_decoder_rejects_invalid_page_boundaries);
+    RUN_TEST(test_vswap_decoder_rejects_invalid_arguments_and_nonempty_output);
+    RUN_TEST(test_wall_tile_selects_original_horizontal_and_vertical_pages);
+    RUN_TEST(test_wall_tile_page_selection_rejects_invalid_or_missing_pages);
     return UNITY_END();
 }
