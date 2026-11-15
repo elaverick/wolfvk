@@ -175,27 +175,47 @@ void test_swapchain_selection_handles_empty_lists(void)
         vulkan_renderer_choose_present_mode(NULL, 0));
 }
 
-void test_renderer_creates_swapchain_and_presents_triangle(void)
+void test_renderer_creates_swapchain_and_presents_quads(void)
 {
+    const VulkanQuad quads[] = {
+        {{
+            {{-0.8f, -0.7f, 0.7f}, {0.95f, 0.28f, 0.16f}},
+            {{0.8f, -0.7f, 0.7f}, {0.20f, 0.75f, 0.92f}},
+            {{0.8f, 0.7f, 0.7f}, {0.95f, 0.78f, 0.22f}},
+            {{-0.8f, 0.7f, 0.7f}, {0.20f, 0.80f, 0.35f}}
+        }},
+        {{
+            {{-0.3f, -0.3f, 0.3f}, {0.95f, 0.20f, 0.65f}},
+            {{0.3f, -0.3f, 0.3f}, {0.95f, 0.20f, 0.65f}},
+            {{0.3f, 0.3f, 0.3f}, {0.95f, 0.20f, 0.65f}},
+            {{-0.3f, 0.3f, 0.3f}, {0.95f, 0.20f, 0.65f}}
+        }}
+    };
     SDL_Window *window = SDL_CreateWindow(
-        "WolfVK Vulkan integration test", 640, 480,
+        "WolfVK Vulkan quad integration test", 640, 480,
         SDL_WINDOW_HIDDEN | SDL_WINDOW_VULKAN);
     VulkanRenderer *renderer = NULL;
     bool renderer_created;
+    bool geometry_uploaded = false;
     bool frame_rendered = false;
 
     TEST_ASSERT_NOT_NULL_MESSAGE(window, SDL_GetError());
 
     renderer_created = vulkan_renderer_create(window, &renderer);
     if (renderer_created) {
-        frame_rendered = vulkan_renderer_draw_frame(renderer);
+        geometry_uploaded = vulkan_renderer_set_quads(
+            renderer, quads, (uint32_t)(sizeof(quads) / sizeof(quads[0])));
+        if (geometry_uploaded) {
+            frame_rendered = vulkan_renderer_draw_frame(renderer);
+        }
     }
 
     vulkan_renderer_destroy(renderer);
     SDL_DestroyWindow(window);
 
     TEST_ASSERT_TRUE_MESSAGE(renderer_created, "Vulkan renderer initialisation failed");
-    TEST_ASSERT_TRUE_MESSAGE(frame_rendered, "Vulkan frame submission or presentation failed");
+    TEST_ASSERT_TRUE_MESSAGE(geometry_uploaded, "Vulkan quad buffer upload failed");
+    TEST_ASSERT_TRUE_MESSAGE(frame_rendered, "Vulkan quad rendering or presentation failed");
 }
 
 void test_device_scoring_prefers_discrete_gpus(void)
