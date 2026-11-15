@@ -126,6 +126,11 @@ static bool create_swapchain(VulkanRenderer *renderer)
         return false;
     }
 
+    if ((capabilities.supportedUsageFlags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) == 0u) {
+        fprintf(stderr, "Vulkan surface images cannot be used as color attachments.\n");
+        return false;
+    }
+
     if (vkGetPhysicalDeviceSurfaceFormatsKHR(
             renderer->physical_device, renderer->surface, &format_count, NULL) != VK_SUCCESS ||
         format_count == 0u) {
