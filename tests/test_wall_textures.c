@@ -205,9 +205,18 @@ void test_wall_tile_selects_original_horizontal_and_vertical_pages(void)
     TEST_ASSERT_TRUE(wolf_wall_texture_page_for_tile(49u, true, 98u, &page));
     TEST_ASSERT_EQUAL_UINT16(97u, page);
 
-    /* The 0x40 side-hit flag is not part of the wall material identity. */
+    /* The 0x40 flag is stripped before resolving the original wall material. */
     TEST_ASSERT_TRUE(wolf_wall_texture_page_for_tile(0x47u, true, 98u, &page));
     TEST_ASSERT_EQUAL_UINT16(13u, page);
+
+    /*
+     * Retail WL6 maps use wall value 106 for flagged wall type 42.
+     * It must resolve to pages 82/83 rather than being mistaken for a door.
+     */
+    TEST_ASSERT_TRUE(wolf_wall_texture_page_for_tile(106u, false, 98u, &page));
+    TEST_ASSERT_EQUAL_UINT16(82u, page);
+    TEST_ASSERT_TRUE(wolf_wall_texture_page_for_tile(106u, true, 98u, &page));
+    TEST_ASSERT_EQUAL_UINT16(83u, page);
 }
 
 void test_wall_tile_page_selection_rejects_invalid_or_missing_pages(void)
@@ -215,7 +224,10 @@ void test_wall_tile_page_selection_rejects_invalid_or_missing_pages(void)
     uint16_t page = UINT16_MAX;
 
     TEST_ASSERT_FALSE(wolf_wall_texture_page_for_tile(0u, false, 98u, &page));
-    TEST_ASSERT_FALSE(wolf_wall_texture_page_for_tile(90u, false, 98u, &page));
+    for (uint16_t door_tile = 90u; door_tile <= 101u; ++door_tile) {
+        TEST_ASSERT_FALSE(wolf_wall_texture_page_for_tile(door_tile, false, 98u, &page));
+    }
+    TEST_ASSERT_FALSE(wolf_wall_texture_page_for_tile(107u, false, 98u, &page));
     TEST_ASSERT_FALSE(wolf_wall_texture_page_for_tile(49u, true, 97u, &page));
     TEST_ASSERT_FALSE(wolf_wall_texture_page_for_tile(7u, false, 98u, NULL));
 }
