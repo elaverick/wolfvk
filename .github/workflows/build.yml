@@ -25,7 +25,6 @@ jobs:
           install_runtime: true
           install_swiftshader: true
           cache: true
-          stripdown: true
 
       - name: Configure
         run: cmake -S . -B build -A x64 -DBUILD_TESTING=ON
