@@ -24,7 +24,7 @@ typedef struct WolfLevel {
     uint16_t object_tiles[WOLF_LEVEL_PLANE_WORDS];
 } WolfLevel;
 
-/* Door cells are omitted from the pre-door milestone so they do not become invisible barriers. */
+/* Ordinary sliding-door cells are replaced by animated panels in the runtime scene. */
 bool wolf_level_is_door_tile(uint16_t wall_tile);
 
 /* Identify secret pushwall cells from the info plane rather than their ordinary wall texture. */
@@ -33,7 +33,7 @@ bool wolf_level_is_secret_door_cell(
     int tile_x,
     int tile_y);
 
-/* Return whether the pre-door milestone should treat this map cell as an opening. */
+/* Return whether a sliding-door cell should be omitted from the static wall mesh. */
 bool wolf_level_is_omitted_door_cell(
     const WolfLevel *level,
     int tile_x,
