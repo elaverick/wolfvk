@@ -76,18 +76,37 @@ void test_level_geometry_uses_original_vswap_orientation_pages(void)
     TEST_ASSERT_EQUAL_UINT32(1u, quads[0].vertices[0].use_texture);
 
     /*
-     * Texture direction follows the original engine's approach direction:
-     * the two horizontal faces reverse U, while both vertical faces keep U
-     * increasing with map row. V runs from the top texel to the bottom.
+     * The first two vertices of every face follow its ordered world-space
+     * edge. The original HitHorizWall and HitVertWall routines both reverse
+     * their source coordinate for one approach direction; the opposing face
+     * vertex order accounts for the other direction. All four exposed faces
+     * therefore carry this same local corner sequence, with U increasing in
+     * the original engine's direction on each individual face.
      */
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, quads[0].vertices[0].texcoord[0]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[0].vertices[1].texcoord[0]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, quads[1].vertices[0].texcoord[0]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[1].vertices[1].texcoord[0]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[2].vertices[0].texcoord[0]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, quads[2].vertices[1].texcoord[0]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[3].vertices[0].texcoord[0]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, quads[3].vertices[1].texcoord[0]);
+    for (size_t face = 0u; face < 4u; ++face) {
+        TEST_ASSERT_FLOAT_WITHIN(
+            0.001f, 1.0f, quads[face].vertices[0].texcoord[0]);
+        TEST_ASSERT_FLOAT_WITHIN(
+            0.001f, 0.0f, quads[face].vertices[1].texcoord[0]);
+    }
+
+    /* Confirm that each pair of faces is wound along the correct map axis. */
+    TEST_ASSERT_FLOAT_WITHIN(
+        0.001f, -1.6f, quads[0].vertices[0].position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(
+        0.001f, 1.6f, quads[0].vertices[1].position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(
+        0.001f, 1.6f, quads[1].vertices[0].position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(
+        0.001f, -1.6f, quads[1].vertices[1].position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(
+        0.001f, 1.6f, quads[2].vertices[0].position[2]);
+    TEST_ASSERT_FLOAT_WITHIN(
+        0.001f, -1.6f, quads[2].vertices[1].position[2]);
+    TEST_ASSERT_FLOAT_WITHIN(
+        0.001f, -1.6f, quads[3].vertices[0].position[2]);
+    TEST_ASSERT_FLOAT_WITHIN(
+        0.001f, 1.6f, quads[3].vertices[1].position[2]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, quads[0].vertices[0].texcoord[1]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[0].vertices[2].texcoord[1]);
 
