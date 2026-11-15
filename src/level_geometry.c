@@ -181,7 +181,6 @@ bool wolf_level_build_wall_quads(
     return true;
 }
 
-
 bool wolf_level_find_player_start(const WolfLevel *level, WolfPlayerStart *player_start)
 {
     /* The original engine maps info-plane markers 19..22 to four compass directions. */

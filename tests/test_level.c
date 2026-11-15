@@ -286,16 +286,21 @@ void test_level_loader_preserves_original_player_start_marker_in_info_plane(void
     WolfPlayerStart player_start = {0};
     char error_message[256];
     FILE *file = NULL;
-    const char *base_path = SDL_GetBasePath();
-    char info_path[1024];
+    uint8_t info_plane_stream[6u + WOLF_LEVEL_PLANE_WORDS * 2u];
+    size_t stream_size = 0u;
 
-    TEST_ASSERT_NOT_NULL(base_path);
     TEST_ASSERT_TRUE(create_test_map_files(
         maphead_path, sizeof(maphead_path),
         gamemaps_path, sizeof(gamemaps_path), 0u));
 
-    TEST_ASSERT_TRUE(snprintf(info_path, sizeof(info_path),
-        "%swolfvk_test_gamemaps.bin", base_path) > 0);
+    /* Build a valid, literal RLEW info plane with marker 19 at (4, 0). */
+    write_u16_le(info_plane_stream, (uint16_t)(WOLF_LEVEL_PLANE_WORDS * 2u));
+    stream_size = 2u;
+    for (size_t index = 0u; index < WOLF_LEVEL_PLANE_WORDS; ++index) {
+        write_u16_le(info_plane_stream + stream_size, index == 4u ? 19u : 0u);
+        stream_size += 2u;
+    }
+
 #if defined(_MSC_VER)
     TEST_ASSERT_EQUAL_INT(0, fopen_s(&file, gamemaps_path, "r+b"));
 #else
@@ -303,12 +308,27 @@ void test_level_loader_preserves_original_player_start_marker_in_info_plane(void
     TEST_ASSERT_NOT_NULL(file);
 #endif
     TEST_ASSERT_NOT_NULL(file);
-    /* Info plane is the second plane at map header offset 38 + 10 bytes. */
-    TEST_ASSERT_EQUAL_INT(0, fseek(file, 38L + 10L + 8L, SEEK_SET));
+    /* Plane 1 is stored after the map header and compressed wall plane. */
+    TEST_ASSERT_EQUAL_INT(0, fseek(file,
+        (long)TEST_MAP_HEADER_SIZE + (long)TEST_PLANE_CHUNK_SIZE, SEEK_SET));
+    TEST_ASSERT_EQUAL_UINT(stream_size, fwrite(info_plane_stream, 1u, stream_size, file));
+    TEST_ASSERT_EQUAL_INT(0, fclose(file));
+
+    /* The fixture's second plane now has a larger uncompressed RLEW stream,
+       so update its declared compressed byte length in the map header. */
+#if defined(_MSC_VER)
+    TEST_ASSERT_EQUAL_INT(0, fopen_s(&file, gamemaps_path, "r+b"));
+#else
+    file = fopen(gamemaps_path, "r+b");
+    TEST_ASSERT_NOT_NULL(file);
+#endif
+    TEST_ASSERT_NOT_NULL(file);
+    TEST_ASSERT_EQUAL_INT(0, fseek(file, 14L, SEEK_SET));
     {
-        const uint8_t start_word[2] = {19u, 0u};
-        TEST_ASSERT_EQUAL_UINT(sizeof(start_word),
-            fwrite(start_word, 1u, sizeof(start_word), file));
+        uint8_t length_bytes[2];
+        write_u16_le(length_bytes, (uint16_t)stream_size);
+        TEST_ASSERT_EQUAL_UINT(sizeof(length_bytes),
+            fwrite(length_bytes, 1u, sizeof(length_bytes), file));
     }
     TEST_ASSERT_EQUAL_INT(0, fclose(file));
 

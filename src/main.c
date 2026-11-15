@@ -66,9 +66,9 @@ static bool build_scene_geometry(
         return false;
     }
 
-    if (!wolf_level_find_player_start(level, player_start) &&
-        !wolf_level_find_open_tile(
-            level, &player_start->tile_x, &player_start->tile_y)) {
+    if (!wolf_level_find_player_start(level, player_start)) {
+        if (!wolf_level_find_open_tile(
+                level, &player_start->tile_x, &player_start->tile_y)) {
         size_t open_tile_count = 0u;
         size_t solid_tile_count = 0u;
 
@@ -96,8 +96,10 @@ static bool build_scene_geometry(
             fprintf(stderr, " %04X", level->wall_tiles[tile_x]);
         }
         fputc('\n', stderr);
-        free(wall_quads);
-        return false;
+            free(wall_quads);
+            return false;
+        }
+        player_start->yaw_radians = 0.0f;
     }
 
     if (wall_quad_count > UINT32_MAX - 2u) {
