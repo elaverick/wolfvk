@@ -260,11 +260,12 @@ bool wolf_level_find_open_tile(
 
     for (uint16_t y = 0u; y < level->height; ++y) {
         for (uint16_t x = 0u; x < level->width; ++x) {
+            uint16_t tile = get_wall_tile(level, x, y);
             float delta_x;
             float delta_y;
             float distance;
 
-            if (get_wall_tile(level, x, y) != 0u) {
+            if (tile != 0u && !wolf_level_is_door_tile(tile)) {
                 continue;
             }
 
