@@ -5,6 +5,7 @@
 #include "wolfvk/level_geometry.h"
 #include "wolfvk/player_controller.h"
 #include "wolfvk/vulkan_renderer.h"
+#include "wolfvk/world.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -139,7 +140,7 @@ int main(int argc, char *argv[])
 {
     SDL_Window *window;
     SDL_Event event;
-    /* The planes extend beyond the camera far clip so their edges remain unseen. */
+    /* The planes extend beyond the camera far clip; the ceiling shares the wall panel's height. */
     const VulkanQuad environment_quads[] = {
         {{
             {{-10000.0f, 0.0f, -10000.0f}, {0.16f, 0.20f, 0.24f}},
@@ -148,10 +149,10 @@ int main(int argc, char *argv[])
             {{-10000.0f, 0.0f, 10000.0f}, {0.16f, 0.20f, 0.24f}}
         }},
         {{
-            {{-10000.0f, 3.2f, -10000.0f}, {0.11f, 0.14f, 0.20f}},
-            {{10000.0f, 3.2f, -10000.0f}, {0.11f, 0.14f, 0.20f}},
-            {{10000.0f, 3.2f, 10000.0f}, {0.11f, 0.14f, 0.20f}},
-            {{-10000.0f, 3.2f, 10000.0f}, {0.11f, 0.14f, 0.20f}}
+            {{-10000.0f, WOLF_WORLD_CEILING_HEIGHT, -10000.0f}, {0.11f, 0.14f, 0.20f}},
+            {{10000.0f, WOLF_WORLD_CEILING_HEIGHT, -10000.0f}, {0.11f, 0.14f, 0.20f}},
+            {{10000.0f, WOLF_WORLD_CEILING_HEIGHT, 10000.0f}, {0.11f, 0.14f, 0.20f}},
+            {{-10000.0f, WOLF_WORLD_CEILING_HEIGHT, 10000.0f}, {0.11f, 0.14f, 0.20f}}
         }}
     };
     VulkanRenderer *renderer = NULL;
@@ -227,9 +228,11 @@ int main(int argc, char *argv[])
 
     wolf_camera_initialize(&camera);
     camera.position[0] =
-        -(float)level.width * 0.5f + (float)player_start.tile_x + 0.5f;
+        -((float)level.width * WOLF_WORLD_TILE_SIZE) * 0.5f +
+        ((float)player_start.tile_x + 0.5f) * WOLF_WORLD_TILE_SIZE;
     camera.position[2] =
-        -(float)level.height * 0.5f + (float)player_start.tile_y + 0.5f;
+        -((float)level.height * WOLF_WORLD_TILE_SIZE) * 0.5f +
+        ((float)player_start.tile_y + 0.5f) * WOLF_WORLD_TILE_SIZE;
     camera.yaw_radians = player_start.yaw_radians;
     if (!update_camera_projection(window, renderer, &camera)) {
         fprintf(stderr, "Could not initialise the camera projection.\n");
