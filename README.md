@@ -6,11 +6,11 @@ Development follows the ordered, approval-gated steps in [roadmap.md](roadmap.md
 
 ## Current development status
 
-**Current roadmap step:** The engine must render quads.
+**Current roadmap step:** There should be a floor plane and a roof plane which are infinite.
 
-The SDL3 window, Vulkan renderer and input milestones are complete. The application now creates a Vulkan instance and surface, prefers discrete GPUs when selecting a graphics/presentation device, builds a swapchain and graphics pipeline, and draws a shader-driven triangle. The swapchain is recreated when SDL reports a pixel-size change. This is the renderer bootstrap; Wolfenstein level geometry is not implemented yet.
+The SDL3 window, Vulkan renderer and input milestones are complete. The application now creates a Vulkan instance and surface, prefers discrete GPUs when selecting a graphics/presentation device, builds a swapchain and graphics pipeline, and renders indexed, vertex-coloured quads with depth testing and a view-projection matrix. The swapchain is recreated when SDL reports a pixel-size change. This is the renderer bootstrap; Wolfenstein level geometry is not implemented yet.
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It contains 22 Unity test cases: three SDL3 window/event tests, four keyboard/mouse/axis input tests, 14 Vulkan selection and renderer unit tests, and one SwiftShader-backed integration test that creates a swapchain and submits/presents a triangle frame. CTest runs the suite in Windows CI.
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It contains 22 Unity test cases: three SDL3 window/event tests, four keyboard/mouse/axis input tests, 14 Vulkan selection and renderer unit tests, and one SwiftShader-backed integration test that creates a swapchain and submits/presents overlapping indexed quads. CTest runs the suite in Windows CI.
 
 | Check | Current status |
 |---|---|
@@ -20,7 +20,8 @@ The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedica
 | SDL3 window | Complete |
 | Vulkan swapchain and triangle rendering | Implemented and verified in Windows CI |
 | Input handling | Keyboard, relative mouse and SDL gamepad state; verified in Windows CI |
-| Quad rendering | Next roadmap step
+| Quad rendering | Indexed vertex and index buffers, depth testing and view-projection transform; verified in Windows CI
+| Infinite floor and roof | Next roadmap step
 | Original level loading | Not started |
 | Playable demo | Not started |
 
@@ -40,4 +41,4 @@ ctest --test-dir build -C Release --output-on-failure
 
 ## Controls
 
-The application currently displays a coloured Vulkan triangle. The input layer tracks keyboard state, relative mouse movement and a connected SDL gamepad, but gameplay controls are not wired up yet; close the window to exit.
+The application currently displays a coloured Vulkan quad. The input layer tracks keyboard state, relative mouse movement and a connected SDL gamepad, but gameplay controls are not wired up yet; close the window to exit.
