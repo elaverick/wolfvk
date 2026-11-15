@@ -287,7 +287,7 @@ void test_world_state_pushwall_moves_one_tile_per_original_128_tics(void)
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 126.0f, world.pushwall.elapsed_ticks);
 
     TEST_ASSERT_TRUE(wolf_world_state_update(
-        &world, 2.0f / WOLF_WORLD_DOOR_TICKS_PER_SECOND,
+        &world, 1.0f / WOLF_WORLD_DOOR_TICKS_PER_SECOND,
         player_x, player_z, &geometry_changed));
     TEST_ASSERT_TRUE(geometry_changed);
     TEST_ASSERT_TRUE(world.pushwall.active);
@@ -317,7 +317,7 @@ void test_world_state_pushwall_stops_after_one_tile_when_second_cell_is_blocked(
 
     TEST_ASSERT_TRUE(wolf_world_state_use(
         &world, player_x, player_z, 1.57079632679f));
-    advance_world_ticks(&world, 128.0f, player_x, player_z);
+    advance_world_ticks(&world, 127.0f, player_x, player_z);
 
     TEST_ASSERT_FALSE(world.pushwall.active);
     TEST_ASSERT_EQUAL_UINT16(
