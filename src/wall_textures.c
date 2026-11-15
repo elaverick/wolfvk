@@ -87,8 +87,7 @@ static bool read_vswap_file(
         return false;
     }
 
-    if ((unsigned long)file_length > (unsigned long)SIZE_MAX ||
-        (size_t)file_length < WOLF_VSWAP_HEADER_PREFIX_SIZE) {
+    if ((size_t)file_length < WOLF_VSWAP_HEADER_PREFIX_SIZE) {
         fclose(file);
         write_error(error_message, error_message_size, "VSWAP.WL6 is too small to contain its header.");
         return false;
@@ -170,8 +169,7 @@ bool wolf_wall_textures_decode_vswap(
     header_size = WOLF_VSWAP_HEADER_PREFIX_SIZE +
         (size_t)chunk_count * WOLF_VSWAP_OFFSET_ENTRY_SIZE +
         (size_t)chunk_count * WOLF_VSWAP_LENGTH_ENTRY_SIZE;
-    if (header_size > file_size ||
-        (size_t)first_sprite_page > SIZE_MAX / WOLF_WALL_TEXTURE_RGBA_SIZE) {
+    if (header_size > file_size) {
         write_error(error_message, error_message_size, "VSWAP page tables are truncated or oversized.");
         return false;
     }
