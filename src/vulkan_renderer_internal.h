@@ -31,6 +31,15 @@ struct VulkanRenderer {
     VkImageView depth_image_view;
     VkFormat depth_format;
 
+    VkDescriptorSetLayout wall_texture_set_layout;
+    VkDescriptorPool wall_texture_descriptor_pool;
+    VkDescriptorSet wall_texture_descriptor_set;
+    VkImage wall_texture_image;
+    VkDeviceMemory wall_texture_image_memory;
+    VkImageView wall_texture_image_view;
+    VkSampler wall_texture_sampler;
+    uint32_t wall_texture_page_count;
+
     VkBuffer vertex_buffer;
     VkDeviceMemory vertex_buffer_memory;
     VkBuffer index_buffer;
@@ -62,6 +71,13 @@ bool vulkan_renderer_geometry_set_quads(
     const VulkanQuad *quads,
     uint32_t quad_count);
 void vulkan_renderer_geometry_destroy(VulkanRenderer *renderer);
+
+bool vulkan_renderer_texture_layout_create(VulkanRenderer *renderer);
+bool vulkan_renderer_texture_set(
+    VulkanRenderer *renderer,
+    const uint8_t *rgba_pages,
+    uint32_t page_count);
+void vulkan_renderer_texture_destroy(VulkanRenderer *renderer);
 
 bool vulkan_renderer_frame_resources_create(VulkanRenderer *renderer);
 void vulkan_renderer_frame_resources_destroy(VulkanRenderer *renderer);
