@@ -340,6 +340,15 @@ bool vulkan_renderer_set_quads(
     return vulkan_renderer_geometry_set_quads(renderer, quads, quad_count);
 }
 
+/* Refresh moving doors and pushwalls in the existing fixed-size mesh allocation. */
+bool vulkan_renderer_update_quads(
+    VulkanRenderer *renderer,
+    const VulkanQuad *quads,
+    uint32_t quad_count)
+{
+    return vulkan_renderer_geometry_update_quads(renderer, quads, quad_count);
+}
+
 /* Upload the original indexed wall pages before any frame references textured geometry. */
 bool vulkan_renderer_set_wall_textures(
     VulkanRenderer *renderer,
