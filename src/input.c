@@ -197,6 +197,7 @@ void wolf_input_handle_event(WolfInput *input, const SDL_Event *event)
     }
 }
 
+/* Expose a held-key query without leaking the storage used for SDL event state. */
 bool wolf_input_key_down(const WolfInput *input, SDL_Scancode key)
 {
     if (input == NULL || key <= SDL_SCANCODE_UNKNOWN || key >= SDL_SCANCODE_COUNT) {
@@ -217,6 +218,7 @@ void wolf_input_mouse_delta(const WolfInput *input, float *x, float *y)
     }
 }
 
+/* Allow gameplay code to distinguish neutral controller input from a connected controller. */
 bool wolf_input_has_gamepad(const WolfInput *input)
 {
     return input != NULL && input->gamepad != NULL;
@@ -233,6 +235,7 @@ float wolf_input_gamepad_axis(const WolfInput *input, SDL_GamepadAxis axis)
     return input->gamepad_axes[axis];
 }
 
+/* Keep button reads safe when a controller is unplugged or a caller supplies an invalid button. */
 bool wolf_input_gamepad_button_down(const WolfInput *input, SDL_GamepadButton button)
 {
     if (input == NULL || input->gamepad == NULL ||
