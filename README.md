@@ -8,12 +8,15 @@ Development follows the ordered, approval-gated steps in [roadmap.md](roadmap.md
 
 **Current roadmap step:** Ensure the window can render Vulkan 3D content in a performant manner.
 
-The SDL3 window milestone is complete. A resizable 1280×720 window opens and exits cleanly when closed. Its Windows x64 configure, build and hidden-window smoke test passed in [GitHub Actions run #1](https://github.com/elaverick/WolfVK/actions/runs/43708820409).
+The SDL3 window milestone is complete. A resizable 1280×720 window opens and exits cleanly when closed. Its Windows x64 configure and build passed in [GitHub Actions run #1](https://github.com/elaverick/WolfVK/actions/runs/43708820409).
+
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The test runner currently contains assertion-based tests for window creation, resizable-window flags, and SDL quit-event queueing. Tests are registered with CTest and run by the GitHub Actions workflow.
 
 | Check | Current status |
 |---|---|
 | Windows x64 build | Tracked by the Actions badge below |
-| Automated tests | SDL3 hidden-window creation smoke test (passed on the completed first milestone) |
+| C unit-test framework | Unity |
+| Automated tests | 3 SDL3 window/event tests; framework integration added, pending CI verification |
 | SDL3 window | Complete |
 | Vulkan renderer | Current development step |
 | Original level loading | Not started |
@@ -21,11 +24,11 @@ The SDL3 window milestone is complete. A resizable 1280×720 window opens and ex
 
 [![Windows build and tests](https://github.com/elaverick/WolfVK/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/elaverick/WolfVK/actions/workflows/build.yml)
 
-The workflow configures and compiles the Windows x64 application, then runs the SDL3 window-creation smoke test. The badge reflects the latest workflow result for the branch.
+The workflow configures and compiles the Windows x64 application, then runs the Unity test suite through CTest. The badge reflects the latest workflow result for the branch.
 
 ## Build locally
 
-A C17 compiler, CMake 3.24 or newer, Git, and network access for SDL3's CMake dependency are required.
+A C17 compiler, CMake 3.24 or newer, Git, and network access for SDL3 and Unity source dependencies are required.
 
 ```powershell
 cmake -S . -B build -A x64 -DBUILD_TESTING=ON
