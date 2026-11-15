@@ -1,6 +1,7 @@
 #include "wolfvk/wall_textures.h"
 
 #include "game_palette.h"
+#include "wolfvk/level.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -269,7 +270,16 @@ bool wolf_wall_texture_page_for_tile(
     uint16_t wall_type;
     uint16_t selected_page;
 
-    if (page_index == NULL || wall_tile == 0u || wall_tile >= 90u) {
+    /*
+     * Door IDs 90–101 are special map cells, while 102–106 are valid
+     * wall values whose 0x40 flag is removed before selecting the texture.
+     * Area markers start at 107 and should already have been normalised to
+     * floor by the map loader.
+     */
+    if (page_index == NULL || wall_tile == 0u ||
+        (wall_tile >= WOLF_LEVEL_DOOR_TILE_FIRST &&
+         wall_tile <= WOLF_LEVEL_DOOR_TILE_LAST) ||
+        wall_tile >= WOLF_LEVEL_AREA_TILE_FIRST) {
         return false;
     }
 
