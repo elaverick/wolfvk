@@ -210,8 +210,22 @@ bool wolf_world_state_init(
                 ++world->door_count;
             }
 
-            if (level->object_tiles[index] == WOLF_LEVEL_INFO_PUSHWALL_MARKER &&
+            if (wolf_level_is_secret_door_cell(level, x, y) &&
                 wall_tile != 0u && !wolf_level_is_door_tile(wall_tile)) {
+                uint16_t horizontal_page;
+                uint16_t vertical_page;
+
+                /*
+                 * A pushwall uses the same two original wall pages as its
+                 * stationary form. Validate them while the info-plane marker
+                 * and its source wall cell are still available.
+                 */
+                if (!wolf_wall_texture_page_for_tile(
+                        wall_tile, false, texture_page_count, &horizontal_page) ||
+                    !wolf_wall_texture_page_for_tile(
+                        wall_tile, true, texture_page_count, &vertical_page)) {
+                    return false;
+                }
                 world->has_secret_walls = true;
             }
         }
@@ -278,11 +292,24 @@ bool wolf_world_state_use(
     }
 
     target_index = tile_index((uint16_t)target_x, (uint16_t)target_y);
-    if (world->level.object_tiles[target_index] == WOLF_LEVEL_INFO_PUSHWALL_MARKER) {
+    if (wolf_level_is_secret_door_cell(&world->level, target_x, target_y)) {
         int destination_x = target_x + direction_x;
         int destination_y = target_y + direction_y;
+        uint16_t wall_tile = world->level.wall_tiles[target_index];
+        uint16_t horizontal_page;
+        uint16_t vertical_page;
 
-        if (world->pushwall.active ||
+        /*
+         * The info-plane marker alone does not make a usable wall. Preserve
+         * the original PushWall guard: it must point at a real, textured wall
+         * and the cell immediately beyond it must be empty.
+         */
+        if (world->pushwall.active || wall_tile == 0u ||
+            wolf_level_is_door_tile(wall_tile) ||
+            !wolf_wall_texture_page_for_tile(
+                wall_tile, false, world->texture_page_count, &horizontal_page) ||
+            !wolf_wall_texture_page_for_tile(
+                wall_tile, true, world->texture_page_count, &vertical_page) ||
             map_cell_is_solid(world, destination_x, destination_y)) {
             return false;
         }
@@ -290,7 +317,7 @@ bool wolf_world_state_use(
         world->pushwall.active = true;
         world->pushwall.source_x = (uint8_t)target_x;
         world->pushwall.source_y = (uint8_t)target_y;
-        world->pushwall.wall_tile = world->level.wall_tiles[target_index];
+        world->pushwall.wall_tile = wall_tile;
         world->pushwall.direction_x = (int8_t)direction_x;
         world->pushwall.direction_y = (int8_t)direction_y;
         /* The original engine initialises pwallstate to one before the first MovePWalls tick. */
@@ -623,18 +650,18 @@ static uint16_t door_texture_page(const WolfWorldState *world, const WolfDoor *d
     return page;
 }
 
-/* The full door slab translates along its original in-plane axis and hides in the adjacent wall. */
-static void build_door_quads(
+/*
+ * The renderer disables face culling, so one quad is visible from both sides.
+ * A second coincident quad with reversed UVs z-fights and appears as a
+ * flickering, incorrectly oriented second door texture.
+ */
+static void build_door_quad(
     const WolfWorldState *world,
     const WolfDoor *door,
-    VulkanQuad *front,
-    VulkanQuad *back)
+    VulkanQuad *quad)
 {
-    static const float front_uvs[4][2] = {
+    static const float door_uvs[4][2] = {
         {0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}
-    };
-    static const float back_uvs[4][2] = {
-        {1.0f, 1.0f}, {0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 0.0f}
     };
     float x0 = -((float)world->level.width * WOLF_WORLD_TILE_SIZE) * 0.5f +
         (float)door->tile_x * WOLF_WORLD_TILE_SIZE;
@@ -645,12 +672,10 @@ static void build_door_quads(
     float slide = ((float)door->position /
         (float)WOLF_WORLD_DOOR_OPEN_POSITION) * WOLF_WORLD_TILE_SIZE;
     float plane;
-    float positions_front[4][3];
-    float positions_back[4][3];
+    float positions[4][3];
 
     if (door->action == WOLF_DOOR_OPEN) {
-        clear_quad(front);
-        clear_quad(back);
+        clear_quad(quad);
         return;
     }
 
@@ -658,47 +683,38 @@ static void build_door_quads(
         plane = (x0 + x1) * 0.5f;
         z0 += slide;
         z1 += slide;
-        positions_front[0][0] = plane;
-        positions_front[0][1] = 0.0f;
-        positions_front[0][2] = z0;
-        positions_front[1][0] = plane;
-        positions_front[1][1] = 0.0f;
-        positions_front[1][2] = z1;
-        positions_front[2][0] = plane;
-        positions_front[2][1] = WOLF_WORLD_WALL_HEIGHT;
-        positions_front[2][2] = z1;
-        positions_front[3][0] = plane;
-        positions_front[3][1] = WOLF_WORLD_WALL_HEIGHT;
-        positions_front[3][2] = z0;
+        positions[0][0] = plane;
+        positions[0][1] = 0.0f;
+        positions[0][2] = z0;
+        positions[1][0] = plane;
+        positions[1][1] = 0.0f;
+        positions[1][2] = z1;
+        positions[2][0] = plane;
+        positions[2][1] = WOLF_WORLD_WALL_HEIGHT;
+        positions[2][2] = z1;
+        positions[3][0] = plane;
+        positions[3][1] = WOLF_WORLD_WALL_HEIGHT;
+        positions[3][2] = z0;
     } else {
         plane = (z0 + z1) * 0.5f;
         x0 += slide;
         x1 += slide;
-        positions_front[0][0] = x0;
-        positions_front[0][1] = 0.0f;
-        positions_front[0][2] = plane;
-        positions_front[1][0] = x1;
-        positions_front[1][1] = 0.0f;
-        positions_front[1][2] = plane;
-        positions_front[2][0] = x1;
-        positions_front[2][1] = WOLF_WORLD_WALL_HEIGHT;
-        positions_front[2][2] = plane;
-        positions_front[3][0] = x0;
-        positions_front[3][1] = WOLF_WORLD_WALL_HEIGHT;
-        positions_front[3][2] = plane;
-    }
-
-    for (size_t index = 0u; index < 4u; ++index) {
-        positions_back[index][0] = positions_front[3u - index][0];
-        positions_back[index][1] = positions_front[3u - index][1];
-        positions_back[index][2] = positions_front[3u - index][2];
+        positions[0][0] = x0;
+        positions[0][1] = 0.0f;
+        positions[0][2] = plane;
+        positions[1][0] = x1;
+        positions[1][1] = 0.0f;
+        positions[1][2] = plane;
+        positions[2][0] = x1;
+        positions[2][1] = WOLF_WORLD_WALL_HEIGHT;
+        positions[2][2] = plane;
+        positions[3][0] = x0;
+        positions[3][1] = WOLF_WORLD_WALL_HEIGHT;
+        positions[3][2] = plane;
     }
 
     append_quad(
-        front, (const float (*)[3])positions_front, front_uvs,
-        door_texture_page(world, door), 0.98f);
-    append_quad(
-        back, (const float (*)[3])positions_back, back_uvs,
+        quad, (const float (*)[3])positions, door_uvs,
         door_texture_page(world, door), 0.98f);
 }
 
@@ -801,7 +817,7 @@ uint32_t wolf_world_state_dynamic_quad_count(const WolfWorldState *world)
         return 0u;
     }
 
-    return (uint32_t)world->door_count * 2u +
+    return (uint32_t)world->door_count +
         (world->has_secret_walls ? 4u : 0u);
 }
 
@@ -824,10 +840,8 @@ bool wolf_world_state_build_dynamic_quads(
     }
 
     for (uint16_t index = 0u; index < world->door_count; ++index) {
-        build_door_quads(
-            world, &world->doors[index],
-            &quads[output_index], &quads[output_index + 1u]);
-        output_index += 2u;
+        build_door_quad(world, &world->doors[index], &quads[output_index]);
+        ++output_index;
     }
 
     if (world->has_secret_walls) {

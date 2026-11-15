@@ -205,7 +205,7 @@ void test_world_state_door_geometry_uses_original_vswap_door_pages(void)
 {
     WolfLevel level = create_test_level();
     WolfWorldState world = {0};
-    VulkanQuad quads[8];
+    VulkanQuad quads[4];
 
     level.wall_tiles[1u * WOLF_LEVEL_PLANE_WIDTH + 1u] = 90u;
     level.wall_tiles[1u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 91u;
@@ -213,45 +213,41 @@ void test_world_state_door_geometry_uses_original_vswap_door_pages(void)
     level.wall_tiles[1u * WOLF_LEVEL_PLANE_WIDTH + 4u] = 101u;
 
     TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 98u));
-    TEST_ASSERT_EQUAL_UINT32(8u, wolf_world_state_dynamic_quad_count(&world));
-    TEST_ASSERT_TRUE(wolf_world_state_build_dynamic_quads(&world, quads, 8u));
+    TEST_ASSERT_EQUAL_UINT32(4u, wolf_world_state_dynamic_quad_count(&world));
+    TEST_ASSERT_TRUE(wolf_world_state_build_dynamic_quads(&world, quads, 4u));
 
-    /* Standard, horizontal and locked door tiles select their original VSWAP pages. */
+    /* Each door has one two-sided quad and retains its original VSWAP page. */
     TEST_ASSERT_EQUAL_UINT32(91u, quads[0].vertices[0].texture_layer);
-    TEST_ASSERT_EQUAL_UINT32(90u, quads[2].vertices[0].texture_layer);
-    TEST_ASSERT_EQUAL_UINT32(97u, quads[4].vertices[0].texture_layer);
-    TEST_ASSERT_EQUAL_UINT32(94u, quads[6].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(90u, quads[1].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(97u, quads[2].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(94u, quads[3].vertices[0].texture_layer);
     TEST_ASSERT_EQUAL_UINT32(1u, quads[0].vertices[0].use_texture);
 
     world.doors[0].position = 32768u;
-    TEST_ASSERT_TRUE(wolf_world_state_build_dynamic_quads(&world, quads, 8u));
+    TEST_ASSERT_TRUE(wolf_world_state_build_dynamic_quads(&world, quads, 4u));
 
     /* A vertical door keeps its X plane fixed and slides halfway along Z. */
     TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[0].vertices[0].position[0]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[0].vertices[0].position[2]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[0].vertices[1].position[2]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[1].vertices[0].position[0]);
 
-    /* A horizontal door at map cell (2, 1) slides along X on the fixed Z=-3.2 plane. */
+    /* An east-west door slides along X while remaining on its fixed Z plane. */
     world.doors[1].position = 32768u;
-    TEST_ASSERT_TRUE(wolf_world_state_build_dynamic_quads(&world, quads, 8u));
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[2].vertices[0].position[0]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[2].vertices[0].position[2]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.2f, quads[2].vertices[1].position[0]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[2].vertices[1].position[2]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[3].vertices[0].position[0]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[3].vertices[0].position[2]);
+    TEST_ASSERT_TRUE(wolf_world_state_build_dynamic_quads(&world, quads, 4u));
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[1].vertices[0].position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[1].vertices[0].position[2]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.2f, quads[1].vertices[1].position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[1].vertices[1].position[2]);
 
-    /* Fully-open panels are removed from the dynamic draw list on both orientations. */
-    world.doors[0].position = WOLF_WORLD_DOOR_OPEN_POSITION;
-    world.doors[0].action = WOLF_DOOR_OPEN;
-    world.doors[1].position = WOLF_WORLD_DOOR_OPEN_POSITION;
-    world.doors[1].action = WOLF_DOOR_OPEN;
-    TEST_ASSERT_TRUE(wolf_world_state_build_dynamic_quads(&world, quads, 8u));
-    TEST_ASSERT_EQUAL_UINT8(0u, quads[0].vertices[0].use_texture);
-    TEST_ASSERT_EQUAL_UINT8(0u, quads[1].vertices[0].use_texture);
-    TEST_ASSERT_EQUAL_UINT8(0u, quads[2].vertices[0].use_texture);
-    TEST_ASSERT_EQUAL_UINT8(0u, quads[3].vertices[0].use_texture);
+    /* Fully-open panels are removed from the draw list in both orientations. */
+    for (uint16_t index = 0u; index < world.door_count; ++index) {
+        world.doors[index].position = WOLF_WORLD_DOOR_OPEN_POSITION;
+        world.doors[index].action = WOLF_DOOR_OPEN;
+    }
+    TEST_ASSERT_TRUE(wolf_world_state_build_dynamic_quads(&world, quads, 4u));
+    for (size_t index = 0u; index < 4u; ++index) {
+        TEST_ASSERT_EQUAL_UINT8(0u, quads[index].vertices[0].use_texture);
+    }
 }
 
 void test_world_state_rejects_door_pages_missing_from_vswap(void)
@@ -384,6 +380,15 @@ void test_world_state_builds_dynamic_secret_wall_geometry(void)
 
     TEST_ASSERT_EQUAL_UINT32(4u, wolf_world_state_dynamic_quad_count(&world));
     TEST_ASSERT_TRUE(wolf_world_state_build_dynamic_quads(&world, quads, 4u));
+
+    /*
+     * The moving wall must retain the source wall's material pages:
+     * horizontal (Z-normal) faces use page 12, vertical (X-normal) faces page 13.
+     */
+    TEST_ASSERT_EQUAL_UINT32(12u, quads[0].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(12u, quads[1].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(13u, quads[2].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(13u, quads[3].vertices[0].texture_layer);
     for (size_t index = 0u; index < 4u; ++index) {
         TEST_ASSERT_EQUAL_UINT32(1u, quads[index].vertices[0].use_texture);
     }
