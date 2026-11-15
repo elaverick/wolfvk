@@ -14,6 +14,7 @@ struct WolfInput {
     bool gamepad_buttons[SDL_GAMEPAD_BUTTON_COUNT];
 };
 
+/* Release the selected controller and clear its cached state so stale input cannot persist. */
 static void close_gamepad(WolfInput *input)
 {
     if (input->gamepad != NULL) {
@@ -30,6 +31,7 @@ static void close_gamepad(WolfInput *input)
     }
 }
 
+/* SDL gamepad handles provide a mapped layout rather than raw joystick-specific bindings. */
 static bool open_gamepad(WolfInput *input, SDL_JoystickID instance_id)
 {
     SDL_Gamepad *gamepad = SDL_OpenGamepad(instance_id);
@@ -43,6 +45,7 @@ static bool open_gamepad(WolfInput *input, SDL_JoystickID instance_id)
     return true;
 }
 
+/* Keep one predictable controller active; later devices can be selected if it is unplugged. */
 static void open_first_available_gamepad(WolfInput *input)
 {
     SDL_JoystickID *gamepad_ids;
@@ -66,6 +69,7 @@ static void open_first_available_gamepad(WolfInput *input)
     SDL_free(gamepad_ids);
 }
 
+/* Remove stick drift and rescale the remaining travel so the deadzone does not reduce top speed. */
 float wolf_input_normalize_axis(Sint16 value, float deadzone)
 {
     float normalized = value < 0
@@ -87,6 +91,7 @@ float wolf_input_normalize_axis(Sint16 value, float deadzone)
     return normalized < 0.0f ? -magnitude : magnitude;
 }
 
+/* Centralise SDL gamepad subsystem ownership and controller discovery in one input object. */
 WolfInput *wolf_input_create(void)
 {
     WolfInput *input = calloc(1, sizeof(*input));
@@ -104,6 +109,7 @@ WolfInput *wolf_input_create(void)
     return input;
 }
 
+/* Close the controller before releasing the input state owned by this object. */
 void wolf_input_destroy(WolfInput *input)
 {
     if (input == NULL) {
@@ -114,6 +120,7 @@ void wolf_input_destroy(WolfInput *input)
     free(input);
 }
 
+/* Mouse motion is frame-relative; analog controls are sampled once so one frame uses a coherent state. */
 void wolf_input_begin_frame(WolfInput *input)
 {
     if (input == NULL) {
@@ -147,6 +154,7 @@ void wolf_input_begin_frame(WolfInput *input)
     }
 }
 
+/* Translate SDL events into the small, device-independent state consumed by the player controller. */
 void wolf_input_handle_event(WolfInput *input, const SDL_Event *event)
 {
     if (input == NULL || event == NULL) {
@@ -198,6 +206,7 @@ bool wolf_input_key_down(const WolfInput *input, SDL_Scancode key)
     return input->keys[key];
 }
 
+/* Return the accumulated relative motion; begin_frame clears it before the next event batch. */
 void wolf_input_mouse_delta(const WolfInput *input, float *x, float *y)
 {
     if (x != NULL) {
@@ -213,6 +222,7 @@ bool wolf_input_has_gamepad(const WolfInput *input)
     return input != NULL && input->gamepad != NULL;
 }
 
+/* Missing controllers and invalid axes behave as neutral input rather than requiring caller branches. */
 float wolf_input_gamepad_axis(const WolfInput *input, SDL_GamepadAxis axis)
 {
     if (input == NULL || input->gamepad == NULL ||
