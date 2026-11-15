@@ -355,6 +355,7 @@ static bool load_shader_module(
     char shader_path[1024];
     FILE *shader_file = NULL;
     long shader_size;
+    int shader_path_length;
     uint32_t *shader_code = NULL;
     VkShaderModuleCreateInfo create_info = {0};
     VkResult result;
@@ -364,8 +365,9 @@ static bool load_shader_module(
         return false;
     }
 
-    if (snprintf(shader_path, sizeof(shader_path), "%sshaders/%s", base_path, shader_filename) < 0 ||
-        strlen(shader_path) >= sizeof(shader_path)) {
+    shader_path_length = snprintf(
+        shader_path, sizeof(shader_path), "%sshaders/%s", base_path, shader_filename);
+    if (shader_path_length < 0 || (size_t)shader_path_length >= sizeof(shader_path)) {
         return false;
     }
 
