@@ -17,6 +17,7 @@ void test_present_mode_falls_back_to_fifo(void);
 void test_surface_format_handles_undefined_single_format(void);
 void test_swapchain_selection_handles_empty_lists(void);
 void test_renderer_creates_swapchain_and_presents_triangle(void);
+void test_device_scoring_prefers_discrete_gpus(void);
 
 int main(void)
 {
@@ -38,5 +39,6 @@ int main(void)
     RUN_TEST(test_surface_format_handles_undefined_single_format);
     RUN_TEST(test_swapchain_selection_handles_empty_lists);
     RUN_TEST(test_renderer_creates_swapchain_and_presents_triangle);
+    RUN_TEST(test_device_scoring_prefers_discrete_gpus);
     return UNITY_END();
 }
