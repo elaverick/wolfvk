@@ -340,7 +340,6 @@ bool vulkan_renderer_set_quads(
     return vulkan_renderer_geometry_set_quads(renderer, quads, quad_count);
 }
 
-/* Store the latest camera matrix for the next submitted frame without rebuilding the pipeline. */
 /* Upload the original indexed wall pages before any frame references textured geometry. */
 bool vulkan_renderer_set_wall_textures(
     VulkanRenderer *renderer,
@@ -350,6 +349,7 @@ bool vulkan_renderer_set_wall_textures(
     return vulkan_renderer_texture_set(renderer, rgba_pages, page_count);
 }
 
+/* Store the latest camera matrix for the next submitted frame without rebuilding the pipeline. */
 bool vulkan_renderer_set_view_projection(
     VulkanRenderer *renderer,
     const float view_projection[16])
