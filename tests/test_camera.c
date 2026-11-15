@@ -1,6 +1,7 @@
 #include "unity.h"
 
 #include "wolfvk/camera.h"
+#include "wolfvk/world.h"
 
 #include <math.h>
 
@@ -20,6 +21,19 @@ void test_default_camera_builds_vulkan_projection(void)
     for (int index = 0; index < 16; ++index) {
         TEST_ASSERT_TRUE(isfinite(matrix[index]));
     }
+}
+
+void test_camera_eye_height_is_half_the_wall_height(void)
+{
+    WolfCamera camera;
+
+    wolf_camera_initialize(&camera);
+
+    /* Keep the player's view centred vertically between floor and ceiling. */
+    TEST_ASSERT_FLOAT_WITHIN(
+        0.001f, WOLF_WORLD_EYE_HEIGHT, camera.position[1]);
+    TEST_ASSERT_FLOAT_WITHIN(
+        0.001f, WOLF_WORLD_WALL_HEIGHT * 0.5f, camera.position[1]);
 }
 
 void test_camera_yaw_changes_view_direction(void)
