@@ -985,6 +985,7 @@ bool vulkan_renderer_frame_resources_recreate(VulkanRenderer *renderer)
 
     if (!create_swapchain(renderer) ||
         !create_image_views(renderer) ||
+        !create_depth_resources(renderer) ||
         !create_render_pass(renderer) ||
         !create_graphics_pipeline(renderer) ||
         !create_framebuffers(renderer) ||
