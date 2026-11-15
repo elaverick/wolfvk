@@ -646,7 +646,7 @@ static bool create_render_finished_semaphores(VulkanRenderer *renderer)
             renderer->device, &semaphore_info, NULL,
             &renderer->render_finished_semaphores[image_index]);
         if (result != VK_SUCCESS) {
-            fprintf(stderr, "Vulkan render-finished semaphore creation failed (%d).\\n", result);
+            fprintf(stderr, "Vulkan render-finished semaphore creation failed (%d).\n", result);
             return false;
         }
     }
