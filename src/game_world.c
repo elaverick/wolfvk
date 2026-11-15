@@ -144,7 +144,7 @@ static bool player_blocks_door(
     float map_y = map_coordinate(player_world_z, world->level.height);
 
     return position_overlaps_cell(
-        map_x, map_y, 0.20f, door->tile_x, door->tile_y);
+        map_x, map_y, 0.34375f, door->tile_x, door->tile_y);
 }
 
 /* CloseDoor leaves a doorway open if the player is standing in its opening. */
@@ -180,6 +180,7 @@ bool wolf_world_state_init(
 
         memset(world, 0, sizeof(*world));
         world->level = level_copy;
+        level = &world->level;
     }
     world->texture_page_count = texture_page_count;
     memset(world->door_at, UINT8_MAX, sizeof(world->door_at));
@@ -322,9 +323,12 @@ bool wolf_world_state_use(
             return true;
 
         case WOLF_DOOR_OPEN:
-            door->open_ticks = 0.0f;
-            return request_door_close(
-                world, door, player_world_x, player_world_z);
+            if (request_door_close(
+                    world, door, player_world_x, player_world_z)) {
+                door->open_ticks = 0.0f;
+                return true;
+            }
+            return false;
 
         case WOLF_DOOR_OPENING:
             return request_door_close(
