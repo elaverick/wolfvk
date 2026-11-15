@@ -1,7 +1,9 @@
 #include "unity.h"
 
 #include "wolfvk/level_geometry.h"
+#include "wolfvk/world.h"
 
+#include <math.h>
 #include <stdlib.h>
 
 void test_level_geometry_emits_four_faces_for_isolated_wall(void)
@@ -18,9 +20,37 @@ void test_level_geometry_emits_four_faces_for_isolated_wall(void)
     TEST_ASSERT_EQUAL_UINT32(4u, quad_count);
     TEST_ASSERT_NOT_NULL(quads);
 
-    TEST_ASSERT_EQUAL_FLOAT(-0.5f, quads[0].vertices[0].position[0]);
-    TEST_ASSERT_EQUAL_FLOAT(-0.5f, quads[0].vertices[0].position[2]);
+    TEST_ASSERT_EQUAL_FLOAT(-1.6f, quads[0].vertices[0].position[0]);
+    TEST_ASSERT_EQUAL_FLOAT(-1.6f, quads[0].vertices[0].position[2]);
     TEST_ASSERT_EQUAL_FLOAT(3.2f, quads[0].vertices[2].position[1]);
+
+    free(quads);
+}
+
+void test_level_geometry_wall_panels_are_square_in_world_space(void)
+{
+    WolfLevel level = {0};
+    VulkanQuad *quads = NULL;
+    uint32_t quad_count = 0u;
+    float horizontal_extent;
+    float vertical_extent;
+
+    level.width = 3u;
+    level.height = 3u;
+    level.wall_tiles[WOLF_LEVEL_PLANE_WIDTH + 1u] = 1u;
+
+    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, &quads, &quad_count));
+    TEST_ASSERT_EQUAL_UINT32(4u, quad_count);
+
+    /* A single wall panel must occupy one square map cell in both world axes. */
+    horizontal_extent = fabsf(
+        quads[0].vertices[1].position[0] - quads[0].vertices[0].position[0]);
+    vertical_extent = fabsf(
+        quads[0].vertices[2].position[1] - quads[0].vertices[1].position[1]);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, WOLF_WORLD_TILE_SIZE, horizontal_extent);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, WOLF_WORLD_WALL_HEIGHT, vertical_extent);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, horizontal_extent, vertical_extent);
 
     free(quads);
 }
