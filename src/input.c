@@ -1,6 +1,5 @@
 #include "wolfvk/input.h"
 
-#include <math.h>
 #include <stdlib.h>
 
 #define WOLF_INPUT_STICK_DEADZONE 0.15f
@@ -72,7 +71,7 @@ float wolf_input_normalize_axis(Sint16 value, float deadzone)
     float normalized = value < 0
         ? (float)value / 32768.0f
         : (float)value / 32767.0f;
-    float magnitude = fabsf(normalized);
+    float magnitude = normalized < 0.0f ? -normalized : normalized;
 
     if (deadzone < 0.0f) {
         deadzone = 0.0f;
