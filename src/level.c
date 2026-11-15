@@ -29,6 +29,13 @@ static void write_error(char *error_message, size_t error_message_size, const ch
     }
 }
 
+bool wolf_level_is_door_tile(uint16_t wall_tile)
+{
+    /* Retail Wolf3D reserves this inclusive wall-plane range for oriented and locked doors. */
+    return wall_tile >= WOLF_LEVEL_DOOR_TILE_FIRST &&
+        wall_tile <= WOLF_LEVEL_DOOR_TILE_LAST;
+}
+
 static FILE *open_binary_file(const char *path)
 {
     FILE *file = NULL;
@@ -44,6 +51,7 @@ static FILE *open_binary_file(const char *path)
     return file;
 }
 
+/* Read each asset completely before parsing so a truncated file never appears valid. */
 static bool read_file(
     const char *path,
     uint8_t **data,
@@ -95,6 +103,7 @@ static bool read_file(
     return true;
 }
 
+/* Expand the original word-oriented back-references, including overlapping copies. */
 bool wolf_level_decode_carmack(
     const uint8_t *source,
     size_t source_size,
@@ -197,6 +206,7 @@ bool wolf_level_decode_carmack(
     return true;
 }
 
+/* Restore the fixed-size tile plane after Carmack expansion has produced the RLEW stream. */
 bool wolf_level_decode_rlew(
     const uint8_t *source,
     size_t source_size,
@@ -257,7 +267,7 @@ bool wolf_level_decode_rlew(
     return true;
 }
 
-/* Carmack expansion produces an RLEW stream whose first word is its expanded byte count. */
+/* Keep the original compression stages together so callers cannot confuse their output formats. */
 static bool decode_map_plane(
     const uint8_t *compressed_plane,
     size_t compressed_plane_size,
@@ -295,6 +305,7 @@ static bool decode_map_plane(
     return decoded;
 }
 
+/* Publish a level only after both original planes have been read and validated successfully. */
 bool wolf_level_load(
     const char *maphead_path,
     const char *gamemaps_path,
@@ -366,7 +377,7 @@ bool wolf_level_load(
     memcpy(decoded_level.name, map_header + 22u, 16u);
     decoded_level.name[16] = '\0';
 
-    /* Wolf3D's original renderer uses the wall and object planes from each 64x64 map. */
+    /* The wall plane defines solid cells; the info plane supplies starts, actors and special markers. */
     for (uint32_t plane_index = 0u; plane_index < 2u; ++plane_index) {
         uint32_t plane_offset = read_u32_le(map_header + plane_index * 4u);
         uint16_t plane_length = read_u16_le(map_header + 12u + plane_index * 2u);
