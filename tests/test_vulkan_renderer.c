@@ -1,6 +1,6 @@
 #include "unity.h"
 
-#include "wolfvk/vulkan_renderer.h"
+#include "vulkan_renderer_internal.h"
 
 void test_graphics_and_present_on_same_queue_family(void)
 {
@@ -102,4 +102,54 @@ void test_renderer_rejects_window_without_vulkan_support(void)
     TEST_ASSERT_FALSE(vulkan_renderer_create(window, &renderer));
     TEST_ASSERT_NULL(renderer);
     SDL_DestroyWindow(window);
+}
+
+void test_surface_format_prefers_srgb(void)
+{
+    const VkSurfaceFormatKHR formats[] = {
+        {.format = VK_FORMAT_R8G8B8A8_UNORM, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
+        {.format = VK_FORMAT_B8G8R8A8_SRGB, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}
+    };
+    VkSurfaceFormatKHR selected = {0};
+
+    TEST_ASSERT_TRUE(vulkan_renderer_choose_surface_format(formats, 2, &selected));
+    TEST_ASSERT_EQUAL_INT(VK_FORMAT_B8G8R8A8_SRGB, selected.format);
+}
+
+void test_surface_format_falls_back_to_first_supported_format(void)
+{
+    const VkSurfaceFormatKHR formats[] = {
+        {.format = VK_FORMAT_R8G8B8A8_UNORM, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
+        {.format = VK_FORMAT_R8G8B8A8_UNORM, .colorSpace = VK_COLOR_SPACE_DISPLAY_P3_NONLINEAR_EXT}
+    };
+    VkSurfaceFormatKHR selected = {0};
+
+    TEST_ASSERT_TRUE(vulkan_renderer_choose_surface_format(formats, 2, &selected));
+    TEST_ASSERT_EQUAL_INT(formats[0].format, selected.format);
+    TEST_ASSERT_EQUAL_INT(formats[0].colorSpace, selected.colorSpace);
+}
+
+void test_present_mode_prefers_mailbox(void)
+{
+    const VkPresentModeKHR modes[] = {
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
+        VK_PRESENT_MODE_MAILBOX_KHR
+    };
+
+    TEST_ASSERT_EQUAL_INT(
+        VK_PRESENT_MODE_MAILBOX_KHR,
+        vulkan_renderer_choose_present_mode(modes, 3));
+}
+
+void test_present_mode_falls_back_to_fifo(void)
+{
+    const VkPresentModeKHR modes[] = {
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
+        VK_PRESENT_MODE_FIFO_KHR
+    };
+
+    TEST_ASSERT_EQUAL_INT(
+        VK_PRESENT_MODE_FIFO_KHR,
+        vulkan_renderer_choose_present_mode(modes, 2));
 }
