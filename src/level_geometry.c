@@ -37,9 +37,8 @@ static uint16_t get_wall_tile(const WolfLevel *level, int x, int y)
  */
 static bool is_open_space_for_geometry(const WolfLevel *level, int x, int y)
 {
-    uint16_t tile = get_wall_tile(level, x, y);
-
-    return tile == 0u || wolf_level_is_door_tile(tile);
+    return get_wall_tile(level, x, y) == 0u ||
+        wolf_level_is_omitted_door_cell(level, x, y);
 }
 
 /* Convert one world-space corner into the renderer's interleaved vertex format. */
@@ -125,7 +124,7 @@ bool wolf_level_build_wall_quads(
             float z1;
             const WallColour *colour;
 
-            if (tile == 0u || wolf_level_is_door_tile(tile)) {
+            if (tile == 0u || wolf_level_is_omitted_door_cell(level, x, y)) {
                 continue;
             }
 
@@ -260,12 +259,12 @@ bool wolf_level_find_open_tile(
 
     for (uint16_t y = 0u; y < level->height; ++y) {
         for (uint16_t x = 0u; x < level->width; ++x) {
-            uint16_t tile = get_wall_tile(level, x, y);
             float delta_x;
             float delta_y;
             float distance;
 
-            if (tile != 0u && !wolf_level_is_door_tile(tile)) {
+            if (get_wall_tile(level, x, y) != 0u &&
+                !wolf_level_is_omitted_door_cell(level, x, y)) {
                 continue;
             }
 
