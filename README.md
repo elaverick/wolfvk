@@ -18,9 +18,9 @@ The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedica
 | C unit-test framework | Unity |
 | Automated tests | 22 Unity test cases: 3 SDL3, 4 input, 14 Vulkan unit, and 1 SwiftShader swapchain render/present integration |
 | SDL3 window | Complete |
-| Vulkan swapchain and triangle rendering | Implemented and verified in Windows CI
+| Vulkan swapchain and triangle rendering | Implemented and verified in Windows CI |
 | Input handling | Keyboard, relative mouse and SDL gamepad state; verified in Windows CI |
-| Input handling | Next roadmap step
+| Quad rendering | Next roadmap step
 | Original level loading | Not started |
 | Playable demo | Not started |
 
