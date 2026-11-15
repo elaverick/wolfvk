@@ -22,6 +22,50 @@ static bool position_overlaps_wall(
         world, world_x, world_z, WOLF_PLAYER_COLLISION_RADIUS_TILES);
 }
 
+/* Find the furthest collision-free point along one axis of a movement step. */
+static float resolve_axis_movement(
+    const WolfWorldState *world,
+    float start_x,
+    float start_z,
+    float movement,
+    bool horizontal)
+{
+    const float target_x = horizontal ? start_x + movement : start_x;
+    const float target_z = horizontal ? start_z : start_z + movement;
+
+    if (!position_overlaps_wall(world, target_x, target_z)) {
+        return movement;
+    }
+
+    /*
+     * The coarse movement step detected the wall but may stop short by almost
+     * one full step. Binary-search the safe portion so the player's collision
+     * radius reaches the wall boundary without crossing it.
+     */
+    {
+        float safe_fraction = 0.0f;
+        float blocked_fraction = 1.0f;
+
+        for (int iteration = 0; iteration < 12; ++iteration) {
+            const float fraction = (safe_fraction + blocked_fraction) * 0.5f;
+            const float candidate_x = horizontal
+                ? start_x + movement * fraction
+                : start_x;
+            const float candidate_z = horizontal
+                ? start_z
+                : start_z + movement * fraction;
+
+            if (position_overlaps_wall(world, candidate_x, candidate_z)) {
+                blocked_fraction = fraction;
+            } else {
+                safe_fraction = fraction;
+            }
+        }
+
+        return movement * safe_fraction;
+    }
+}
+
 /* Subdivide movement to avoid tunnelling, then resolve axes independently to retain wall sliding. */
 static void move_with_wall_sliding(
     WolfCamera *camera,
@@ -40,16 +84,11 @@ static void move_with_wall_sliding(
     const float step_z = movement_z * distance / (float)step_count;
 
     for (int step = 0; step < step_count; ++step) {
-        const float candidate_x = camera->position[0] + step_x;
-        const float candidate_z = camera->position[2] + step_z;
-
-        /* Resolve axes separately so a blocked direction can still slide along a wall. */
-        if (!position_overlaps_wall(world, candidate_x, camera->position[2])) {
-            camera->position[0] = candidate_x;
-        }
-        if (!position_overlaps_wall(world, camera->position[0], candidate_z)) {
-            camera->position[2] = candidate_z;
-        }
+        /* Resolve each axis independently so blocked motion can still slide. */
+        camera->position[0] += resolve_axis_movement(
+            world, camera->position[0], camera->position[2], step_x, true);
+        camera->position[2] += resolve_axis_movement(
+            world, camera->position[0], camera->position[2], step_z, false);
     }
 }
 
