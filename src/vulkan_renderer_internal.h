@@ -1,0 +1,42 @@
+#ifndef WOLFVK_VULKAN_RENDERER_INTERNAL_H
+#define WOLFVK_VULKAN_RENDERER_INTERNAL_H
+
+#include "wolfvk/vulkan_renderer.h"
+
+struct VulkanRenderer {
+    VkInstance instance;
+    VkSurfaceKHR surface;
+    VkPhysicalDevice physical_device;
+    VkDevice device;
+    VkQueue graphics_queue;
+    VkQueue present_queue;
+    uint32_t graphics_queue_family;
+    uint32_t present_queue_family;
+
+    VkSwapchainKHR swapchain;
+    VkFormat swapchain_format;
+    VkExtent2D swapchain_extent;
+    uint32_t swapchain_image_count;
+    VkImage *swapchain_images;
+    VkImageView *swapchain_image_views;
+
+    VkRenderPass render_pass;
+    VkPipelineLayout pipeline_layout;
+    VkPipeline graphics_pipeline;
+    VkFramebuffer *framebuffers;
+
+    VkCommandPool command_pool;
+    VkCommandBuffer *command_buffers;
+
+    VkSemaphore image_available_semaphore;
+    VkSemaphore render_finished_semaphore;
+    VkFence in_flight_fence;
+    bool framebuffer_resized;
+};
+
+bool vulkan_renderer_frame_resources_create(VulkanRenderer *renderer);
+void vulkan_renderer_frame_resources_destroy(VulkanRenderer *renderer);
+bool vulkan_renderer_frame_resources_recreate(VulkanRenderer *renderer);
+bool vulkan_renderer_frame_resources_draw(VulkanRenderer *renderer);
+
+#endif
