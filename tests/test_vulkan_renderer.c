@@ -89,3 +89,17 @@ void test_queue_selection_ignores_empty_queue_families(void)
     TEST_ASSERT_EQUAL_UINT32(1, indices.graphics_family);
     TEST_ASSERT_EQUAL_UINT32(1, indices.present_family);
 }
+
+void test_renderer_rejects_window_without_vulkan_support(void)
+{
+    SDL_Window *window = SDL_CreateWindow(
+        "WolfVK non-Vulkan test window", 320, 240, SDL_WINDOW_HIDDEN);
+    VulkanRenderer *renderer = NULL;
+
+    TEST_ASSERT_NOT_NULL_MESSAGE(window, SDL_GetError());
+    renderer = (VulkanRenderer *)window;
+
+    TEST_ASSERT_FALSE(vulkan_renderer_create(window, &renderer));
+    TEST_ASSERT_NULL(renderer);
+    SDL_DestroyWindow(window);
+}
