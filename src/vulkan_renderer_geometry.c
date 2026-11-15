@@ -191,6 +191,50 @@ bool vulkan_renderer_geometry_set_quads(
     renderer->index_buffer = new_index_buffer;
     renderer->index_buffer_memory = new_index_memory;
     renderer->index_count = index_count;
+    renderer->quad_count = quad_count;
+    renderer->vertex_buffer_size = (VkDeviceSize)vertex_data_size;
+    return true;
+}
+
+
+/* Update host-visible quad vertices only after the preceding frame has released the buffer. */
+bool vulkan_renderer_geometry_update_quads(
+    VulkanRenderer *renderer,
+    const VulkanQuad *quads,
+    uint32_t quad_count)
+{
+    VkResult result;
+    void *mapped_data = NULL;
+
+    if (renderer == NULL || renderer->device == VK_NULL_HANDLE ||
+        (quad_count > 0u && quads == NULL) ||
+        quad_count != renderer->quad_count ||
+        (quad_count > 0u && renderer->vertex_buffer_memory == VK_NULL_HANDLE)) {
+        return false;
+    }
+
+    if (quad_count == 0u) {
+        return true;
+    }
+
+    if (renderer->in_flight_fence != VK_NULL_HANDLE) {
+        result = vkWaitForFences(
+            renderer->device, 1u, &renderer->in_flight_fence,
+            VK_TRUE, UINT64_MAX);
+        if (result != VK_SUCCESS) {
+            return false;
+        }
+    }
+
+    result = vkMapMemory(
+        renderer->device, renderer->vertex_buffer_memory,
+        0u, renderer->vertex_buffer_size, 0u, &mapped_data);
+    if (result != VK_SUCCESS) {
+        return false;
+    }
+
+    memcpy(mapped_data, quads, (size_t)renderer->vertex_buffer_size);
+    vkUnmapMemory(renderer->device, renderer->vertex_buffer_memory);
     return true;
 }
 
@@ -206,4 +250,6 @@ void vulkan_renderer_geometry_destroy(VulkanRenderer *renderer)
     destroy_buffer(
         renderer, &renderer->index_buffer, &renderer->index_buffer_memory);
     renderer->index_count = 0u;
+    renderer->quad_count = 0u;
+    renderer->vertex_buffer_size = 0u;
 }
