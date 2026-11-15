@@ -88,14 +88,14 @@ static bool build_scene_geometry(
             fprintf(
                 stderr,
                 "No player-start marker or open floor cell exists in level %s (%u x %u). "
-                "The decoded wall plane contains %zu solid cells and %zu open cells.\\n",
+                "The decoded wall plane contains %zu solid cells and %zu open cells.\n",
                 level->name, (unsigned int)level->width, (unsigned int)level->height,
                 solid_tile_count, open_tile_count);
             fprintf(stderr, "First wall-plane row:");
             for (uint16_t tile_x = 0u; tile_x < level->width && tile_x < 16u; ++tile_x) {
                 fprintf(stderr, " %04X", level->wall_tiles[tile_x]);
             }
-            fputc('\\n', stderr);
+            fputc('\n', stderr);
             free(wall_quads);
             return false;
         }
