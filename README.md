@@ -20,8 +20,8 @@ The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedica
 | SDL3 window | Complete |
 | Vulkan renderer and swapchain | Implemented and verified in Windows CI |
 | Input handling | Keyboard, relative mouse and SDL gamepad state; verified in Windows CI |
-| Quad rendering | Indexed vertex and index buffers, depth testing and view-projection transform; verified in Windows CI
-| Infinite floor and roof | Next roadmap step
+| Quad rendering | Indexed vertex and index buffers, depth testing and view-projection transform; verified in Windows CI |
+| Infinite floor and roof | Large world-space planes with perspective camera; verified in Windows CI |
 | Original level loading | Next roadmap step |
 | Playable demo | Not started |
 
