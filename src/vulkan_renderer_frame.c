@@ -806,6 +806,7 @@ bool vulkan_renderer_frame_resources_draw(VulkanRenderer *renderer)
 {
     VkResult result;
     uint32_t image_index = 0;
+    bool acquired_suboptimal = false;
     VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info = {0};
     VkPresentInfoKHR present_info = {0};
@@ -875,7 +876,7 @@ bool vulkan_renderer_frame_resources_draw(VulkanRenderer *renderer)
 
     result = vkQueuePresentKHR(renderer->present_queue, &present_info);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ||
-        renderer->framebuffer_resized) {
+        renderer->framebuffer_resized || acquired_suboptimal) {
         return vulkan_renderer_frame_resources_recreate(renderer);
     }
     if (result != VK_SUCCESS) {
