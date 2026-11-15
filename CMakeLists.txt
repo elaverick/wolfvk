@@ -36,6 +36,7 @@ add_executable(wolfvk
     src/command_line.c
     src/input.c
     src/level.c
+    src/level_geometry.c
     src/vulkan_renderer_geometry.c
     src/vulkan_renderer.c
     src/vulkan_renderer_frame.c
@@ -117,6 +118,7 @@ if(BUILD_TESTING)
         src/command_line.c
         src/input.c
         src/level.c
+        src/level_geometry.c
         src/vulkan_renderer_geometry.c
         src/vulkan_renderer.c
         src/vulkan_renderer_frame.c
