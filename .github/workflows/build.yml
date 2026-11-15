@@ -69,9 +69,11 @@ jobs:
           - Mouse: look
           - Escape: quit
 
-          The mouse is captured while the window is focused. Wall textures are loaded
-          from VSWAP.WL6. Sprites, enemies, pickups and animated doors are not
-          part of this milestone. Integer scaling is a separate follow-on step.
+          The mouse is captured while the window is focused. Wall textures and animated
+          door panels are loaded from VSWAP.WL6. Press E or Space to operate doors
+          and marked secret pushwalls; locked doors require their matching key.
+          Sprites, enemies and pickups are not yet implemented. Integer scaling
+          remains a follow-on step.
           '@
           Set-Content -LiteralPath (Join-Path $packageDir "README.txt") -Value $instructions -Encoding utf8
           Compress-Archive -Path (Join-Path $packageDir "*") -DestinationPath "build\WolfVK-textured-demo-windows-x64.zip" -Force
