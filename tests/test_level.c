@@ -30,9 +30,9 @@ static void write_u32_le(uint8_t *destination, uint32_t value)
 static void write_zero_plane(uint8_t *destination)
 {
     write_u16_le(destination, 8u);
-    write_u16_le(destination + 2u, WOLF_LEVEL_PLANE_WORDS * sizeof(uint16_t));
-    write_u16_le(destination + 4u, TEST_RLEW_TAG);
-    write_u16_le(destination + 6u, WOLF_LEVEL_PLANE_WORDS);
+    write_u16_le(destination + 2u, (uint16_t)(WOLF_LEVEL_PLANE_WORDS * sizeof(uint16_t)));
+    write_u16_le(destination + 4u, (uint16_t)TEST_RLEW_TAG);
+    write_u16_le(destination + 6u, (uint16_t)WOLF_LEVEL_PLANE_WORDS);
     write_u16_le(destination + 8u, 0u);
 }
 
@@ -82,15 +82,15 @@ static bool create_test_map_files(char *maphead_path, size_t maphead_path_size,
     }
 
     memset(maphead, 0xff, sizeof(maphead));
-    write_u16_le(maphead, TEST_RLEW_TAG);
+    write_u16_le(maphead, (uint16_t)TEST_RLEW_TAG);
     write_u32_le(maphead + 2u, 0u);
 
     write_u32_le(gamemaps, TEST_MAP_HEADER_SIZE);
     write_u32_le(gamemaps + 4u, TEST_MAP_HEADER_SIZE + TEST_PLANE_CHUNK_SIZE);
-    write_u16_le(gamemaps + 12u, TEST_PLANE_CHUNK_SIZE);
-    write_u16_le(gamemaps + 14u, TEST_PLANE_CHUNK_SIZE);
-    write_u16_le(gamemaps + 18u, WOLF_LEVEL_PLANE_WIDTH);
-    write_u16_le(gamemaps + 20u, WOLF_LEVEL_PLANE_HEIGHT);
+    write_u16_le(gamemaps + 12u, (uint16_t)TEST_PLANE_CHUNK_SIZE);
+    write_u16_le(gamemaps + 14u, (uint16_t)TEST_PLANE_CHUNK_SIZE);
+    write_u16_le(gamemaps + 18u, (uint16_t)WOLF_LEVEL_PLANE_WIDTH);
+    write_u16_le(gamemaps + 20u, (uint16_t)WOLF_LEVEL_PLANE_HEIGHT);
     memcpy(gamemaps + 22u, "TEST LEVEL", 10u);
 
     write_zero_plane(gamemaps + TEST_MAP_HEADER_SIZE);
