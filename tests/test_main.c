@@ -89,6 +89,7 @@ void test_world_state_locked_door_requires_and_collects_original_key_marker(void
 void test_world_state_door_geometry_uses_original_vswap_door_pages(void);
 void test_world_state_rejects_door_pages_missing_from_vswap(void);
 void test_world_state_use_selects_pushwall_direction_from_player_yaw(void);
+void test_world_state_detects_secret_wall_for_held_use_input(void);
 void test_world_state_pushwall_moves_one_tile_per_original_128_tics(void);
 void test_world_state_pushwall_stops_after_one_tile_when_second_cell_is_blocked(void);
 void test_world_state_rejects_pushwall_when_first_cell_is_blocked(void);
@@ -186,6 +187,7 @@ int main(void)
     RUN_TEST(test_world_state_door_geometry_uses_original_vswap_door_pages);
     RUN_TEST(test_world_state_rejects_door_pages_missing_from_vswap);
     RUN_TEST(test_world_state_use_selects_pushwall_direction_from_player_yaw);
+    RUN_TEST(test_world_state_detects_secret_wall_for_held_use_input);
     RUN_TEST(test_world_state_pushwall_moves_one_tile_per_original_128_tics);
     RUN_TEST(test_world_state_pushwall_stops_after_one_tile_when_second_cell_is_blocked);
     RUN_TEST(test_world_state_rejects_pushwall_when_first_cell_is_blocked);

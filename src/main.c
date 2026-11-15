@@ -369,7 +369,10 @@ int main(int argc, char *argv[])
             use_down = wolf_input_key_down(input, SDL_SCANCODE_E) ||
                 wolf_input_key_down(input, SDL_SCANCODE_SPACE) ||
                 wolf_input_gamepad_button_down(input, SDL_GAMEPAD_BUTTON_NORTH);
-            if (use_down && !use_was_down) {
+            if (use_down && (!use_was_down ||
+                wolf_world_state_has_secret_wall_ahead(
+                    &world, camera.position[0], camera.position[2],
+                    camera.yaw_radians))) {
                 dynamic_geometry_changed = wolf_world_state_use(
                     &world, camera.position[0], camera.position[2],
                     camera.yaw_radians) || dynamic_geometry_changed;

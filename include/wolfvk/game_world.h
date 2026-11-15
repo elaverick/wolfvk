@@ -61,6 +61,13 @@ bool wolf_world_state_init(
     const WolfLevel *level,
     uint16_t texture_page_count);
 
+/* True if a valid secret-wall marker is in the immediately facing map cell. */
+bool wolf_world_state_has_secret_wall_ahead(
+    const WolfWorldState *world,
+    float player_world_x,
+    float player_world_z,
+    float player_yaw_radians);
+
 /* Activate the original Use action in the cardinal direction nearest the player's yaw. */
 bool wolf_world_state_use(
     WolfWorldState *world,
@@ -89,7 +96,7 @@ bool wolf_world_state_collect_key(
     float player_world_x,
     float player_world_z);
 
-/* Dynamic geometry reserves two quads per door and four for a map with pushwalls. */
+/* Dynamic geometry reserves one two-sided quad per door and four for a map with pushwalls. */
 uint32_t wolf_world_state_dynamic_quad_count(const WolfWorldState *world);
 
 /* Rebuild the fixed-size animated door and pushwall section of the scene mesh. */

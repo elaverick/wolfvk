@@ -234,12 +234,19 @@ bool wolf_world_state_init(
     return true;
 }
 
-/* A single Use press operates the door or pushwall immediately in front of the player. */
-bool wolf_world_state_use(
-    WolfWorldState *world,
+/*
+ * Resolve the same four-way interaction cell for the view direction used by
+ * both the original Use action and the SDL camera. Camera yaw zero looks north.
+ */
+static bool world_state_facing_cell(
+    const WolfWorldState *world,
     float player_world_x,
     float player_world_z,
-    float player_yaw_radians)
+    float player_yaw_radians,
+    int *target_x,
+    int *target_y,
+    int *direction_x_out,
+    int *direction_y_out)
 {
     float map_x;
     float map_y;
@@ -249,12 +256,10 @@ bool wolf_world_state_use(
     int direction_y = 0;
     int player_tile_x;
     int player_tile_y;
-    int target_x;
-    int target_y;
-    size_t target_index;
-    int door_index;
 
-    if (world == NULL || !isfinite(player_world_x) || !isfinite(player_world_z) ||
+    if (world == NULL || target_x == NULL || target_y == NULL ||
+        direction_x_out == NULL || direction_y_out == NULL ||
+        !isfinite(player_world_x) || !isfinite(player_world_z) ||
         !isfinite(player_yaw_radians)) {
         return false;
     }
@@ -284,10 +289,67 @@ bool wolf_world_state_use(
         break;
     }
 
-    target_x = player_tile_x + direction_x;
-    target_y = player_tile_y + direction_y;
-    if (target_x < 0 || target_y < 0 ||
-        target_x >= world->level.width || target_y >= world->level.height) {
+    *target_x = player_tile_x + direction_x;
+    *target_y = player_tile_y + direction_y;
+    *direction_x_out = direction_x;
+    *direction_y_out = direction_y;
+    return *target_x >= 0 && *target_y >= 0 &&
+        *target_x < world->level.width && *target_y < world->level.height;
+}
+
+/*
+ * The original player calls PushWall for as long as Use is held. Expose the
+ * adjacent marker query so the main loop can retry pushwall activation while
+ * held without repeatedly toggling ordinary doors.
+ */
+bool wolf_world_state_has_secret_wall_ahead(
+    const WolfWorldState *world,
+    float player_world_x,
+    float player_world_z,
+    float player_yaw_radians)
+{
+    int target_x;
+    int target_y;
+    int direction_x;
+    int direction_y;
+    size_t target_index;
+    uint16_t wall_tile;
+    uint16_t horizontal_page;
+    uint16_t vertical_page;
+
+    if (!world_state_facing_cell(
+            world, player_world_x, player_world_z, player_yaw_radians,
+            &target_x, &target_y, &direction_x, &direction_y) ||
+        !wolf_level_is_secret_door_cell(&world->level, target_x, target_y)) {
+        return false;
+    }
+
+    target_index = tile_index((uint16_t)target_x, (uint16_t)target_y);
+    wall_tile = world->level.wall_tiles[target_index];
+    return wall_tile != 0u && !wolf_level_is_door_tile(wall_tile) &&
+        wolf_wall_texture_page_for_tile(
+            wall_tile, false, world->texture_page_count, &horizontal_page) &&
+        wolf_wall_texture_page_for_tile(
+            wall_tile, true, world->texture_page_count, &vertical_page);
+}
+
+/* A single Use press operates the door or pushwall immediately in front of the player. */
+bool wolf_world_state_use(
+    WolfWorldState *world,
+    float player_world_x,
+    float player_world_z,
+    float player_yaw_radians)
+{
+    int target_x;
+    int target_y;
+    int direction_x;
+    int direction_y;
+    size_t target_index;
+    int door_index;
+
+    if (!world_state_facing_cell(
+            world, player_world_x, player_world_z, player_yaw_radians,
+            &target_x, &target_y, &direction_x, &direction_y)) {
         return false;
     }
 
@@ -329,11 +391,6 @@ bool wolf_world_state_use(
         world->level.object_tiles[target_index] = 0u;
         ++world->geometry_revision;
         return true;
-    }
-
-    door_index = door_index_at(world, target_x, target_y);
-    if (door_index < 0) {
-        return false;
     }
 
     {

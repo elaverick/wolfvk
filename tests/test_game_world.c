@@ -285,6 +285,30 @@ void test_world_state_use_selects_pushwall_direction_from_player_yaw(void)
     }
 }
 
+void test_world_state_detects_secret_wall_for_held_use_input(void)
+{
+    WolfLevel level = create_test_level();
+    WolfWorldState world = {0};
+    float player_z = tile_center_world(2, 5u);
+
+    level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 7u;
+    level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] =
+        WOLF_LEVEL_INFO_PUSHWALL_MARKER;
+    TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 98u));
+
+    /* Holding Use before reaching the adjacent tile must not consume the action. */
+    TEST_ASSERT_FALSE(wolf_world_state_has_secret_wall_ahead(
+        &world, tile_center_world(0, 5u), player_z, 1.57079632679f));
+    TEST_ASSERT_TRUE(wolf_world_state_has_secret_wall_ahead(
+        &world, tile_center_world(1, 5u), player_z, 1.57079632679f));
+
+    TEST_ASSERT_TRUE(wolf_world_state_use(
+        &world, tile_center_world(1, 5u), player_z, 1.57079632679f));
+    TEST_ASSERT_TRUE(world.pushwall.active);
+    TEST_ASSERT_FALSE(wolf_world_state_has_secret_wall_ahead(
+        &world, tile_center_world(1, 5u), player_z, 1.57079632679f));
+}
+
 void test_world_state_pushwall_moves_one_tile_per_original_128_tics(void)
 {
     WolfLevel level = create_test_level();
