@@ -10,13 +10,13 @@ Development follows the ordered, approval-gated steps in [roadmap.md](roadmap.md
 
 The SDL3 window milestone is complete. The application now requests a Vulkan-capable window, creates a Vulkan instance and surface, selects a graphics/presentation device, and creates its logical device. Swapchain creation and actual 3D drawing are still outstanding. Its Windows x64 configure and build passed in [GitHub Actions run #1](https://github.com/elaverick/WolfVK/actions/runs/43708820409).
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The test runner contains sixteen Unity tests: three SDL3 window/event integration tests and six Vulkan queue-family selection unit tests. The Vulkan build dependency is installed explicitly in Windows CI. Tests are registered with CTest and run by the GitHub Actions workflow.
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The test runner contains seventeen Unity tests: three SDL3 window/event integration tests and six Vulkan queue-family selection unit tests. The Vulkan build dependency is installed explicitly in Windows CI. Tests are registered with CTest and run by the GitHub Actions workflow.
 
 | Check | Current status |
 |---|---|
 | Windows x64 build | Tracked by the Actions badge below |
 | C unit-test framework | Unity |
-| Automated tests | 16 Unity tests: 3 SDL3 integration tests and 13 Vulkan queue, surface-format, present-mode and renderer-guard unit tests |
+| Automated tests | 17 Unity tests: 3 SDL3 integration tests, 13 Vulkan selection/renderer unit tests, and 1 SwiftShader-backed swapchain render/present integration test |
 | SDL3 window | Complete |
 | Vulkan instance, surface and device selection | Implemented; CI verification pending |
 | Original level loading | Not started |
