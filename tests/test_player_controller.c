@@ -134,6 +134,7 @@ void test_player_slides_along_wall_when_forward_motion_is_blocked(void)
     TEST_ASSERT_NOT_NULL(input);
     wolf_camera_initialize(&camera);
     create_open_test_level(&level);
+    camera.position[0] = 0.2f;
     level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 1u;
     set_key(input, SDL_SCANCODE_W, true);
     set_key(input, SDL_SCANCODE_D, true);
@@ -141,6 +142,53 @@ void test_player_slides_along_wall_when_forward_motion_is_blocked(void)
     TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.1f));
     TEST_ASSERT_TRUE(camera.position[0] < 0.31f);
     TEST_ASSERT_TRUE(camera.position[2] < -0.20f);
+
+    wolf_input_destroy(input);
+}
+
+void test_player_forward_direction_tracks_camera_yaw(void)
+{
+    WolfCamera camera;
+    WolfLevel level;
+    WolfInput *input = create_test_input();
+
+    TEST_ASSERT_NOT_NULL(input);
+    wolf_camera_initialize(&camera);
+    camera.yaw_radians = 1.57079633f;
+    create_open_test_level(&level);
+    set_key(input, SDL_SCANCODE_W, true);
+
+    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.05f));
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.175f, camera.position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, camera.position[2]);
+
+    wolf_input_destroy(input);
+}
+
+void test_player_mouse_look_clamps_pitch(void)
+{
+    WolfCamera camera;
+    WolfLevel level;
+    WolfInput *input = create_test_input();
+    SDL_Event event = {0};
+
+    TEST_ASSERT_NOT_NULL(input);
+    wolf_camera_initialize(&camera);
+    create_open_test_level(&level);
+
+    event.type = SDL_EVENT_MOUSE_MOTION;
+    event.motion.yrel = -10000.0f;
+    wolf_input_handle_event(input, &event);
+    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.0f));
+    TEST_ASSERT_TRUE(camera.pitch_radians > 1.4f);
+    TEST_ASSERT_TRUE(camera.pitch_radians < 1.5f);
+
+    wolf_input_begin_frame(input);
+    event.motion.yrel = 10000.0f;
+    wolf_input_handle_event(input, &event);
+    TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.0f));
+    TEST_ASSERT_TRUE(camera.pitch_radians < -1.4f);
+    TEST_ASSERT_TRUE(camera.pitch_radians > -1.5f);
 
     wolf_input_destroy(input);
 }
