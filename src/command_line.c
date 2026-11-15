@@ -74,7 +74,7 @@ bool wolf_parse_command_line(
                 requested_level > WOLF_LEVEL_MAX_MAPS) {
                 write_error(
                     error_message, error_message_size,
-                    "The level number must be between 1 and 100.");
+                    "The level number must be between 1 and 60.");
                 return false;
             }
 

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define WOLF_MAPHEAD_HEADER_SIZE (2u + WOLF_LEVEL_MAX_MAPS * 4u)
+#define WOLF_MAPHEAD_HEADER_SIZE (2u + WOLF_LEVEL_MAPHEAD_OFFSET_COUNT * 4u)
 #define WOLF_MAP_HEADER_SIZE 38u
 #define WOLF_CARMACK_NEAR_TAG 0xa7u
 #define WOLF_CARMACK_FAR_TAG 0xa8u

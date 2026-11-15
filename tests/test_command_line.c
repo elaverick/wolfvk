@@ -45,11 +45,17 @@ void test_command_line_accepts_first_level_explicitly(void)
     TEST_ASSERT_TRUE(wolf_parse_command_line(
         3, arguments, &options, error_message, sizeof(error_message)));
     TEST_ASSERT_EQUAL_UINT32(0u, options.level_index);
+
+    /* The retail WL6 campaign has 60 maps and uses a 100-entry MAPHEAD table. */
+    (void)snprintf(level, sizeof(level), "60");
+    TEST_ASSERT_TRUE(wolf_parse_command_line(
+        3, arguments, &options, error_message, sizeof(error_message)));
+    TEST_ASSERT_EQUAL_UINT32(59u, options.level_index);
 }
 
 void test_command_line_rejects_invalid_level_numbers(void)
 {
-    const char *invalid_levels[] = {"0", "101", "-1", "abc", "2abc"};
+    const char *invalid_levels[] = {"0", "61", "101", "-1", "abc", "2abc"};
     char program[] = "wolfvk";
     char option[] = "--level";
     WolfOptions options;

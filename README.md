@@ -6,24 +6,24 @@ Development follows the ordered, approval-gated steps in [roadmap.md](roadmap.md
 
 ## Current development status
 
-**Current milestone:** interactive, untextured level rendering. The SDL3 window and Vulkan renderer draw indexed, vertex-coloured quads with depth testing and a perspective camera. The application reads original-format MAPHEAD/GAMEMAPS data, expands the Carmack and RLEW compressed wall and object planes, generates exposed wall faces, and combines them with large floor and roof planes.
+**Current milestone:** interactive, untextured level rendering. The SDL3 window and Vulkan renderer draw indexed, vertex-coloured quads with depth testing and a perspective camera. The application reads original-format MAPHEAD/GAMEMAPS data, expands the Carmack and RLEW compressed wall and info planes, identifies the original player-start marker and direction, generates exposed wall faces, and combines them with large floor and roof planes. The retail WL6 data contains 60 playable maps; MAPHEAD retains a 100-slot offset table.
 
 The player can move with **WASD** and look with the mouse. Movement is relative to camera yaw, diagonal movement is normalised, and the player is kept out of wall tiles with sliding collision resolution. Relative mouse capture is released when the window loses focus and restored when it regains focus. Press **Escape** to quit.
 
-The level loader expects `MAPHEAD.WL6` and `GAMEMAPS.WL6` in the working directory. Those original game files are not included in this repository. The parser and geometry are covered by deterministic tests, but visual verification against a genuine WL6 level remains outstanding until those files are available.
+The level loader expects `MAPHEAD.WL6` and `GAMEMAPS.WL6` in the working directory. Those original game files are not included in this repository. The uploaded retail WL6 files have been inspected: all 60 playable maps decode as 64×64 maps, each with exactly one valid player-start marker on a floor cell. Level 1 starts at tile (29, 57), facing east. This data inspection validates the map structure and spawn interpretation; the live Vulkan rendering still needs visual confirmation.
 
 The approval gate before texture work is the next milestone: build and present a Windows demo for review. Textures must not be added until that demo has been confirmed.
 
 ## Automated tests
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It contains 56 Unity test cases:
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It contains 61 Unity test cases:
 
 - 3 SDL3 window and event tests
 - 3 camera projection tests
 - 9 player movement, mouse-look and collision tests
 - 4 keyboard, mouse and gamepad input tests
-- 8 Carmack/RLEW decoder and level-loader tests
-- 6 wall-geometry tests
+- 10 Carmack/RLEW decoder and level-loader tests
+- 9 wall-geometry and player-start tests
 - 8 command-line parser tests
 - 14 Vulkan selection and renderer unit tests
 - 1 SwiftShader-backed integration test that creates a swapchain and submits/presents overlapping indexed quads
@@ -37,8 +37,8 @@ CTest runs the suite in Windows CI.
 | Vulkan renderer and swapchain | Implemented and tested in Windows CI |
 | Indexed quad rendering and depth testing | Implemented and tested |
 | Infinite floor and roof planes | Implemented |
-| Original WL6 map decoding and level selection | Implemented; synthetic original-format fixtures pass |
-| Untextured exposed wall faces | Implemented; genuine-map visual check outstanding |
+| Original WL6 map decoding and level selection | Implemented; 60 real WL6 maps inspected and synthetic original-format fixtures tested |
+| Untextured exposed wall faces | Implemented; level 1 geometry data yields 1,016 exposed wall faces; visual check outstanding |
 | WASD movement and mouse-look | Implemented; player collision tests pass |
 | Pre-texture demo | Next approval-gated milestone |
 | Original textures and integer scaling | Not started; wait for demo approval |

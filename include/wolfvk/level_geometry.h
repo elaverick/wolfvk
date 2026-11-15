@@ -13,7 +13,19 @@ bool wolf_level_build_wall_quads(
     VulkanQuad **quads,
     uint32_t *quad_count);
 
-/* Find the empty map cell nearest the level centre for the initial camera position. */
+#define WOLF_LEVEL_PLAYER_START_FIRST 19u
+#define WOLF_LEVEL_PLAYER_START_LAST 22u
+
+typedef struct WolfPlayerStart {
+    uint16_t tile_x;
+    uint16_t tile_y;
+    float yaw_radians;
+} WolfPlayerStart;
+
+/* Read the original info-plane player start marker (tiles 19 through 22). */
+bool wolf_level_find_player_start(const WolfLevel *level, WolfPlayerStart *player_start);
+
+/* Find a deterministic open-cell fallback for maps without an original start marker. */
 bool wolf_level_find_open_tile(
     const WolfLevel *level,
     uint16_t *tile_x,

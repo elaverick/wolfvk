@@ -1,6 +1,6 @@
 #include "unity.h"
 
-#include "wolfvk/level.h"
+#include "wolfvk/level_geometry.h"
 
 #include <SDL3/SDL.h>
 
@@ -10,7 +10,7 @@
 #define TEST_RLEW_TAG 0xabcd
 #define TEST_PLANE_CHUNK_SIZE 10u
 #define TEST_MAP_HEADER_SIZE 38u
-#define TEST_MAPHEAD_SIZE (2u + WOLF_LEVEL_MAX_MAPS * 4u)
+#define TEST_MAPHEAD_SIZE (2u + WOLF_LEVEL_MAPHEAD_OFFSET_COUNT * 4u)
 #define TEST_GAMEMAPS_SIZE (TEST_MAP_HEADER_SIZE + 2u * TEST_PLANE_CHUNK_SIZE)
 
 static void write_u16_le(uint8_t *destination, uint16_t value)

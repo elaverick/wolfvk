@@ -69,33 +69,33 @@ static bool build_scene_geometry(
     if (!wolf_level_find_player_start(level, player_start)) {
         if (!wolf_level_find_open_tile(
                 level, &player_start->tile_x, &player_start->tile_y)) {
-        size_t open_tile_count = 0u;
-        size_t solid_tile_count = 0u;
+            size_t open_tile_count = 0u;
+            size_t solid_tile_count = 0u;
 
-        for (uint16_t tile_y = 0u; tile_y < level->height; ++tile_y) {
-            for (uint16_t tile_x = 0u; tile_x < level->width; ++tile_x) {
-                size_t tile_index =
-                    (size_t)tile_y * WOLF_LEVEL_PLANE_WIDTH + tile_x;
+            for (uint16_t tile_y = 0u; tile_y < level->height; ++tile_y) {
+                for (uint16_t tile_x = 0u; tile_x < level->width; ++tile_x) {
+                    size_t tile_index =
+                        (size_t)tile_y * WOLF_LEVEL_PLANE_WIDTH + tile_x;
 
-                if (level->wall_tiles[tile_index] == 0u) {
-                    ++open_tile_count;
-                } else {
-                    ++solid_tile_count;
+                    if (level->wall_tiles[tile_index] == 0u) {
+                        ++open_tile_count;
+                    } else {
+                        ++solid_tile_count;
+                    }
                 }
             }
-        }
 
-        fprintf(
-            stderr,
-            "No player-start marker or open floor cell exists in level %s (%u x %u). "
-            "The decoded wall plane contains %zu solid cells and %zu open cells.\n",
-            level->name, (unsigned int)level->width, (unsigned int)level->height,
-            solid_tile_count, open_tile_count);
-        fprintf(stderr, "First wall-plane row:");
-        for (uint16_t tile_x = 0u; tile_x < level->width && tile_x < 16u; ++tile_x) {
-            fprintf(stderr, " %04X", level->wall_tiles[tile_x]);
-        }
-        fputc('\n', stderr);
+            fprintf(
+                stderr,
+                "No player-start marker or open floor cell exists in level %s (%u x %u). "
+                "The decoded wall plane contains %zu solid cells and %zu open cells.\\n",
+                level->name, (unsigned int)level->width, (unsigned int)level->height,
+                solid_tile_count, open_tile_count);
+            fprintf(stderr, "First wall-plane row:");
+            for (uint16_t tile_x = 0u; tile_x < level->width && tile_x < 16u; ++tile_x) {
+                fprintf(stderr, " %04X", level->wall_tiles[tile_x]);
+            }
+            fputc('\\n', stderr);
             free(wall_quads);
             return false;
         }
