@@ -10,6 +10,7 @@ include(FetchContent)
 include(CTest)
 
 find_package(SDL3 CONFIG QUIET)
+find_package(Vulkan REQUIRED)
 if(NOT SDL3_FOUND)
     set(SDL_SHARED OFF CACHE BOOL "" FORCE)
     set(SDL_STATIC ON CACHE BOOL "" FORCE)
@@ -29,7 +30,7 @@ endif()
 add_executable(wolfvk
     src/main.c
 )
-target_link_libraries(wolfvk PRIVATE SDL3::SDL3)
+target_link_libraries(wolfvk PRIVATE SDL3::SDL3 Vulkan::Vulkan)
 if(MSVC)
     target_compile_options(wolfvk PRIVATE /W4 /WX)
 else()
