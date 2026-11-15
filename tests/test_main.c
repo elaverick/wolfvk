@@ -22,6 +22,7 @@ void test_carmack_decoder_rejects_invalid_back_references(void);
 void test_rlew_decoder_expands_literals_and_runs(void);
 void test_rlew_decoder_rejects_truncated_and_overflowing_runs(void);
 void test_level_loader_reads_original_map_header_and_planes(void);
+void test_level_loader_converts_area_markers_to_open_cells(void);
 void test_level_loader_rejects_sparse_map_entries(void);
 void test_command_line_defaults_to_first_level(void);
 void test_command_line_converts_one_based_level_to_zero_based_index(void);
@@ -82,6 +83,7 @@ int main(void)
     RUN_TEST(test_rlew_decoder_expands_literals_and_runs);
     RUN_TEST(test_rlew_decoder_rejects_truncated_and_overflowing_runs);
     RUN_TEST(test_level_loader_reads_original_map_header_and_planes);
+    RUN_TEST(test_level_loader_converts_area_markers_to_open_cells);
     RUN_TEST(test_level_loader_rejects_sparse_map_entries);
     RUN_TEST(test_command_line_defaults_to_first_level);
     RUN_TEST(test_command_line_converts_one_based_level_to_zero_based_index);
