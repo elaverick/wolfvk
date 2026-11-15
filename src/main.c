@@ -6,6 +6,7 @@
 #include "wolfvk/player_controller.h"
 #include "wolfvk/vulkan_renderer.h"
 #include "wolfvk/world.h"
+#include "wolfvk/wall_textures.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,6 +46,7 @@ static void print_usage(const char *program_name)
 /* Combine the map's exposed wall faces with the large floor and roof, and resolve its spawn. */
 static bool build_scene_geometry(
     const WolfLevel *level,
+    uint16_t texture_page_count,
     const VulkanQuad environment_quads[2],
     VulkanQuad **scene_quads,
     uint32_t *scene_quad_count,
@@ -61,7 +63,7 @@ static bool build_scene_geometry(
         return false;
     }
 
-    if (!wolf_level_build_wall_quads(level, &wall_quads, &wall_quad_count)) {
+    if (!wolf_level_build_wall_quads(level, texture_page_count, &wall_quads, &wall_quad_count)) {
         fprintf(
             stderr, "Could not generate wall geometry for level %s (%u x %u).\n",
             level != NULL ? level->name : "(null)",
@@ -160,6 +162,7 @@ int main(int argc, char *argv[])
     WolfCamera camera;
     WolfOptions options;
     WolfLevel level;
+    WolfWallTextures wall_textures = {0};
     VulkanQuad *scene_quads = NULL;
     uint32_t scene_quad_count = 0u;
     WolfPlayerStart player_start = {0};
@@ -189,9 +192,15 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if (!wolf_wall_textures_load_vswap(
+            "VSWAP.WL6", &wall_textures, error_message, sizeof(error_message))) {
+        fprintf(stderr, "Could not load original wall textures: %s\\n", error_message);
+        return 1;
+    }
+
     if (!build_scene_geometry(
-            &level, environment_quads, &scene_quads, &scene_quad_count,
-            &player_start)) {
+            &level, wall_textures.page_count, environment_quads,
+            &scene_quads, &scene_quad_count, &player_start)) {
         fprintf(stderr, "Level geometry initialisation failed; see the diagnostic above.\n");
         return 1;
     }
@@ -206,6 +215,7 @@ int main(int argc, char *argv[])
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "SDL video initialisation failed: %s\n", SDL_GetError());
         free(scene_quads);
+        wolf_wall_textures_destroy(&wall_textures);
         return 1;
     }
 
@@ -214,6 +224,7 @@ int main(int argc, char *argv[])
     if (window == NULL) {
         fprintf(stderr, "SDL Vulkan window creation failed: %s\n", SDL_GetError());
         free(scene_quads);
+        wolf_wall_textures_destroy(&wall_textures);
         SDL_Quit();
         return 1;
     }
@@ -221,10 +232,23 @@ int main(int argc, char *argv[])
     if (!vulkan_renderer_create(window, &renderer)) {
         fprintf(stderr, "Vulkan renderer initialisation failed.\n");
         free(scene_quads);
+        wolf_wall_textures_destroy(&wall_textures);
         SDL_DestroyWindow(window);
         SDL_Quit();
         return 1;
     }
+
+    if (!vulkan_renderer_set_wall_textures(
+            renderer, wall_textures.rgba_pages, wall_textures.page_count)) {
+        fprintf(stderr, "Could not upload the original VSWAP wall textures.\\n");
+        free(scene_quads);
+        wolf_wall_textures_destroy(&wall_textures);
+        vulkan_renderer_destroy(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+    wolf_wall_textures_destroy(&wall_textures);
 
     wolf_camera_initialize(&camera);
     camera.position[0] =
