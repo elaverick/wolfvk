@@ -13,8 +13,10 @@ You may use the main branch of the following repository as a reference point. Yo
 [x] There should be a floor plane and a roof plane which are infinite (you may use rendering cheats to achieve this).
 [x] You must be able to read level data from the original Wolfenstein 3D data sources.
 [x] A user should be able to select the level to render from the command line with a --level argument. If a --level arguement is not passed, you should render the first level.
-[ ] You must draw the level using untextured quads, you are not required to draw sprites, enemies, pick ups or doors at this time, you may skip rendering doors and secret doors.
-[ ] The user must be able to navigate the level using WASD keys and use the mouse to look.
+[x] You must draw the level using untextured quads, you are not required to draw sprites, enemies, pick ups or doors at this time, you may skip rendering doors and secret doors.
+[x] The user must be able to navigate the level using WASD keys and use the mouse to look.
 [ ] Build a demo release at this point and present to the user for confirmation that this works as expected.
 [ ] Once the above gate has passed, work on loading the textures from the original Wolfenstein data sources and applying them to the quads.
 [ ] Textures must support integer scaling to retain the pixel art aesthetic.
+
+Before presenting the demo for approval, verify the rendered geometry against genuine original WL6 map data. MAPHEAD.WL6 and GAMEMAPS.WL6 are not included in this repository, so visual verification is pending access to those files. Do not start texture work until the user approves the untextured demo.
