@@ -36,7 +36,6 @@ bool vulkan_renderer_find_queue_families(
 /* Create the Vulkan instance, window surface, physical device and logical device. */
 bool vulkan_renderer_create(SDL_Window *window, VulkanRenderer **renderer);
 
-/* Release Vulkan objects in reverse dependency order. */
 /* Upload static quad geometry. Each quad supplies four world-space vertices. */
 bool vulkan_renderer_set_quads(
     VulkanRenderer *renderer,
@@ -50,8 +49,11 @@ bool vulkan_renderer_set_view_projection(
 
 /* Submit and present one frame. Returns false on an unrecoverable Vulkan error. */
 bool vulkan_renderer_draw_frame(VulkanRenderer *renderer);
+
+/* Defer swapchain recreation until the next frame can safely rebuild size-dependent resources. */
 void vulkan_renderer_notify_resize(VulkanRenderer *renderer);
 
+/* Release Vulkan objects in reverse dependency order. */
 void vulkan_renderer_destroy(VulkanRenderer *renderer);
 
 #endif
