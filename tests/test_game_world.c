@@ -232,12 +232,15 @@ void test_world_state_door_geometry_uses_original_vswap_door_pages(void)
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[0].vertices[1].position[2]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[1].vertices[0].position[0]);
 
-    /* A horizontal door slides along X while its Z plane remains fixed. */
+    /* A horizontal door at map cell (2, 1) slides along X on the fixed Z=-3.2 plane. */
     world.doors[1].position = 32768u;
     TEST_ASSERT_TRUE(wolf_world_state_build_dynamic_quads(&world, quads, 8u));
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[2].vertices[0].position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[2].vertices[0].position[0]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[2].vertices[0].position[2]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[2].vertices[1].position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.2f, quads[2].vertices[1].position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[2].vertices[1].position[2]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.2f, quads[3].vertices[0].position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[3].vertices[0].position[2]);
 
     /* Fully-open panels are removed from the dynamic draw list on both orientations. */
     world.doors[0].position = WOLF_WORLD_DOOR_OPEN_POSITION;
