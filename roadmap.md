@@ -18,6 +18,9 @@ You may use the main branch of the following repository as a reference point. Yo
 [x] Build a demo release at this point and present to the user for confirmation that this works as expected.
 [x] Once the above gate has passed, work on loading the textures from the original Wolfenstein data sources and applying them to the quads.
 [ ] Textures must support integer scaling to retain the pixel art aesthetic.
+[x] Normal and locked doors must use original WL6 door tile IDs, key locks, orientation, interaction and `tics << 10` opening/closing behaviour.
+[x] Doors must auto-close after the original 300-tic interval and reverse when obstructed.
+[x] Secret pushwalls must use info-plane marker 98, the original cardinal push direction and 128-tic tile timing.
 
 The user supplied MAPHEAD.WL6 and GAMEMAPS.WL6 for validation. All 60 playable maps decode as 64x64 levels and contain exactly one player-start marker on a floor cell. Level 1 (Wolf1 Map1) starts at tile (29, 57), facing east; after applying the original AREATILE (107+) rule, its wall map contains 3,082 non-floor cells and 1,014 floor cells. After omitting the 22 ordinary door cells and five secret pushwall cells, 3,055 solid wall cells remain and the mesh exposes 1,018 wall faces. The startup failure in the user's 14:23 executable was caused by that binary predating the area-floor normalization fix committed at 14:32; it treated every level-1 cell as solid. The corrected code now also uses the original info-plane player marker and direction.
 
@@ -27,8 +30,15 @@ The latest Windows x64 run [43740769232](https://github.com/elaverick/WolfVK/act
 
 The source has also had a documentation pass to meet the comment standard above: implementation functions throughout the C source now explain their purpose and the relevant design constraints, rather than narrating individual statements.
 
-Door treatment remains intentionally an opening, not an invisible barrier. Original wall-plane values 90–101 identify ordinary sliding/locked doors. Secret pushwalls are identified separately by info-plane marker 98 over a conventional wall tile. Both cell types are omitted from static geometry and treated as traversable for collision and fallback spawn selection; all other solid wall tiles remain rendered and collidable. This does not implement door animation, opening controls, keys, or pushwall interaction.
+Door, key and secret-pushwall implementation:
+- Wall-plane values 90–101 are instantiated as doors with the original even/odd orientation and lock mapping. VSWAP door pages are selected from the final eight wall pages, matching the original standard, locked and elevator page pairs.
+- Door panels advance by 1024 position units per game tic at 70 tics per second, saturate at 0xffff, remain open for 300 tics, and close at the same rate. A closing door reverses if the player still overlaps the doorway. Map collision treats the door as solid until it reaches the fully-open state. The player can manually reverse an opening or closing door, subject to the original four key lock checks.
+- The renderer retains a pair of dynamic quads per door, translating vertical and horizontal panels along their original in-plane axes. Full-open panels are removed from the dynamic draw list.
+- Secret pushwalls are identified by original info-plane marker 98. A Use action starts movement at one tile per 128 tics, advances through at most two cells, reserves the next cell, and stops after one tile if the next destination is blocked.
+- Original keys are collected from the WL6 info-plane markers. The four locked-door key bits are enforced.
+- Movement collision now resolves the last safe point at a wall boundary rather than leaving a large gap when a subdivided movement step first meets a wall. Per-frame movement still resolves axes separately so wall sliding is retained.
+- Regression tests cover door orientation, lock mapping, exact opening speed and open position, automatic closing delay, obstruction, manual reversal, key gating/collection, VSWAP door pages, both panel orientations and full-open rendering. Secret-wall tests cover direction, timing, blocked destinations and moving geometry.
 
-Regression coverage now includes ordinary door tile classification, omitted wall faces, secret-door marker recognition, fallback spawn selection, and player traversal through both ordinary and secret door cells. The Windows x64 build and all 78 registered Unity test cases passed on commit `4076af557e2c1ad013f363ac70947d0851e047e8`; the textured Windows demo was packaged and uploaded by [Actions run 43740769232](https://github.com/elaverick/WolfVK/actions/runs/43740769232).
+The current test runner registers 93 Unity cases, including SDL3 input/window, camera, collision, level decoding, wall geometry, VSWAP texture mapping, world state and a SwiftShader-backed Vulkan frame submission test. The current door/pushwall source and expanded renderer tests are on `main`; [Actions run 43752002088](https://github.com/elaverick/WolfVK/actions/runs/43752002088) is the current Windows validation run. Previous runs before the latest geometry work are not evidence of the current state.
 
-Texture loading and application to the exposed wall faces are complete and Windows-CI verified. Integer scaling is the next roadmap item and remains unimplemented.
+Integer texture scaling remains the only unchecked item on the original ordered roadmap. It must preserve nearest-neighbour pixel art sampling while selecting an integer physical-pixel scale for the rendered scene and letterboxing unused space; it has not been implemented.
