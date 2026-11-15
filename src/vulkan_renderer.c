@@ -258,6 +258,11 @@ bool vulkan_renderer_create(SDL_Window *window, VulkanRenderer **renderer_out)
     }
 
     *renderer_out = NULL;
+    if ((SDL_GetWindowFlags(window) & SDL_WINDOW_VULKAN) == 0u) {
+        fprintf(stderr, "The SDL window was not created with SDL_WINDOW_VULKAN.\n");
+        return false;
+    }
+
     renderer = calloc(1, sizeof(*renderer));
     if (renderer == NULL) {
         return false;
