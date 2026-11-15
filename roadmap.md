@@ -12,7 +12,7 @@ You may use the main branch of the following repository as a reference point. Yo
 [x] The engine must be able to render quads.
 [x] There should be a floor plane and a roof plane which are infinite (you may use rendering cheats to achieve this).
 [x] You must be able to read level data from the original Wolfenstein 3D data sources.
-[ ] A user should be able to select the level to render from the command line with a --level argument. If a --level arguement is not passed, you should render the first level.
+[x] A user should be able to select the level to render from the command line with a --level argument. If a --level arguement is not passed, you should render the first level.
 [ ] You must draw the level using untextured quads, you are not required to draw sprites, enemies, pick ups or doors at this time, you may skip rendering doors and secret doors.
 [ ] The user must be able to navigate the level using WASD keys and use the mouse to look.
 [ ] Build a demo release at this point and present to the user for confirmation that this works as expected.
