@@ -256,6 +256,7 @@ bool vulkan_renderer_texture_set(
     VkDescriptorImageInfo descriptor_image = {0};
     VkWriteDescriptorSet descriptor_write = {0};
     VkDeviceSize upload_size;
+    size_t upload_byte_count;
     uint32_t memory_type_index;
     void *mapped_data = NULL;
     VkResult result;
@@ -263,8 +264,7 @@ bool vulkan_renderer_texture_set(
     if (renderer == NULL || renderer->device == VK_NULL_HANDLE ||
         renderer->command_pool == VK_NULL_HANDLE ||
         renderer->wall_texture_set_layout == VK_NULL_HANDLE ||
-        rgba_pages == NULL || page_count == 0u ||
-        (size_t)page_count > SIZE_MAX / WOLF_WALL_TEXTURE_RGBA_SIZE) {
+        rgba_pages == NULL || page_count == 0u) {
         return false;
     }
 
@@ -274,7 +274,12 @@ bool vulkan_renderer_texture_set(
         return false;
     }
 
-    upload_size = (VkDeviceSize)((size_t)page_count * WOLF_WALL_TEXTURE_RGBA_SIZE);
+    upload_byte_count = (size_t)page_count * WOLF_WALL_TEXTURE_RGBA_SIZE;
+    if (upload_byte_count / WOLF_WALL_TEXTURE_RGBA_SIZE != (size_t)page_count) {
+        fprintf(stderr, "VSWAP wall texture data size exceeds the host address space.\\n");
+        return false;
+    }
+    upload_size = (VkDeviceSize)upload_byte_count;
 
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffer_info.size = upload_size;
