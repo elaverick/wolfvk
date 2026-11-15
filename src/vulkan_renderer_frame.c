@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Choose a swapchain format suitable for predictable 8-bit colour output on desktop displays. */
 bool vulkan_renderer_choose_surface_format(
     const VkSurfaceFormatKHR *available_formats,
     uint32_t format_count,
@@ -105,6 +106,7 @@ static VkCompositeAlphaFlagBitsKHR choose_composite_alpha(VkCompositeAlphaFlagsK
     return VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 }
 
+/* Create the presentation images at the drawable size and honour the surface's queue-sharing rules. */
 static bool create_swapchain(VulkanRenderer *renderer)
 {
     VkSurfaceCapabilitiesKHR capabilities;
@@ -244,6 +246,7 @@ static bool create_swapchain(VulkanRenderer *renderer)
     return true;
 }
 
+/* Give each swapchain image a view so the render pass can use it as a colour attachment. */
 static bool create_image_views(VulkanRenderer *renderer)
 {
     uint32_t image_index;
@@ -284,6 +287,7 @@ static bool create_image_views(VulkanRenderer *renderer)
     return true;
 }
 
+/* Depth attachments need device-local memory; keep that requirement separate from host upload buffers. */
 static bool find_depth_memory_type(
     VulkanRenderer *renderer,
     uint32_t type_filter,
@@ -308,6 +312,7 @@ static bool find_depth_memory_type(
 }
 
 /* One shared depth image is safe while the renderer limits itself to one frame in flight. */
+/* Select a depth format supported by the adapter and allocate one depth target for the swapchain. */
 static bool create_depth_resources(VulkanRenderer *renderer)
 {
     static const VkFormat depth_candidates[] = {
@@ -405,6 +410,7 @@ static bool create_depth_resources(VulkanRenderer *renderer)
     return true;
 }
 
+/* Define the colour/depth attachment lifetime and the layout transitions required by each frame. */
 static bool create_render_pass(VulkanRenderer *renderer)
 {
     VkAttachmentDescription attachments[2] = {0};
@@ -485,6 +491,7 @@ static FILE *open_shader_file(const char *path)
     return shader_file;
 }
 
+/* Load the packaged SPIR-V relative to the executable so the demo is independent of its launch directory. */
 static bool load_shader_module(
     VulkanRenderer *renderer,
     const char *shader_filename,
@@ -556,6 +563,7 @@ static bool load_shader_module(
     return true;
 }
 
+/* Bind the quad vertex layout, depth testing and shaders into the pipeline reused by every level frame. */
 static bool create_graphics_pipeline(VulkanRenderer *renderer)
 {
     VkShaderModule vertex_shader = VK_NULL_HANDLE;
@@ -715,6 +723,7 @@ static bool create_graphics_pipeline(VulkanRenderer *renderer)
     return true;
 }
 
+/* Pair each presentation image with the depth attachment used while that image is rendered. */
 static bool create_framebuffers(VulkanRenderer *renderer)
 {
     uint32_t image_index;
@@ -752,6 +761,7 @@ static bool create_framebuffers(VulkanRenderer *renderer)
     return true;
 }
 
+/* Allocate command storage from the graphics family that owns the rendering queue. */
 static bool create_command_pool(VulkanRenderer *renderer)
 {
     VkCommandPoolCreateInfo create_info = {0};
@@ -770,6 +780,7 @@ static bool create_command_pool(VulkanRenderer *renderer)
     return true;
 }
 
+/* Keep one primary command buffer per framebuffer so each acquired image has matching recorded work. */
 static bool allocate_command_buffers(VulkanRenderer *renderer)
 {
     VkCommandBufferAllocateInfo allocate_info = {0};
@@ -798,6 +809,7 @@ static bool allocate_command_buffers(VulkanRenderer *renderer)
     return true;
 }
 
+/* Synchronise CPU reuse of frame resources with GPU completion and image acquisition. */
 static bool create_sync_objects(VulkanRenderer *renderer)
 {
     VkSemaphoreCreateInfo semaphore_info = {0};
@@ -824,6 +836,7 @@ static bool create_sync_objects(VulkanRenderer *renderer)
     return true;
 }
 
+/* Signal presentation per swapchain image, avoiding reuse while the presentation engine still owns a wait. */
 static bool create_render_finished_semaphores(VulkanRenderer *renderer)
 {
     uint32_t image_index;
@@ -849,6 +862,7 @@ static bool create_render_finished_semaphores(VulkanRenderer *renderer)
     return true;
 }
 
+/* Release all resources whose dimensions or image ownership are tied to the current swapchain. */
 static void destroy_swapchain_resources(VulkanRenderer *renderer)
 {
     uint32_t image_index;
@@ -928,6 +942,7 @@ static void destroy_swapchain_resources(VulkanRenderer *renderer)
     renderer->swapchain_image_count = 0;
 }
 
+/* Construct frame resources in dependency order so failure can use the same partial teardown path. */
 bool vulkan_renderer_frame_resources_create(VulkanRenderer *renderer)
 {
     if (!create_swapchain(renderer) ||
@@ -946,6 +961,7 @@ bool vulkan_renderer_frame_resources_create(VulkanRenderer *renderer)
     return true;
 }
 
+/* Destroy frame resources in reverse dependency order after the renderer has stopped GPU work. */
 void vulkan_renderer_frame_resources_destroy(VulkanRenderer *renderer)
 {
     if (renderer->device == VK_NULL_HANDLE) {
@@ -968,6 +984,7 @@ void vulkan_renderer_frame_resources_destroy(VulkanRenderer *renderer)
     }
 }
 
+/* Rebuild size-dependent resources only when the window has a non-zero drawable extent. */
 bool vulkan_renderer_frame_resources_recreate(VulkanRenderer *renderer)
 {
     int drawable_width = 0;
@@ -999,6 +1016,7 @@ bool vulkan_renderer_frame_resources_recreate(VulkanRenderer *renderer)
     return true;
 }
 
+/* Record one complete scene pass against the framebuffer belonging to the acquired image. */
 static bool record_command_buffer(
     VulkanRenderer *renderer,
     VkCommandBuffer command_buffer,
@@ -1057,6 +1075,7 @@ static bool record_command_buffer(
     return true;
 }
 
+/* Acquire, submit and present one frame while handling out-of-date swapchains and resize requests. */
 bool vulkan_renderer_frame_resources_draw(VulkanRenderer *renderer)
 {
     VkResult result;
