@@ -16,7 +16,7 @@ void test_level_geometry_emits_four_faces_for_isolated_wall(void)
     level.height = 3u;
     level.wall_tiles[WOLF_LEVEL_PLANE_WIDTH + 1u] = 7u;
 
-    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, &quads, &quad_count));
+    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, UINT16_MAX, &quads, &quad_count));
     TEST_ASSERT_EQUAL_UINT32(4u, quad_count);
     TEST_ASSERT_NOT_NULL(quads);
 
@@ -39,7 +39,7 @@ void test_level_geometry_wall_panels_are_square_in_world_space(void)
     level.height = 3u;
     level.wall_tiles[WOLF_LEVEL_PLANE_WIDTH + 1u] = 1u;
 
-    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, &quads, &quad_count));
+    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, UINT16_MAX, &quads, &quad_count));
     TEST_ASSERT_EQUAL_UINT32(4u, quad_count);
 
     /* A single wall panel must occupy one square map cell in both world axes. */
@@ -55,6 +55,47 @@ void test_level_geometry_wall_panels_are_square_in_world_space(void)
     free(quads);
 }
 
+void test_level_geometry_uses_original_vswap_orientation_pages(void)
+{
+    WolfLevel level = {0};
+    VulkanQuad *quads = NULL;
+    uint32_t quad_count = 0u;
+
+    level.width = 3u;
+    level.height = 3u;
+    level.wall_tiles[WOLF_LEVEL_PLANE_WIDTH + 1u] = 7u;
+
+    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, 14u, &quads, &quad_count));
+    TEST_ASSERT_EQUAL_UINT32(4u, quad_count);
+
+    /* Wolf3D pairs horizontal and vertical wall pages as even/odd VSWAP indices. */
+    TEST_ASSERT_EQUAL_UINT32(12u, quads[0].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(12u, quads[1].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(13u, quads[2].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(13u, quads[3].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(1u, quads[0].vertices[0].use_texture);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[0].vertices[0].texcoord[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, quads[0].vertices[0].texcoord[1]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, quads[0].vertices[2].texcoord[1]);
+
+    free(quads);
+}
+
+void test_level_geometry_rejects_missing_vswap_texture_page(void)
+{
+    WolfLevel level = {0};
+    VulkanQuad *quads = NULL;
+    uint32_t quad_count = 99u;
+
+    level.width = 3u;
+    level.height = 3u;
+    level.wall_tiles[WOLF_LEVEL_PLANE_WIDTH + 1u] = 7u;
+
+    TEST_ASSERT_FALSE(wolf_level_build_wall_quads(&level, 13u, &quads, &quad_count));
+    TEST_ASSERT_NULL(quads);
+    TEST_ASSERT_EQUAL_UINT32(0u, quad_count);
+}
+
 void test_level_geometry_omits_shared_faces_between_adjacent_walls(void)
 {
     WolfLevel level = {0};
@@ -66,7 +107,7 @@ void test_level_geometry_omits_shared_faces_between_adjacent_walls(void)
     level.wall_tiles[WOLF_LEVEL_PLANE_WIDTH + 1u] = 1u;
     level.wall_tiles[WOLF_LEVEL_PLANE_WIDTH + 2u] = 2u;
 
-    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, &quads, &quad_count));
+    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, UINT16_MAX, &quads, &quad_count));
     TEST_ASSERT_EQUAL_UINT32(6u, quad_count);
 
     free(quads);
@@ -85,7 +126,7 @@ void test_level_geometry_treats_door_cells_as_openings(void)
     level.wall_tiles[WOLF_LEVEL_PLANE_WIDTH + 1u] = 7u;
     level.wall_tiles[WOLF_LEVEL_PLANE_WIDTH + 2u] = WOLF_LEVEL_DOOR_TILE_FIRST;
 
-    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, &quads, &quad_count));
+    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, UINT16_MAX, &quads, &quad_count));
     TEST_ASSERT_EQUAL_UINT32(4u, quad_count);
     TEST_ASSERT_NOT_NULL(quads);
 
@@ -118,7 +159,7 @@ void test_level_geometry_omits_info_plane_secret_door_cells(void)
     level.object_tiles[wall_index] = WOLF_LEVEL_INFO_PUSHWALL_MARKER;
 
     /* The info-plane marker identifies a secret door even though its wall tile looks ordinary. */
-    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, &quads, &quad_count));
+    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, UINT16_MAX, &quads, &quad_count));
     TEST_ASSERT_NULL(quads);
     TEST_ASSERT_EQUAL_UINT32(0u, quad_count);
 }
@@ -152,7 +193,7 @@ void test_level_geometry_returns_empty_array_for_empty_map(void)
     level.width = 3u;
     level.height = 3u;
 
-    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, &quads, &quad_count));
+    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, UINT16_MAX, &quads, &quad_count));
     TEST_ASSERT_NULL(quads);
     TEST_ASSERT_EQUAL_UINT32(0u, quad_count);
 }
@@ -195,14 +236,14 @@ void test_level_geometry_rejects_invalid_arguments(void)
     VulkanQuad *quads = NULL;
     uint32_t quad_count = 0u;
 
-    TEST_ASSERT_FALSE(wolf_level_build_wall_quads(NULL, &quads, &quad_count));
-    TEST_ASSERT_FALSE(wolf_level_build_wall_quads(&level, NULL, &quad_count));
-    TEST_ASSERT_FALSE(wolf_level_build_wall_quads(&level, &quads, NULL));
+    TEST_ASSERT_FALSE(wolf_level_build_wall_quads(NULL, UINT16_MAX, &quads, &quad_count));
+    TEST_ASSERT_FALSE(wolf_level_build_wall_quads(&level, UINT16_MAX, NULL, &quad_count));
+    TEST_ASSERT_FALSE(wolf_level_build_wall_quads(&level, UINT16_MAX, &quads, NULL));
     TEST_ASSERT_FALSE(wolf_level_find_open_tile(NULL, NULL, NULL));
 
     level.width = (uint16_t)(WOLF_LEVEL_PLANE_WIDTH + 1u);
     level.height = 1u;
-    TEST_ASSERT_FALSE(wolf_level_build_wall_quads(&level, &quads, &quad_count));
+    TEST_ASSERT_FALSE(wolf_level_build_wall_quads(&level, UINT16_MAX, &quads, &quad_count));
 }
 
 void test_level_geometry_reads_original_wolf3d_player_start_markers(void)
