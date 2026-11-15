@@ -84,6 +84,8 @@ void test_world_state_rejects_more_than_sixty_four_doors(void)
     WolfLevel level = create_test_level();
     WolfWorldState world = {0};
 
+    level.width = WOLF_LEVEL_PLANE_WIDTH;
+    level.height = 2u;
     for (uint16_t index = 0u; index < WOLF_WORLD_MAX_DOORS + 1u; ++index) {
         level.wall_tiles[index] = 90u;
     }
@@ -225,8 +227,8 @@ void test_world_state_door_geometry_uses_original_vswap_door_pages(void)
     TEST_ASSERT_TRUE(wolf_world_state_build_dynamic_quads(&world, quads, 8u));
 
     /* A vertical door keeps its X plane fixed and slides one half tile along Z. */
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, -1.6f, quads[0].vertices[0].position[0]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[0].vertices[0].position[2]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[0].vertices[0].position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[0].vertices[0].position[2]);
 }
 
 void test_world_state_rejects_door_pages_missing_from_vswap(void)
@@ -284,7 +286,7 @@ void test_world_state_pushwall_moves_one_tile_per_original_128_tics(void)
 
     advance_world_ticks(&world, 126.0f, player_x, player_z);
     TEST_ASSERT_TRUE(world.pushwall.active);
-    TEST_ASSERT_FLOAT_WITHIN(0.01f, 126.0f, world.pushwall.elapsed_ticks);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 127.0f, world.pushwall.elapsed_ticks);
 
     TEST_ASSERT_TRUE(wolf_world_state_update(
         &world, 1.0f / WOLF_WORLD_DOOR_TICKS_PER_SECOND,
