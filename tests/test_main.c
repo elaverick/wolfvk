@@ -79,6 +79,22 @@ void test_vswap_decoder_rejects_invalid_arguments_and_nonempty_output(void);
 void test_wall_tile_selects_original_horizontal_and_vertical_pages(void);
 void test_wall_tile_page_selection_rejects_invalid_or_missing_pages(void);
 
+void test_world_state_spawns_original_door_orientations_and_locks(void);
+void test_world_state_rejects_more_than_sixty_four_doors(void);
+void test_world_state_door_opens_at_original_tics_times_1024_speed(void);
+void test_world_state_door_auto_closes_after_original_three_hundred_tics(void);
+void test_world_state_keeps_door_open_while_player_occupies_doorway(void);
+void test_world_state_manual_door_use_reverses_opening_direction(void);
+void test_world_state_locked_door_requires_and_collects_original_key_marker(void);
+void test_world_state_door_geometry_uses_original_vswap_door_pages(void);
+void test_world_state_rejects_door_pages_missing_from_vswap(void);
+void test_world_state_use_selects_pushwall_direction_from_player_yaw(void);
+void test_world_state_pushwall_moves_one_tile_per_original_128_tics(void);
+void test_world_state_pushwall_stops_after_one_tile_when_second_cell_is_blocked(void);
+void test_world_state_rejects_pushwall_when_first_cell_is_blocked(void);
+void test_world_state_builds_dynamic_secret_wall_geometry(void);
+void test_world_state_collects_original_yellow_key_marker(void);
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -160,5 +176,20 @@ int main(void)
     RUN_TEST(test_vswap_decoder_rejects_invalid_arguments_and_nonempty_output);
     RUN_TEST(test_wall_tile_selects_original_horizontal_and_vertical_pages);
     RUN_TEST(test_wall_tile_page_selection_rejects_invalid_or_missing_pages);
+    RUN_TEST(test_world_state_spawns_original_door_orientations_and_locks);
+    RUN_TEST(test_world_state_rejects_more_than_sixty_four_doors);
+    RUN_TEST(test_world_state_door_opens_at_original_tics_times_1024_speed);
+    RUN_TEST(test_world_state_door_auto_closes_after_original_three_hundred_tics);
+    RUN_TEST(test_world_state_keeps_door_open_while_player_occupies_doorway);
+    RUN_TEST(test_world_state_manual_door_use_reverses_opening_direction);
+    RUN_TEST(test_world_state_locked_door_requires_and_collects_original_key_marker);
+    RUN_TEST(test_world_state_door_geometry_uses_original_vswap_door_pages);
+    RUN_TEST(test_world_state_rejects_door_pages_missing_from_vswap);
+    RUN_TEST(test_world_state_use_selects_pushwall_direction_from_player_yaw);
+    RUN_TEST(test_world_state_pushwall_moves_one_tile_per_original_128_tics);
+    RUN_TEST(test_world_state_pushwall_stops_after_one_tile_when_second_cell_is_blocked);
+    RUN_TEST(test_world_state_rejects_pushwall_when_first_cell_is_blocked);
+    RUN_TEST(test_world_state_builds_dynamic_secret_wall_geometry);
+    RUN_TEST(test_world_state_collects_original_yellow_key_marker);
     return UNITY_END();
 }
