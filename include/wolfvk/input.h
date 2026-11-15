@@ -16,7 +16,7 @@ void wolf_input_destroy(WolfInput *input);
 /* Clear per-frame mouse motion and refresh the connected gamepad state. */
 void wolf_input_begin_frame(WolfInput *input);
 
-/* Apply an SDL event to the input state. */
+/* Translate SDL events once so gameplay reads stable device-independent state each frame. */
 void wolf_input_handle_event(WolfInput *input, const SDL_Event *event);
 
 /* Query keyboard state and accumulated relative mouse movement. */
