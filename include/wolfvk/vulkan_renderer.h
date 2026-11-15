@@ -10,6 +10,15 @@
 
 typedef struct VulkanRenderer VulkanRenderer;
 
+typedef struct VulkanVertex {
+    float position[3];
+    float colour[3];
+} VulkanVertex;
+
+typedef struct VulkanQuad {
+    VulkanVertex vertices[4];
+} VulkanQuad;
+
 typedef struct VulkanQueueFamilyIndices {
     uint32_t graphics_family;
     uint32_t present_family;
@@ -28,6 +37,17 @@ bool vulkan_renderer_find_queue_families(
 bool vulkan_renderer_create(SDL_Window *window, VulkanRenderer **renderer);
 
 /* Release Vulkan objects in reverse dependency order. */
+/* Upload static quad geometry. Each quad supplies four world-space vertices. */
+bool vulkan_renderer_set_quads(
+    VulkanRenderer *renderer,
+    const VulkanQuad *quads,
+    uint32_t quad_count);
+
+/* Set a column-major 4x4 view-projection matrix used by the vertex shader. */
+bool vulkan_renderer_set_view_projection(
+    VulkanRenderer *renderer,
+    const float view_projection[16]);
+
 /* Submit and present one frame. Returns false on an unrecoverable Vulkan error. */
 bool vulkan_renderer_draw_frame(VulkanRenderer *renderer);
 void vulkan_renderer_notify_resize(VulkanRenderer *renderer);
