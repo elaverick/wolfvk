@@ -40,7 +40,7 @@ static void print_usage(const char *program_name)
 {
     printf("Usage: %s [--level NUMBER] [--help]\n", program_name);
     printf("Level numbers are one-based; if omitted, the first level is loaded.\n");
-    printf("Place MAPHEAD.WL6 and GAMEMAPS.WL6 in the working directory.\n");
+    printf("Place MAPHEAD.WL6, GAMEMAPS.WL6 and VSWAP.WL6 in the working directory.\n");
 }
 
 /* Combine the map's exposed wall faces with the large floor and roof, and resolve its spawn. */
@@ -194,14 +194,15 @@ int main(int argc, char *argv[])
 
     if (!wolf_wall_textures_load_vswap(
             "VSWAP.WL6", &wall_textures, error_message, sizeof(error_message))) {
-        fprintf(stderr, "Could not load original wall textures: %s\\n", error_message);
+        fprintf(stderr, "Could not load original wall textures: %s\n", error_message);
         return 1;
     }
 
     if (!build_scene_geometry(
             &level, wall_textures.page_count, environment_quads,
             &scene_quads, &scene_quad_count, &player_start)) {
-        fprintf(stderr, "Level geometry initialisation failed; see the diagnostic above.\n");
+        fprintf(stderr, "Level geometry initialisation failed; check the VSWAP wall page range.\n");
+        wolf_wall_textures_destroy(&wall_textures);
         return 1;
     }
 
@@ -240,7 +241,7 @@ int main(int argc, char *argv[])
 
     if (!vulkan_renderer_set_wall_textures(
             renderer, wall_textures.rgba_pages, wall_textures.page_count)) {
-        fprintf(stderr, "Could not upload the original VSWAP wall textures.\\n");
+        fprintf(stderr, "Could not upload the original VSWAP wall textures.\n");
         free(scene_quads);
         wolf_wall_textures_destroy(&wall_textures);
         vulkan_renderer_destroy(renderer);
