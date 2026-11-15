@@ -54,13 +54,13 @@ static bool build_scene_geometry(
 
     if (scene_quads == NULL || scene_quad_count == NULL ||
         spawn_x == NULL || spawn_y == NULL) {
-        fprintf(stderr, "Invalid level geometry output arguments.\\n");
+        fprintf(stderr, "Invalid level geometry output arguments.\n");
         return false;
     }
 
     if (!wolf_level_build_wall_quads(level, &wall_quads, &wall_quad_count)) {
         fprintf(
-            stderr, "Could not generate wall geometry for level %s (%u x %u).\\n",
+            stderr, "Could not generate wall geometry for level %s (%u x %u).\n",
             level != NULL ? level->name : "(null)",
             level != NULL ? (unsigned int)level->width : 0u,
             level != NULL ? (unsigned int)level->height : 0u);
@@ -87,20 +87,20 @@ static bool build_scene_geometry(
         fprintf(
             stderr,
             "No open spawn cell exists in level %s (%u x %u). "
-            "The decoded wall plane contains %zu solid cells and %zu open cells.\\n",
+            "The decoded wall plane contains %zu solid cells and %zu open cells.\n",
             level->name, (unsigned int)level->width, (unsigned int)level->height,
             solid_tile_count, open_tile_count);
         fprintf(stderr, "First wall-plane row:");
         for (uint16_t tile_x = 0u; tile_x < level->width && tile_x < 16u; ++tile_x) {
             fprintf(stderr, " %04X", level->wall_tiles[tile_x]);
         }
-        fputc('\\n', stderr);
+        fputc('\n', stderr);
         free(wall_quads);
         return false;
     }
 
     if (wall_quad_count > UINT32_MAX - 2u) {
-        fprintf(stderr, "Level generated too many wall quads.\\n");
+        fprintf(stderr, "Level generated too many wall quads.\n");
         free(wall_quads);
         return false;
     }
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
     }
 
     if (!SDL_SetWindowRelativeMouseMode(window, true)) {
-        fprintf(stderr, "Could not capture the mouse for relative mouse-look: %s\\n",
+        fprintf(stderr, "Could not capture the mouse for relative mouse-look: %s\n",
             SDL_GetError());
     }
 
@@ -291,7 +291,7 @@ int main(int argc, char *argv[])
 
         if (!wolf_player_update(&camera, input, &level, delta_seconds) ||
             !update_camera_projection(window, renderer, &camera)) {
-            fprintf(stderr, "Player update or camera projection failed.\\n");
+            fprintf(stderr, "Player update or camera projection failed.\n");
             running = 0;
         }
 
