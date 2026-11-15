@@ -33,6 +33,7 @@ endif()
 add_executable(wolfvk
     src/main.c
     src/camera.c
+    src/command_line.c
     src/input.c
     src/level.c
     src/vulkan_renderer_geometry.c
@@ -108,10 +109,12 @@ if(BUILD_TESTING)
         tests/test_main.c
         tests/test_window.c
         tests/test_camera.c
+        tests/test_command_line.c
         tests/test_level.c
         tests/test_input.c
         tests/test_vulkan_renderer.c
         src/camera.c
+        src/command_line.c
         src/input.c
         src/level.c
         src/vulkan_renderer_geometry.c
