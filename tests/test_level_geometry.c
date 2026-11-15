@@ -92,6 +92,22 @@ void test_level_geometry_uses_original_vswap_orientation_pages(void)
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[0].vertices[2].texcoord[1]);
 
     free(quads);
+    quads = NULL;
+    quad_count = 0u;
+
+    /*
+     * Level 1 uses tile 106 (0x6A): its 0x40 flag leaves wall type 42,
+     * which selects the final pages needed by that retail map.
+     */
+    level.wall_tiles[WOLF_LEVEL_PLANE_WIDTH + 1u] = 106u;
+    TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, 98u, &quads, &quad_count));
+    TEST_ASSERT_EQUAL_UINT32(4u, quad_count);
+    TEST_ASSERT_EQUAL_UINT32(82u, quads[0].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(82u, quads[1].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(83u, quads[2].vertices[0].texture_layer);
+    TEST_ASSERT_EQUAL_UINT32(83u, quads[3].vertices[0].texture_layer);
+
+    free(quads);
 }
 
 void test_level_geometry_rejects_missing_vswap_texture_page(void)
