@@ -42,7 +42,7 @@ void test_level_geometry_rejects_missing_vswap_texture_page(void);
 void test_level_geometry_omits_shared_faces_between_adjacent_walls(void);
 void test_level_geometry_treats_door_cells_as_openings(void);
 void test_level_door_tile_classifier_matches_retail_range(void);
-void test_level_geometry_omits_info_plane_secret_door_cells(void);
+void test_level_geometry_keeps_stationary_secret_walls_in_static_geometry(void);
 void test_level_geometry_can_choose_a_door_as_fallback_spawn_cell(void);
 void test_level_geometry_returns_empty_array_for_empty_map(void);
 void test_level_geometry_finds_nearest_open_tile(void);
@@ -124,7 +124,7 @@ int main(void)
     RUN_TEST(test_level_geometry_omits_shared_faces_between_adjacent_walls);
     RUN_TEST(test_level_geometry_treats_door_cells_as_openings);
     RUN_TEST(test_level_door_tile_classifier_matches_retail_range);
-    RUN_TEST(test_level_geometry_omits_info_plane_secret_door_cells);
+    RUN_TEST(test_level_geometry_keeps_stationary_secret_walls_in_static_geometry);
     RUN_TEST(test_level_geometry_can_choose_a_door_as_fallback_spawn_cell);
     RUN_TEST(test_level_geometry_returns_empty_array_for_empty_map);
     RUN_TEST(test_level_geometry_finds_nearest_open_tile);
