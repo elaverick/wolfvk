@@ -35,6 +35,8 @@ struct VulkanRenderer {
     bool framebuffer_resized;
 };
 
+uint32_t vulkan_renderer_score_device_type(VkPhysicalDeviceType device_type);
+
 bool vulkan_renderer_choose_surface_format(
     const VkSurfaceFormatKHR *available_formats,
     uint32_t format_count,
