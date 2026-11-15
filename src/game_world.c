@@ -293,7 +293,8 @@ bool wolf_world_state_use(
         world->pushwall.wall_tile = world->level.wall_tiles[target_index];
         world->pushwall.direction_x = (int8_t)direction_x;
         world->pushwall.direction_y = (int8_t)direction_y;
-        world->pushwall.elapsed_ticks = 0.0f;
+        /* The original engine initialises pwallstate to one before the first MovePWalls tick. */
+        world->pushwall.elapsed_ticks = 1.0f;
         world->pushwall.second_tile_available = false;
 
         /* The old cell becomes floor while the moving wall supplies its collision and render shape. */
@@ -737,7 +738,14 @@ static bool build_pushwall_quads(
         return false;
     }
 
-    progress = world->pushwall.elapsed_ticks / WOLF_WORLD_PUSHWALL_TILE_TICKS;
+    {
+        float pwall_state = world->pushwall.elapsed_ticks;
+        float tile_offset = floorf(pwall_state / WOLF_WORLD_PUSHWALL_TILE_TICKS);
+        float texel_offset = fmodf(floorf(pwall_state * 0.5f), 64.0f) / 64.0f;
+
+        /* Match pwallpos = (pwallstate / 2) & 63 and its 128-tic tile transitions. */
+        progress = tile_offset + texel_offset;
+    }
     map_x = (float)world->pushwall.source_x + 0.5f +
         (float)world->pushwall.direction_x * progress;
     map_y = (float)world->pushwall.source_y + 0.5f +
