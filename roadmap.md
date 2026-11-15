@@ -10,7 +10,7 @@ You may use the main branch of the following repository as a reference point. Yo
 [x] Ensure the window can render Vulkan 3D content in a performant manner.
 [x] The window must be able to read inputs from the keyboard, mouse and a compatible game pad controller (such as an Xbox one controller).
 [x] The engine must be able to render quads.
-[ ] There should be a floor plane and a roof plane which are infinite (you may use rendering cheats to achieve this).
+[x] There should be a floor plane and a roof plane which are infinite (you may use rendering cheats to achieve this).
 [ ] You must be able to read level data from the original Wolfenstein 3D data sources.
 [ ] A user should be able to select the level to render from the command line with a --level argument. If a --level arguement is not passed, you should render the first level.
 [ ] You must draw the level using untextured quads, you are not required to draw sprites, enemies, pick ups or doors at this time, you may skip rendering doors and secret doors.
