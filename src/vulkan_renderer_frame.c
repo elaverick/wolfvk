@@ -842,6 +842,7 @@ bool vulkan_renderer_frame_resources_draw(VulkanRenderer *renderer)
         fprintf(stderr, "Acquiring a Vulkan swapchain image failed (%d).\n", result);
         return false;
     }
+    acquired_suboptimal = result == VK_SUBOPTIMAL_KHR;
 
     command_buffer = renderer->command_buffers[image_index];
     result = vkResetFences(renderer->device, 1, &renderer->in_flight_fence);
