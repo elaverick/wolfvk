@@ -261,6 +261,7 @@ int main(int argc, char *argv[])
         SDL_Delay(1);
     }
 
+    (void)SDL_SetWindowRelativeMouseMode(window, false);
     wolf_input_destroy(input);
     vulkan_renderer_destroy(renderer);
     SDL_DestroyWindow(window);
