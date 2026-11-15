@@ -276,7 +276,7 @@ bool vulkan_renderer_texture_set(
 
     upload_byte_count = (size_t)page_count * WOLF_WALL_TEXTURE_RGBA_SIZE;
     if (upload_byte_count / WOLF_WALL_TEXTURE_RGBA_SIZE != (size_t)page_count) {
-        fprintf(stderr, "VSWAP wall texture data size exceeds the host address space.\\n");
+        fprintf(stderr, "VSWAP wall texture data size exceeds the host address space.\n");
         return false;
     }
     upload_size = (VkDeviceSize)upload_byte_count;
