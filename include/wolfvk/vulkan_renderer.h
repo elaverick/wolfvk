@@ -13,6 +13,9 @@ typedef struct VulkanRenderer VulkanRenderer;
 typedef struct VulkanVertex {
     float position[3];
     float colour[3];
+    float texcoord[2];
+    uint32_t texture_layer;
+    uint32_t use_texture;
 } VulkanVertex;
 
 typedef struct VulkanQuad {
@@ -41,6 +44,12 @@ bool vulkan_renderer_set_quads(
     VulkanRenderer *renderer,
     const VulkanQuad *quads,
     uint32_t quad_count);
+
+/* Upload 64x64 RGBA wall pages as layers in the renderer's nearest-sampled texture array. */
+bool vulkan_renderer_set_wall_textures(
+    VulkanRenderer *renderer,
+    const uint8_t *rgba_pages,
+    uint32_t page_count);
 
 /* Set a column-major 4x4 view-projection matrix used by the vertex shader. */
 bool vulkan_renderer_set_view_projection(
