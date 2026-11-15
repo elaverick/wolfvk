@@ -27,6 +27,18 @@ typedef struct WolfLevel {
 /* Door cells are omitted from the pre-door milestone so they do not become invisible barriers. */
 bool wolf_level_is_door_tile(uint16_t wall_tile);
 
+/* Identify secret pushwall cells from the info plane rather than their ordinary wall texture. */
+bool wolf_level_is_secret_door_cell(
+    const WolfLevel *level,
+    int tile_x,
+    int tile_y);
+
+/* Return whether the pre-door milestone should treat this map cell as an opening. */
+bool wolf_level_is_omitted_door_cell(
+    const WolfLevel *level,
+    int tile_x,
+    int tile_y);
+
 /* Decode the length-prefixed Carmack stream used by original Wolf3D map planes. */
 bool wolf_level_decode_carmack(
     const uint8_t *source,
