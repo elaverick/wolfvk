@@ -108,6 +108,7 @@ if(BUILD_TESTING)
         tests/test_main.c
         tests/test_window.c
         tests/test_camera.c
+        tests/test_level.c
         tests/test_input.c
         tests/test_vulkan_renderer.c
         src/camera.c
