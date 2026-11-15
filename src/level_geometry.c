@@ -140,7 +140,7 @@ bool wolf_level_build_wall_quads(
             if (is_open_space_for_geometry(level, x, y - 1)) {
                 const float face[4][3] = {
                     {x0, 0.0f, z0}, {x1, 0.0f, z0},
-                    {x1, WOLF_WORLD_WALL_HEIGHT, z0}, {x0, WOLF_WALL_HEIGHT, z0}
+                    {x1, WOLF_WORLD_WALL_HEIGHT, z0}, {x0, WOLF_WORLD_WALL_HEIGHT, z0}
                 };
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count, face, colour, 0.82f)) {
@@ -152,7 +152,7 @@ bool wolf_level_build_wall_quads(
             if (is_open_space_for_geometry(level, x, y + 1)) {
                 const float face[4][3] = {
                     {x1, 0.0f, z1}, {x0, 0.0f, z1},
-                    {x0, WOLF_WALL_HEIGHT, z1}, {x1, WOLF_WALL_HEIGHT, z1}
+                    {x0, WOLF_WORLD_WALL_HEIGHT, z1}, {x1, WOLF_WORLD_WALL_HEIGHT, z1}
                 };
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count, face, colour, 0.95f)) {
@@ -164,7 +164,7 @@ bool wolf_level_build_wall_quads(
             if (is_open_space_for_geometry(level, x - 1, y)) {
                 const float face[4][3] = {
                     {x0, 0.0f, z1}, {x0, 0.0f, z0},
-                    {x0, WOLF_WALL_HEIGHT, z0}, {x0, WOLF_WALL_HEIGHT, z1}
+                    {x0, WOLF_WORLD_WALL_HEIGHT, z0}, {x0, WOLF_WORLD_WALL_HEIGHT, z1}
                 };
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count, face, colour, 0.72f)) {
@@ -176,7 +176,7 @@ bool wolf_level_build_wall_quads(
             if (is_open_space_for_geometry(level, x + 1, y)) {
                 const float face[4][3] = {
                     {x1, 0.0f, z0}, {x1, 0.0f, z1},
-                    {x1, WOLF_WALL_HEIGHT, z1}, {x1, WOLF_WALL_HEIGHT, z0}
+                    {x1, WOLF_WORLD_WALL_HEIGHT, z1}, {x1, WOLF_WORLD_WALL_HEIGHT, z0}
                 };
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count, face, colour, 0.88f)) {
