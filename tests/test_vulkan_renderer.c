@@ -74,3 +74,18 @@ void test_queue_selection_rejects_null_arguments(void)
     TEST_ASSERT_FALSE(vulkan_renderer_find_queue_families(
         families, present_support, 1, NULL));
 }
+
+void test_queue_selection_ignores_empty_queue_families(void)
+{
+    const VkQueueFamilyProperties families[] = {
+        {.queueFlags = VK_QUEUE_GRAPHICS_BIT, .queueCount = 0},
+        {.queueFlags = VK_QUEUE_GRAPHICS_BIT, .queueCount = 1}
+    };
+    const VkBool32 present_support[] = {VK_TRUE, VK_TRUE};
+    VulkanQueueFamilyIndices indices = {0};
+
+    TEST_ASSERT_TRUE(vulkan_renderer_find_queue_families(
+        families, present_support, 2, &indices));
+    TEST_ASSERT_EQUAL_UINT32(1, indices.graphics_family);
+    TEST_ASSERT_EQUAL_UINT32(1, indices.present_family);
+}
