@@ -40,7 +40,7 @@ CTest runs the suite in Windows CI.
 | Indexed quad rendering and depth testing | Implemented and tested |
 | Infinite floor and roof planes | Implemented |
 | Original WL6 map decoding and level selection | Implemented; 60 real WL6 maps inspected and synthetic original-format fixtures tested |
-| Untextured exposed wall faces | Implemented; level 1 geometry data yields 1,016 exposed wall faces; ordinary doors (wall-plane 90–101) and secret doors (info-plane 98) are omitted as passable openings; visual check outstanding |
+| Untextured exposed wall faces | Implemented; level 1 geometry data yields 1,018 exposed wall faces; ordinary doors (wall-plane 90–101) and secret doors (info-plane 98) are omitted as passable openings; visual check outstanding |
 | WASD movement and mouse-look | Implemented; player collision tests pass |
 | Pre-texture demo | Packaged and available for visual review; awaiting approval |
 | Original textures and integer scaling | Not started; require explicit demo approval |
