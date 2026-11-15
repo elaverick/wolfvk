@@ -6,23 +6,23 @@ Development follows the ordered, approval-gated steps in [roadmap.md](roadmap.md
 
 ## Current development status
 
-**Current roadmap step:** A user should be able to select the level to render from the command line with a `--level` argument.
+**Current roadmap step:** You must draw the level using untextured quads.
 
-The SDL3 window, Vulkan renderer, input, quad and infinite floor/roof milestones are complete. The application creates a Vulkan instance and surface, prefers discrete GPUs when selecting a graphics/presentation device, and renders indexed, vertex-coloured geometry with depth testing and a perspective camera. Large floor and roof planes extend beyond the camera far clip so their edges are not visible. The projection is recalculated on window resize. A level loader now reads the original `MAPHEAD` and `GAMEMAPS` layout and expands the wall and object planes through Carmack and RLEW decompression. The application does not yet select or render a level; that is the next roadmap step.
+The SDL3 window, Vulkan renderer, input, quad and infinite floor/roof milestones are complete. The application creates a Vulkan instance and surface, prefers discrete GPUs when selecting a graphics/presentation device, and renders indexed, vertex-coloured geometry with depth testing and a perspective camera. Large floor and roof planes extend beyond the camera far clip so their edges are not visible. The projection is recalculated on window resize. A level loader now reads the original `MAPHEAD` and `GAMEMAPS` layout and expands the wall and object planes through Carmack and RLEW decompression. The application now loads the selected map at startup. The map geometry is not drawn yet; that is the next roadmap step.
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It contains 33 Unity test cases: three SDL3 window/event tests, three camera matrix tests, four keyboard/mouse/axis input tests, eight Carmack/RLEW and level-loader tests, 14 Vulkan selection and renderer unit tests, and one SwiftShader-backed integration test that creates a swapchain and submits/presents overlapping indexed quads. CTest runs the suite in Windows CI.
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It contains 41 Unity test cases: three SDL3 window/event tests, three camera matrix tests, four keyboard/mouse/axis input tests, eight Carmack/RLEW and level-loader tests, eight command-line parser tests, 14 Vulkan selection and renderer unit tests, and one SwiftShader-backed integration test that creates a swapchain and submits/presents overlapping indexed quads. CTest runs the suite in Windows CI.
 
 | Check | Current status |
 |---|---|
 | Windows x64 build | Tracked by the Actions badge below |
 | C unit-test framework | Unity |
-| Automated tests | 33 Unity test cases: 3 SDL3, 3 camera, 4 input, 8 level, 14 Vulkan unit, and 1 SwiftShader quad render/present integration |
+| Automated tests | 41 Unity test cases: 3 SDL3, 3 camera, 4 input, 8 level, 8 command line, 14 Vulkan unit, and 1 SwiftShader quad render/present integration |
 | SDL3 window | Complete |
 | Vulkan renderer and swapchain | Implemented and verified in Windows CI |
 | Input handling | Keyboard, relative mouse and SDL gamepad state; verified in Windows CI |
 | Quad rendering | Indexed vertex and index buffers, depth testing and view-projection transform; verified in Windows CI |
 | Infinite floor and roof | Large world-space planes with perspective camera; verified in Windows CI |
-| Original level loading | MAPHEAD/GAMEMAPS parser with Carmack and RLEW decompression; synthetic original-format fixture tests pass |
+| Original level loading | MAPHEAD/GAMEMAPS parser with Carmack and RLEW decompression; synthetic original-format fixture tests pass |\n| Level selection | `--level N` (one-based), defaults to level 1; validated with Unity tests |
 | Playable demo | Not started |
 
 [![Windows build and tests](https://github.com/elaverick/WolfVK/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/elaverick/WolfVK/actions/workflows/build.yml)
@@ -41,4 +41,4 @@ ctest --test-dir build -C Release --output-on-failure
 
 ## Controls
 
-The application currently displays large, untextured floor and roof planes. The level loader is implemented as a tested library component, but is not yet connected to the application command line. The input layer tracks keyboard state, relative mouse movement and a connected SDL gamepad, but gameplay controls are not wired up yet; close the window to exit.
+The application currently displays large, untextured floor and roof planes. It loads the selected level from `MAPHEAD.WL6` and `GAMEMAPS.WL6` at startup; map geometry is not yet rendered. Use `--level N` to choose a one-based level number, or omit it to load the first level. The input layer tracks keyboard state, relative mouse movement and a connected SDL gamepad, but gameplay controls are not wired up yet; close the window to exit.
