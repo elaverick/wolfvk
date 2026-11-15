@@ -65,7 +65,7 @@ ctest --test-dir build -C Release --output-on-failure
 Keep `shaders/` beside `wolfvk.exe`. Place `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` from your own Wolfenstein 3D WL6 installation in the working directory, then launch:
 
 ```powershell
-.\\wolfvk.exe
+.\wolfvk.exe
 ```
 
 Use `--level N` to select a one-based level number; omit it to load the first level.
