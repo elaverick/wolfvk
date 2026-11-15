@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Use framebuffer pixels for the aspect ratio so high-DPI windows keep a correct projection. */
 static bool update_camera_projection(
     SDL_Window *window,
     VulkanRenderer *renderer,
@@ -39,6 +40,7 @@ static void print_usage(const char *program_name)
     printf("Place MAPHEAD.WL6 and GAMEMAPS.WL6 in the working directory.\n");
 }
 
+/* Combine the map's exposed wall faces with the large floor and roof, and resolve its spawn. */
 static bool build_scene_geometry(
     const WolfLevel *level,
     const VulkanQuad environment_quads[2],
@@ -66,6 +68,7 @@ static bool build_scene_geometry(
         return false;
     }
 
+    /* Custom maps may omit the original marker; a deterministic floor fallback still permits inspection. */
     if (!wolf_level_find_player_start(level, player_start)) {
         if (!wolf_level_find_open_tile(
                 level, &player_start->tile_x, &player_start->tile_y)) {
@@ -129,6 +132,7 @@ static bool build_scene_geometry(
     return true;
 }
 
+/* Own the application lifetime: load WL6 data, establish SDL/Vulkan, run input and frame updates, then unwind. */
 int main(int argc, char *argv[])
 {
     SDL_Window *window;
