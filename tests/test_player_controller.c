@@ -223,6 +223,37 @@ void test_player_can_move_through_omitted_door_cells(void)
     wolf_input_destroy(input);
 }
 
+void test_player_can_move_through_secret_door_cells(void)
+{
+    WolfCamera camera;
+    WolfLevel level;
+    WolfInput *input = create_test_input();
+
+    TEST_ASSERT_NOT_NULL(input);
+    wolf_camera_initialize(&camera);
+    create_open_test_level(&level);
+
+    /* A pushwall marker in the info plane makes its ordinary wall tile an omitted secret door. */
+    camera.position[0] = -1.0f;
+    camera.position[2] = 0.0f;
+    camera.yaw_radians = 1.57079633f;
+    level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 1u;
+    level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] =
+        WOLF_LEVEL_INFO_PUSHWALL_MARKER;
+    level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 1u;
+    set_key(input, SDL_SCANCODE_W, true);
+
+    for (int frame = 0; frame < 16; ++frame) {
+        TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.1f));
+    }
+
+    /* The player crosses the marked cell but remains blocked by the next ordinary wall. */
+    TEST_ASSERT_TRUE(camera.position[0] > 0.1f);
+    TEST_ASSERT_TRUE(camera.position[0] < 0.4f);
+
+    wolf_input_destroy(input);
+}
+
 void test_player_rejects_invalid_state_and_frame_time(void)
 {
     WolfCamera camera;
