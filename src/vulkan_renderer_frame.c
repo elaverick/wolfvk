@@ -571,7 +571,7 @@ static bool create_graphics_pipeline(VulkanRenderer *renderer)
     VkPipelineShaderStageCreateInfo shader_stages[2] = {0};
     VkPipelineVertexInputStateCreateInfo vertex_input = {0};
     VkVertexInputBindingDescription vertex_binding = {0};
-    VkVertexInputAttributeDescription vertex_attributes[2] = {0};
+    VkVertexInputAttributeDescription vertex_attributes[5] = {0};
     VkPipelineDepthStencilStateCreateInfo depth_stencil = {0};
     VkPushConstantRange view_projection_range = {0};
     VkPipelineInputAssemblyStateCreateInfo input_assembly = {0};
@@ -621,10 +621,25 @@ static bool create_graphics_pipeline(VulkanRenderer *renderer)
     vertex_attributes[1].format = VK_FORMAT_R32G32B32_SFLOAT;
     vertex_attributes[1].offset = (uint32_t)offsetof(VulkanVertex, colour);
 
+    vertex_attributes[2].location = 2;
+    vertex_attributes[2].binding = 0;
+    vertex_attributes[2].format = VK_FORMAT_R32G32_SFLOAT;
+    vertex_attributes[2].offset = (uint32_t)offsetof(VulkanVertex, texcoord);
+
+    vertex_attributes[3].location = 3;
+    vertex_attributes[3].binding = 0;
+    vertex_attributes[3].format = VK_FORMAT_R32_UINT;
+    vertex_attributes[3].offset = (uint32_t)offsetof(VulkanVertex, texture_layer);
+
+    vertex_attributes[4].location = 4;
+    vertex_attributes[4].binding = 0;
+    vertex_attributes[4].format = VK_FORMAT_R32_UINT;
+    vertex_attributes[4].offset = (uint32_t)offsetof(VulkanVertex, use_texture);
+
     vertex_input.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input.vertexBindingDescriptionCount = 1;
     vertex_input.pVertexBindingDescriptions = &vertex_binding;
-    vertex_input.vertexAttributeDescriptionCount = 2;
+    vertex_input.vertexAttributeDescriptionCount = 5;
     vertex_input.pVertexAttributeDescriptions = vertex_attributes;
 
     input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -683,7 +698,9 @@ static bool create_graphics_pipeline(VulkanRenderer *renderer)
     view_projection_range.size = (uint32_t)sizeof(renderer->view_projection);
 
     layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layout_info.pushConstantRangeCount = 1;
+    layout_info.setLayoutCount = 1u;
+    layout_info.pSetLayouts = &renderer->wall_texture_set_layout;
+    layout_info.pushConstantRangeCount = 1u;
     layout_info.pPushConstantRanges = &view_projection_range;
     result = vkCreatePipelineLayout(
         renderer->device, &layout_info, NULL, &renderer->pipeline_layout);
@@ -1053,6 +1070,20 @@ static bool record_command_buffer(
 
     vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->graphics_pipeline);
+    if (renderer->wall_texture_descriptor_set == VK_NULL_HANDLE) {
+        fprintf(stderr, "Wall textures must be uploaded before drawing the level.\\n");
+        vkCmdEndRenderPass(command_buffer);
+        return false;
+    }
+    vkCmdBindDescriptorSets(
+        command_buffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        renderer->pipeline_layout,
+        0u,
+        1u,
+        &renderer->wall_texture_descriptor_set,
+        0u,
+        NULL);
     vkCmdPushConstants(
         command_buffer, renderer->pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT,
         0, (uint32_t)sizeof(renderer->view_projection), renderer->view_projection);
