@@ -54,6 +54,7 @@ static void matrix_multiply(
     memcpy(result, product, sizeof(product));
 }
 
+/* Start at standing eye height with finite projection limits suitable for a room-scale level. */
 void wolf_camera_initialize(WolfCamera *camera)
 {
     if (camera == NULL) {
@@ -67,6 +68,7 @@ void wolf_camera_initialize(WolfCamera *camera)
     camera->far_clip = 2000.0f;
 }
 
+/* Build the camera transform and Vulkan projection from yaw/pitch without storing derived matrices. */
 bool wolf_camera_build_view_projection(
     const WolfCamera *camera,
     float aspect_ratio,
