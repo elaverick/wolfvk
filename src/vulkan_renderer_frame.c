@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static bool choose_surface_format(
+bool vulkan_renderer_choose_surface_format(
     const VkSurfaceFormatKHR *available_formats,
     uint32_t format_count,
     VkSurfaceFormatKHR *chosen_format)
@@ -27,7 +27,7 @@ static bool choose_surface_format(
     return true;
 }
 
-static VkPresentModeKHR choose_present_mode(
+VkPresentModeKHR vulkan_renderer_choose_present_mode(
     const VkPresentModeKHR *available_modes,
     uint32_t mode_count)
 {
@@ -152,13 +152,13 @@ static bool create_swapchain(VulkanRenderer *renderer)
     result = vkGetPhysicalDeviceSurfacePresentModesKHR(
         renderer->physical_device, renderer->surface, &mode_count, available_modes);
     if (result != VK_SUCCESS ||
-        !choose_surface_format(available_formats, format_count, &surface_format)) {
+        !vulkan_renderer_choose_surface_format(available_formats, format_count, &surface_format)) {
         free(available_formats);
         free(available_modes);
         return false;
     }
 
-    present_mode = choose_present_mode(available_modes, mode_count);
+    present_mode = vulkan_renderer_choose_present_mode(available_modes, mode_count);
     extent = choose_swapchain_extent(&capabilities, renderer->window);
     free(available_formats);
     free(available_modes);
