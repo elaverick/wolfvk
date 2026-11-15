@@ -1,6 +1,9 @@
 #include "unity.h"
 
 #include "vulkan_renderer_internal.h"
+#include "wolfvk/wall_textures.h"
+
+#include <string.h>
 
 void test_graphics_and_present_on_same_queue_family(void)
 {
@@ -194,17 +197,24 @@ void test_renderer_creates_swapchain_and_presents_quads(void)
     SDL_Window *window = SDL_CreateWindow(
         "WolfVK Vulkan quad integration test", 640, 480,
         SDL_WINDOW_HIDDEN | SDL_WINDOW_VULKAN);
+    uint8_t white_wall_page[WOLF_WALL_TEXTURE_RGBA_SIZE];
     VulkanRenderer *renderer = NULL;
     bool renderer_created;
+    bool textures_uploaded = false;
     bool geometry_uploaded = false;
     bool frame_rendered = false;
 
     TEST_ASSERT_NOT_NULL_MESSAGE(window, SDL_GetError());
+    memset(white_wall_page, 255, sizeof(white_wall_page));
 
     renderer_created = vulkan_renderer_create(window, &renderer);
     if (renderer_created) {
-        geometry_uploaded = vulkan_renderer_set_quads(
-            renderer, quads, (uint32_t)(sizeof(quads) / sizeof(quads[0])));
+        textures_uploaded = vulkan_renderer_set_wall_textures(
+            renderer, white_wall_page, 1u);
+        if (textures_uploaded) {
+            geometry_uploaded = vulkan_renderer_set_quads(
+                renderer, quads, (uint32_t)(sizeof(quads) / sizeof(quads[0])));
+        }
         if (geometry_uploaded) {
             frame_rendered = vulkan_renderer_draw_frame(renderer);
         }
@@ -214,6 +224,7 @@ void test_renderer_creates_swapchain_and_presents_quads(void)
     SDL_DestroyWindow(window);
 
     TEST_ASSERT_TRUE_MESSAGE(renderer_created, "Vulkan renderer initialisation failed");
+    TEST_ASSERT_TRUE_MESSAGE(textures_uploaded, "Vulkan texture array upload failed");
     TEST_ASSERT_TRUE_MESSAGE(geometry_uploaded, "Vulkan quad buffer upload failed");
     TEST_ASSERT_TRUE_MESSAGE(frame_rendered, "Vulkan quad rendering or presentation failed");
 }
