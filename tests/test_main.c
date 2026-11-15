@@ -3,6 +3,10 @@
 void test_window_creation(void);
 void test_window_is_resizable(void);
 void test_window_close_event_can_be_queued(void);
+void test_keyboard_events_update_key_state(void);
+void test_mouse_motion_accumulates_until_next_frame(void);
+void test_gamepad_axis_normalization_applies_deadzone(void);
+void test_input_queries_handle_invalid_arguments(void);
 void test_graphics_and_present_on_same_queue_family(void);
 void test_graphics_and_present_on_separate_queue_families(void);
 void test_queue_selection_rejects_missing_graphics_queue(void);
@@ -25,6 +29,10 @@ int main(void)
     RUN_TEST(test_window_creation);
     RUN_TEST(test_window_is_resizable);
     RUN_TEST(test_window_close_event_can_be_queued);
+    RUN_TEST(test_keyboard_events_update_key_state);
+    RUN_TEST(test_mouse_motion_accumulates_until_next_frame);
+    RUN_TEST(test_gamepad_axis_normalization_applies_deadzone);
+    RUN_TEST(test_input_queries_handle_invalid_arguments);
     RUN_TEST(test_graphics_and_present_on_same_queue_family);
     RUN_TEST(test_graphics_and_present_on_separate_queue_families);
     RUN_TEST(test_queue_selection_rejects_missing_graphics_queue);
