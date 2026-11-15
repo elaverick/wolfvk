@@ -8,7 +8,6 @@
 #define WOLF_MAP_HEADER_SIZE 38u
 #define WOLF_CARMACK_NEAR_TAG 0xa7u
 #define WOLF_CARMACK_FAR_TAG 0xa8u
-#define WOLF_RLEW_PLANE_BYTES (WOLF_LEVEL_PLANE_WORDS * sizeof(uint16_t))
 
 static uint16_t read_u16_le(const uint8_t *data)
 {
@@ -56,6 +55,7 @@ static bool read_file(
     long file_length;
     uint8_t *file_data;
     size_t bytes_read;
+    int close_result;
 
     if (file == NULL) {
         write_error(error_message, error_message_size, "Could not open a map data file.");
@@ -83,7 +83,8 @@ static bool read_file(
     }
 
     bytes_read = fread(file_data, 1u, (size_t)file_length, file);
-    if (bytes_read != (size_t)file_length || fclose(file) != 0) {
+    close_result = fclose(file);
+    if (bytes_read != (size_t)file_length || close_result != 0) {
         free(file_data);
         write_error(error_message, error_message_size, "Could not read a complete map data file.");
         return false;
@@ -256,6 +257,7 @@ bool wolf_level_decode_rlew(
     return true;
 }
 
+/* Carmack expansion produces an RLEW stream whose first word is its expanded byte count. */
 static bool decode_map_plane(
     const uint8_t *compressed_plane,
     size_t compressed_plane_size,
@@ -364,6 +366,7 @@ bool wolf_level_load(
     memcpy(decoded_level.name, map_header + 22u, 16u);
     decoded_level.name[16] = '\0';
 
+    /* Wolf3D's original renderer uses the wall and object planes from each 64x64 map. */
     for (uint32_t plane_index = 0u; plane_index < 2u; ++plane_index) {
         uint32_t plane_offset = read_u32_le(map_header + plane_index * 4u);
         uint16_t plane_length = read_u16_le(map_header + 12u + plane_index * 2u);
