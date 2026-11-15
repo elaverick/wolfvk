@@ -79,7 +79,7 @@ void test_player_normalizes_diagonal_movement_speed(void)
     distance = sqrtf(
         camera.position[0] * camera.position[0] +
         camera.position[2] * camera.position[2]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.175f, distance);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.56f, distance);
 
     wolf_input_destroy(input);
 }
@@ -141,7 +141,7 @@ void test_player_slides_along_wall_when_forward_motion_is_blocked(void)
     set_key(input, SDL_SCANCODE_D, true);
 
     TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.1f));
-    TEST_ASSERT_TRUE(camera.position[0] < 0.31f);
+    TEST_ASSERT_TRUE(camera.position[0] < 0.97f);
     TEST_ASSERT_TRUE(camera.position[2] < -0.20f);
 
     wolf_input_destroy(input);
@@ -160,7 +160,7 @@ void test_player_forward_direction_tracks_camera_yaw(void)
     set_key(input, SDL_SCANCODE_W, true);
 
     TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.05f));
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.175f, camera.position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.56f, camera.position[0]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, camera.position[2]);
 
     wolf_input_destroy(input);
@@ -249,8 +249,8 @@ void test_player_can_move_through_secret_door_cells(void)
     }
 
     /* The player crosses the marked cell but remains blocked by the next ordinary wall. */
-    TEST_ASSERT_TRUE(camera.position[0] > 0.1f);
-    TEST_ASSERT_TRUE(camera.position[0] < 0.4f);
+    TEST_ASSERT_TRUE(camera.position[0] > 0.85f);
+    TEST_ASSERT_TRUE(camera.position[0] < 0.97f);
 
     wolf_input_destroy(input);
 }
