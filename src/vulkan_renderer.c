@@ -265,7 +265,7 @@ bool vulkan_renderer_create(SDL_Window *window, VulkanRenderer **renderer_out)
     }
 
     if (!SDL_Vulkan_LoadLibrary(NULL)) {
-        fprintf(stderr, "SDL could not load the Vulkan loader: %s\\n", SDL_GetError());
+        fprintf(stderr, "SDL could not load the Vulkan loader: %s\n", SDL_GetError());
         free(renderer);
         return false;
     }
