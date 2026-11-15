@@ -95,6 +95,7 @@ void test_world_state_pushwall_moves_one_tile_per_original_128_tics(void);
 void test_world_state_pushwall_stops_after_one_tile_when_second_cell_is_blocked(void);
 void test_world_state_rejects_pushwall_when_first_cell_is_blocked(void);
 void test_world_state_builds_dynamic_secret_wall_geometry(void);
+void test_world_state_uses_original_level_one_secret_wall_material_pages(void);
 void test_world_state_collects_original_yellow_key_marker(void);
 
 int main(void)
@@ -194,6 +195,7 @@ int main(void)
     RUN_TEST(test_world_state_pushwall_stops_after_one_tile_when_second_cell_is_blocked);
     RUN_TEST(test_world_state_rejects_pushwall_when_first_cell_is_blocked);
     RUN_TEST(test_world_state_builds_dynamic_secret_wall_geometry);
+    RUN_TEST(test_world_state_uses_original_level_one_secret_wall_material_pages);
     RUN_TEST(test_world_state_collects_original_yellow_key_marker);
     return UNITY_END();
 }

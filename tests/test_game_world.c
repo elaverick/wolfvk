@@ -418,6 +418,39 @@ void test_world_state_builds_dynamic_secret_wall_geometry(void)
     }
 }
 
+/*
+ * Level 1's five secret markers use ordinary wall types 1, 4 and 10.
+ * The original raycaster keeps each wall type's horizontal/vertical page pair
+ * when the marked wall is pushed, rather than substituting a generic door page.
+ */
+void test_world_state_uses_original_level_one_secret_wall_material_pages(void)
+{
+    static const uint16_t wall_types[] = {1u, 4u, 10u};
+    static const uint16_t horizontal_pages[] = {0u, 6u, 18u};
+    static const uint16_t vertical_pages[] = {1u, 7u, 19u};
+
+    for (size_t index = 0u; index < sizeof(wall_types) / sizeof(wall_types[0]); ++index) {
+        WolfLevel level = create_test_level();
+        WolfWorldState world = {0};
+        VulkanQuad quads[4];
+
+        level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] = wall_types[index];
+        level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] =
+            WOLF_LEVEL_INFO_PUSHWALL_MARKER;
+
+        TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 98u));
+        TEST_ASSERT_TRUE(wolf_world_state_use(
+            &world, tile_center_world(1, 5u), tile_center_world(2, 5u),
+            1.57079632679f));
+        TEST_ASSERT_TRUE(wolf_world_state_build_dynamic_quads(&world, quads, 4u));
+
+        TEST_ASSERT_EQUAL_UINT32(horizontal_pages[index], quads[0].vertices[0].texture_layer);
+        TEST_ASSERT_EQUAL_UINT32(horizontal_pages[index], quads[1].vertices[0].texture_layer);
+        TEST_ASSERT_EQUAL_UINT32(vertical_pages[index], quads[2].vertices[0].texture_layer);
+        TEST_ASSERT_EQUAL_UINT32(vertical_pages[index], quads[3].vertices[0].texture_layer);
+    }
+}
+
 void test_world_state_collects_original_yellow_key_marker(void)
 {
     WolfLevel level = create_test_level();

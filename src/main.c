@@ -156,19 +156,23 @@ int main(int argc, char *argv[])
 {
     SDL_Window *window;
     SDL_Event event;
-    /* The planes extend beyond the camera far clip; the ceiling shares the wall panel's height. */
+    /*
+     * Match the supplied original-game reference capture. The swapchain is sRGB,
+     * so these linear values produce display greys of approximately RGB 113 and 56.
+     * The planes extend beyond the camera far clip and share the original wall height.
+     */
     const VulkanQuad environment_quads[] = {
         {{
-            {{-10000.0f, 0.0f, -10000.0f}, {0.16f, 0.20f, 0.24f}},
-            {{10000.0f, 0.0f, -10000.0f}, {0.16f, 0.20f, 0.24f}},
-            {{10000.0f, 0.0f, 10000.0f}, {0.16f, 0.20f, 0.24f}},
-            {{-10000.0f, 0.0f, 10000.0f}, {0.16f, 0.20f, 0.24f}}
+            {{-10000.0f, 0.0f, -10000.0f}, {0.165132f, 0.165132f, 0.165132f}},
+            {{10000.0f, 0.0f, -10000.0f}, {0.165132f, 0.165132f, 0.165132f}},
+            {{10000.0f, 0.0f, 10000.0f}, {0.165132f, 0.165132f, 0.165132f}},
+            {{-10000.0f, 0.0f, 10000.0f}, {0.165132f, 0.165132f, 0.165132f}}
         }},
         {{
-            {{-10000.0f, WOLF_WORLD_CEILING_HEIGHT, -10000.0f}, {0.11f, 0.14f, 0.20f}},
-            {{10000.0f, WOLF_WORLD_CEILING_HEIGHT, -10000.0f}, {0.11f, 0.14f, 0.20f}},
-            {{10000.0f, WOLF_WORLD_CEILING_HEIGHT, 10000.0f}, {0.11f, 0.14f, 0.20f}},
-            {{-10000.0f, WOLF_WORLD_CEILING_HEIGHT, 10000.0f}, {0.11f, 0.14f, 0.20f}}
+            {{-10000.0f, WOLF_WORLD_CEILING_HEIGHT, -10000.0f}, {0.039546f, 0.039546f, 0.039546f}},
+            {{10000.0f, WOLF_WORLD_CEILING_HEIGHT, -10000.0f}, {0.039546f, 0.039546f, 0.039546f}},
+            {{10000.0f, WOLF_WORLD_CEILING_HEIGHT, 10000.0f}, {0.039546f, 0.039546f, 0.039546f}},
+            {{-10000.0f, WOLF_WORLD_CEILING_HEIGHT, 10000.0f}, {0.039546f, 0.039546f, 0.039546f}}
         }}
     };
     VulkanRenderer *renderer = NULL;

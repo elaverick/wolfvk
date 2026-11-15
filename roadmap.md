@@ -17,6 +17,7 @@ You may use the main branch of the following repository as a reference point. Yo
 [x] The user must be able to navigate the level using WASD keys and use the mouse to look.
 [x] Build a demo release at this point and present to the user for confirmation that this works as expected.
 [x] Once the above gate has passed, work on loading the textures from the original Wolfenstein data sources and applying them to the quads.
+[x] Match the original reference floor and ceiling greys using sRGB-aware linear-space vertex colours.
 [ ] Textures must support integer scaling to retain the pixel art aesthetic.
 [x] Normal and locked doors must use original WL6 door tile IDs, key locks, orientation, interaction and `tics << 10` opening/closing behaviour.
 [x] Doors must auto-close after the original 300-tic interval and reverse when obstructed.
@@ -34,11 +35,11 @@ Door, key and secret-pushwall implementation:
 - Wall-plane values 90–101 are instantiated as doors with the original even/odd orientation and lock mapping. VSWAP door pages are selected from the final eight wall pages, matching the original standard, locked and elevator page pairs.
 - Door panels advance by 1024 position units per game tic at 70 tics per second, saturate at 0xffff, remain open for 300 tics, and close at the same rate. A closing door reverses if the player still overlaps the doorway. Map collision treats the door as solid until it reaches the fully-open state. The player can manually reverse an opening or closing door, subject to the original four key lock checks.
 - The renderer retains a pair of dynamic quads per door, translating vertical and horizontal panels along their original in-plane axes. Full-open panels are removed from the dynamic draw list.
-- Secret pushwalls are identified by original info-plane marker 98. A Use action starts movement at one tile per 128 tics, advances through at most two cells, reserves the next cell, and stops after one tile if the next destination is blocked.
+- Secret pushwalls are identified by original info-plane marker 98. A Use action starts movement at one tile per 128 tics, advances through at most two cells, reserves the next cell, and stops after one tile if the next destination is blocked. Level 1's five markers use wall types 1, 4 and 10; regression coverage verifies the corresponding original horizontal/vertical VSWAP page pairs.
 - Original keys are collected from the WL6 info-plane markers. The four locked-door key bits are enforced.
 - Movement collision now resolves the last safe point at a wall boundary rather than leaving a large gap when a subdivided movement step first meets a wall. Per-frame movement still resolves axes separately so wall sliding is retained.
 - Regression tests cover door orientation, lock mapping, exact opening speed and open position, automatic closing delay, obstruction, manual reversal, key gating/collection, VSWAP door pages, both panel orientations and full-open rendering. Secret-wall tests cover direction, timing, blocked destinations and moving geometry.
 
-The current test runner registers 93 Unity cases, including SDL3 input/window, camera, collision, level decoding, wall geometry, VSWAP texture mapping, world state and a SwiftShader-backed Vulkan frame submission test. The current door/pushwall source and expanded renderer tests are on `main`; [Actions run 43752002088](https://github.com/elaverick/WolfVK/actions/runs/43752002088) is the current Windows validation run. Previous runs before the latest geometry work are not evidence of the current state.
+The current test runner registers 96 Unity cases, including SDL3 input/window, camera, collision, level decoding, wall geometry, VSWAP texture mapping, world state and a SwiftShader-backed Vulkan frame submission test. Windows GitHub Actions builds and runs this suite, packages the demo and uploads the artifact. The current reference-colour and Level 1 secret-wall material changes are subject to the workflow run for their commit.
 
 Integer texture scaling remains the only unchecked item on the original ordered roadmap. It must preserve nearest-neighbour pixel art sampling while selecting an integer physical-pixel scale for the rendered scene and letterboxing unused space; it has not been implemented.
