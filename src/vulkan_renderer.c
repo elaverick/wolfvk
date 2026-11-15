@@ -4,6 +4,22 @@
 #include <stdlib.h>
 #include <string.h>
 
+uint32_t vulkan_renderer_score_device_type(VkPhysicalDeviceType device_type)
+{
+    switch (device_type) {
+    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+        return 4;
+    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+        return 3;
+    case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+        return 2;
+    case VK_PHYSICAL_DEVICE_TYPE_CPU:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
 bool vulkan_renderer_find_queue_families(
     const VkQueueFamilyProperties *queue_families,
     const VkBool32 *present_support,
@@ -82,6 +98,7 @@ static bool select_physical_device(VulkanRenderer *renderer)
     VkPhysicalDevice *devices = NULL;
     uint32_t device_index;
     bool selected = false;
+    uint32_t best_device_score = 0;
 
     if (vkEnumeratePhysicalDevices(renderer->instance, &device_count, NULL) != VK_SUCCESS ||
         device_count == 0u) {
@@ -99,7 +116,7 @@ static bool select_physical_device(VulkanRenderer *renderer)
         return false;
     }
 
-    for (device_index = 0; device_index < device_count && !selected; ++device_index) {
+    for (device_index = 0; device_index < device_count; ++device_index) {
         uint32_t family_count = 0;
         VkQueueFamilyProperties *families = NULL;
         VkBool32 *present_support = NULL;
@@ -142,10 +159,18 @@ static bool select_physical_device(VulkanRenderer *renderer)
                 vkGetPhysicalDeviceSurfacePresentModesKHR(
                     devices[device_index], renderer->surface, &present_mode_count, NULL) == VK_SUCCESS &&
                 format_count > 0u && present_mode_count > 0u) {
-                renderer->physical_device = devices[device_index];
-                renderer->graphics_queue_family = indices.graphics_family;
-                renderer->present_queue_family = indices.present_family;
-                selected = true;
+                VkPhysicalDeviceProperties properties;
+                uint32_t device_score;
+
+                vkGetPhysicalDeviceProperties(devices[device_index], &properties);
+                device_score = vulkan_renderer_score_device_type(properties.deviceType);
+                if (!selected || device_score > best_device_score) {
+                    renderer->physical_device = devices[device_index];
+                    renderer->graphics_queue_family = indices.graphics_family;
+                    renderer->present_queue_family = indices.present_family;
+                    best_device_score = device_score;
+                    selected = true;
+                }
             }
         }
 
