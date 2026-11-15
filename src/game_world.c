@@ -175,8 +175,12 @@ bool wolf_world_state_init(
         return false;
     }
 
-    memset(world, 0, sizeof(*world));
-    world->level = *level;
+    {
+        WolfLevel level_copy = *level;
+
+        memset(world, 0, sizeof(*world));
+        world->level = level_copy;
+    }
     world->texture_page_count = texture_page_count;
     memset(world->door_at, UINT8_MAX, sizeof(world->door_at));
     world->geometry_revision = 1u;
