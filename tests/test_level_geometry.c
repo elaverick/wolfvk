@@ -74,7 +74,20 @@ void test_level_geometry_uses_original_vswap_orientation_pages(void)
     TEST_ASSERT_EQUAL_UINT32(13u, quads[2].vertices[0].texture_layer);
     TEST_ASSERT_EQUAL_UINT32(13u, quads[3].vertices[0].texture_layer);
     TEST_ASSERT_EQUAL_UINT32(1u, quads[0].vertices[0].use_texture);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[0].vertices[0].texcoord[0]);
+
+    /*
+     * Texture direction follows the original engine's approach direction:
+     * the two horizontal faces reverse U, while both vertical faces keep U
+     * increasing with map row. V runs from the top texel to the bottom.
+     */
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, quads[0].vertices[0].texcoord[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[0].vertices[1].texcoord[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, quads[1].vertices[0].texcoord[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[1].vertices[1].texcoord[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[2].vertices[0].texcoord[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, quads[2].vertices[1].texcoord[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[3].vertices[0].texcoord[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, quads[3].vertices[1].texcoord[0]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, quads[0].vertices[0].texcoord[1]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[0].vertices[2].texcoord[1]);
 
