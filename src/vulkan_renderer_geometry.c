@@ -48,6 +48,7 @@ static void destroy_buffer(
     }
 }
 
+/* Static level geometry is uploaded once, so coherent host-visible buffers keep setup simple. */
 static bool create_host_buffer(
     VulkanRenderer *renderer,
     const void *data,
@@ -146,6 +147,7 @@ bool vulkan_renderer_geometry_set_quads(
         return false;
     }
 
+    /* Two indexed triangles share each quad's four vertices. */
     for (uint32_t quad_index = 0; quad_index < quad_count; ++quad_index) {
         uint32_t vertex_base = quad_index * 4u;
         uint32_t index_base = quad_index * 6u;
