@@ -81,10 +81,14 @@ bool wolf_level_build_wall_quads(
     VulkanQuad **quads,
     uint32_t *quad_count)
 {
-    static const float horizontal_uvs[4][2] = {
-        {0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}
-    };
-    static const float reversed_horizontal_uvs[4][2] = {
+    /*
+     * The face vertices are ordered to preserve the original raycaster's
+     * approach-dependent wall coordinate. HitVertWall flips its coordinate
+     * for xtilestep == -1; HitHorizWall flips for ytilestep != -1. Keeping
+     * one explicit corner pattern here avoids making opposite faces share
+     * an incorrect world-axis orientation.
+     */
+    static const float wall_uvs[4][2] = {
         {1.0f, 1.0f}, {0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 0.0f}
     };
     size_t capacity;
@@ -153,7 +157,7 @@ bool wolf_level_build_wall_quads(
                 };
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count,
-                        face, reversed_horizontal_uvs, horizontal_page, 0.82f)) {
+                        face, wall_uvs, horizontal_page, 0.82f)) {
                     free(generated_quads);
                     return false;
                 }
@@ -166,7 +170,7 @@ bool wolf_level_build_wall_quads(
                 };
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count,
-                        face, reversed_horizontal_uvs, horizontal_page, 0.95f)) {
+                        face, wall_uvs, horizontal_page, 0.95f)) {
                     free(generated_quads);
                     return false;
                 }
@@ -179,7 +183,7 @@ bool wolf_level_build_wall_quads(
                 };
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count,
-                        face, horizontal_uvs, vertical_page, 0.72f)) {
+                        face, wall_uvs, vertical_page, 0.72f)) {
                     free(generated_quads);
                     return false;
                 }
@@ -192,7 +196,7 @@ bool wolf_level_build_wall_quads(
                 };
                 if (!append_wall_face(
                         generated_quads, capacity, &generated_count,
-                        face, horizontal_uvs, vertical_page, 0.88f)) {
+                        face, wall_uvs, vertical_page, 0.88f)) {
                     free(generated_quads);
                     return false;
                 }
