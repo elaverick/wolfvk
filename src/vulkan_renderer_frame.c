@@ -1,5 +1,6 @@
 #include "vulkan_renderer_internal.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -283,40 +284,177 @@ static bool create_image_views(VulkanRenderer *renderer)
     return true;
 }
 
+static bool find_depth_memory_type(
+    VulkanRenderer *renderer,
+    uint32_t type_filter,
+    uint32_t *memory_type_index)
+{
+    VkPhysicalDeviceMemoryProperties memory_properties;
+
+    vkGetPhysicalDeviceMemoryProperties(renderer->physical_device, &memory_properties);
+    for (uint32_t index = 0; index < memory_properties.memoryTypeCount; ++index) {
+        bool type_is_available = (type_filter & (1u << index)) != 0u;
+        bool is_device_local =
+            (memory_properties.memoryTypes[index].propertyFlags &
+             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0u;
+
+        if (type_is_available && is_device_local) {
+            *memory_type_index = index;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool create_depth_resources(VulkanRenderer *renderer)
+{
+    static const VkFormat depth_candidates[] = {
+        VK_FORMAT_D32_SFLOAT,
+        VK_FORMAT_D32_SFLOAT_S8_UINT,
+        VK_FORMAT_D24_UNORM_S8_UINT
+    };
+    VkFormatProperties format_properties;
+    VkImageCreateInfo image_info = {0};
+    VkMemoryRequirements memory_requirements;
+    VkMemoryAllocateInfo allocation_info = {0};
+    VkImageViewCreateInfo view_info = {0};
+    uint32_t memory_type_index = 0;
+    VkResult result;
+    bool depth_format_found = false;
+
+    for (size_t index = 0; index < sizeof(depth_candidates) / sizeof(depth_candidates[0]); ++index) {
+        vkGetPhysicalDeviceFormatProperties(
+            renderer->physical_device, depth_candidates[index], &format_properties);
+        if ((format_properties.optimalTilingFeatures &
+             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0u) {
+            renderer->depth_format = depth_candidates[index];
+            depth_format_found = true;
+            break;
+        }
+    }
+
+    if (!depth_format_found) {
+        fprintf(stderr, "No supported Vulkan depth attachment format was found.\n");
+        return false;
+    }
+
+    image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_info.imageType = VK_IMAGE_TYPE_2D;
+    image_info.extent.width = renderer->swapchain_extent.width;
+    image_info.extent.height = renderer->swapchain_extent.height;
+    image_info.extent.depth = 1;
+    image_info.mipLevels = 1;
+    image_info.arrayLayers = 1;
+    image_info.format = renderer->depth_format;
+    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    result = vkCreateImage(renderer->device, &image_info, NULL, &renderer->depth_image);
+    if (result != VK_SUCCESS) {
+        fprintf(stderr, "Vulkan depth image creation failed (%d).\n", result);
+        return false;
+    }
+
+    vkGetImageMemoryRequirements(
+        renderer->device, renderer->depth_image, &memory_requirements);
+    if (!find_depth_memory_type(
+            renderer, memory_requirements.memoryTypeBits, &memory_type_index)) {
+        fprintf(stderr, "No suitable Vulkan memory type for the depth image was found.\n");
+        return false;
+    }
+
+    allocation_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocation_info.allocationSize = memory_requirements.size;
+    allocation_info.memoryTypeIndex = memory_type_index;
+    result = vkAllocateMemory(
+        renderer->device, &allocation_info, NULL, &renderer->depth_image_memory);
+    if (result != VK_SUCCESS) {
+        fprintf(stderr, "Vulkan depth image memory allocation failed (%d).\n", result);
+        return false;
+    }
+
+    result = vkBindImageMemory(
+        renderer->device, renderer->depth_image, renderer->depth_image_memory, 0);
+    if (result != VK_SUCCESS) {
+        fprintf(stderr, "Vulkan depth image memory binding failed (%d).\n", result);
+        return false;
+    }
+
+    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    view_info.image = renderer->depth_image;
+    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    view_info.format = renderer->depth_format;
+    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    view_info.subresourceRange.baseMipLevel = 0;
+    view_info.subresourceRange.levelCount = 1;
+    view_info.subresourceRange.baseArrayLayer = 0;
+    view_info.subresourceRange.layerCount = 1;
+
+    result = vkCreateImageView(
+        renderer->device, &view_info, NULL, &renderer->depth_image_view);
+    if (result != VK_SUCCESS) {
+        fprintf(stderr, "Vulkan depth image view creation failed (%d).\n", result);
+        return false;
+    }
+
+    return true;
+}
+
 static bool create_render_pass(VulkanRenderer *renderer)
 {
-    VkAttachmentDescription color_attachment = {0};
+    VkAttachmentDescription attachments[2] = {0};
     VkAttachmentReference color_attachment_reference = {0};
+    VkAttachmentReference depth_attachment_reference = {0};
     VkSubpassDescription subpass = {0};
     VkSubpassDependency dependency = {0};
     VkRenderPassCreateInfo create_info = {0};
     VkResult result;
 
-    color_attachment.format = renderer->swapchain_format;
-    color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    attachments[0].format = renderer->swapchain_format;
+    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    attachments[1].format = renderer->depth_format;
+    attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     color_attachment_reference.attachment = 0;
     color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+    depth_attachment_reference.attachment = 1;
+    depth_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &color_attachment_reference;
+    subpass.pDepthStencilAttachment = &depth_attachment_reference;
 
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
     create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    create_info.attachmentCount = 1;
-    create_info.pAttachments = &color_attachment;
+    create_info.attachmentCount = 2;
+    create_info.pAttachments = attachments;
     create_info.subpassCount = 1;
     create_info.pSubpasses = &subpass;
     create_info.dependencyCount = 1;
@@ -423,6 +561,10 @@ static bool create_graphics_pipeline(VulkanRenderer *renderer)
     VkShaderModule fragment_shader = VK_NULL_HANDLE;
     VkPipelineShaderStageCreateInfo shader_stages[2] = {0};
     VkPipelineVertexInputStateCreateInfo vertex_input = {0};
+    VkVertexInputBindingDescription vertex_binding = {0};
+    VkVertexInputAttributeDescription vertex_attributes[2] = {0};
+    VkPipelineDepthStencilStateCreateInfo depth_stencil = {0};
+    VkPushConstantRange view_projection_range = {0};
     VkPipelineInputAssemblyStateCreateInfo input_assembly = {0};
     VkViewport viewport = {0};
     VkRect2D scissor = {0};
@@ -456,7 +598,25 @@ static bool create_graphics_pipeline(VulkanRenderer *renderer)
     shader_stages[1].module = fragment_shader;
     shader_stages[1].pName = "main";
 
+    vertex_binding.binding = 0;
+    vertex_binding.stride = sizeof(VulkanVertex);
+    vertex_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    vertex_attributes[0].location = 0;
+    vertex_attributes[0].binding = 0;
+    vertex_attributes[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+    vertex_attributes[0].offset = (uint32_t)offsetof(VulkanVertex, position);
+
+    vertex_attributes[1].location = 1;
+    vertex_attributes[1].binding = 0;
+    vertex_attributes[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    vertex_attributes[1].offset = (uint32_t)offsetof(VulkanVertex, colour);
+
     vertex_input.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertex_input.vertexBindingDescriptionCount = 1;
+    vertex_input.pVertexBindingDescriptions = &vertex_binding;
+    vertex_input.vertexAttributeDescriptionCount = 2;
+    vertex_input.pVertexAttributeDescriptions = vertex_attributes;
 
     input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -502,7 +662,20 @@ static bool create_graphics_pipeline(VulkanRenderer *renderer)
     color_blending.attachmentCount = 1;
     color_blending.pAttachments = &color_blend_attachment;
 
+    depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depth_stencil.depthTestEnable = VK_TRUE;
+    depth_stencil.depthWriteEnable = VK_TRUE;
+    depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    depth_stencil.depthBoundsTestEnable = VK_FALSE;
+    depth_stencil.stencilTestEnable = VK_FALSE;
+
+    view_projection_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    view_projection_range.offset = 0;
+    view_projection_range.size = (uint32_t)sizeof(renderer->view_projection);
+
     layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layout_info.pushConstantRangeCount = 1;
+    layout_info.pPushConstantRanges = &view_projection_range;
     result = vkCreatePipelineLayout(
         renderer->device, &layout_info, NULL, &renderer->pipeline_layout);
     if (result != VK_SUCCESS) {
@@ -520,6 +693,7 @@ static bool create_graphics_pipeline(VulkanRenderer *renderer)
     pipeline_info.pViewportState = &viewport_state;
     pipeline_info.pRasterizationState = &rasterizer;
     pipeline_info.pMultisampleState = &multisampling;
+    pipeline_info.pDepthStencilState = &depth_stencil;
     pipeline_info.pColorBlendState = &color_blending;
     pipeline_info.layout = renderer->pipeline_layout;
     pipeline_info.renderPass = renderer->render_pass;
@@ -552,12 +726,16 @@ static bool create_framebuffers(VulkanRenderer *renderer)
 
     for (image_index = 0; image_index < renderer->swapchain_image_count; ++image_index) {
         VkFramebufferCreateInfo create_info = {0};
+        VkImageView attachments[2] = {
+            renderer->swapchain_image_views[image_index],
+            renderer->depth_image_view
+        };
         VkResult result;
 
         create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         create_info.renderPass = renderer->render_pass;
-        create_info.attachmentCount = 1;
-        create_info.pAttachments = &renderer->swapchain_image_views[image_index];
+        create_info.attachmentCount = 2;
+        create_info.pAttachments = attachments;
         create_info.width = renderer->swapchain_extent.width;
         create_info.height = renderer->swapchain_extent.height;
         create_info.layers = 1;
@@ -703,6 +881,19 @@ static void destroy_swapchain_resources(VulkanRenderer *renderer)
     free(renderer->framebuffers);
     renderer->framebuffers = NULL;
 
+    if (renderer->depth_image_view != VK_NULL_HANDLE) {
+        vkDestroyImageView(renderer->device, renderer->depth_image_view, NULL);
+        renderer->depth_image_view = VK_NULL_HANDLE;
+    }
+    if (renderer->depth_image != VK_NULL_HANDLE) {
+        vkDestroyImage(renderer->device, renderer->depth_image, NULL);
+        renderer->depth_image = VK_NULL_HANDLE;
+    }
+    if (renderer->depth_image_memory != VK_NULL_HANDLE) {
+        vkFreeMemory(renderer->device, renderer->depth_image_memory, NULL);
+        renderer->depth_image_memory = VK_NULL_HANDLE;
+    }
+
     if (renderer->graphics_pipeline != VK_NULL_HANDLE) {
         vkDestroyPipeline(renderer->device, renderer->graphics_pipeline, NULL);
         renderer->graphics_pipeline = VK_NULL_HANDLE;
@@ -740,6 +931,7 @@ bool vulkan_renderer_frame_resources_create(VulkanRenderer *renderer)
 {
     if (!create_swapchain(renderer) ||
         !create_image_views(renderer) ||
+        !create_depth_resources(renderer) ||
         !create_render_pass(renderer) ||
         !create_graphics_pipeline(renderer) ||
         !create_framebuffers(renderer) ||
@@ -811,8 +1003,9 @@ static bool record_command_buffer(
     uint32_t image_index)
 {
     VkCommandBufferBeginInfo begin_info = {0};
-    VkClearValue clear_color = {{{0.025f, 0.035f, 0.065f, 1.0f}}};
+    VkClearValue clear_values[2] = {0};
     VkRenderPassBeginInfo render_pass_info = {0};
+    VkDeviceSize vertex_buffer_offset = 0;
     VkResult result;
 
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -828,12 +1021,29 @@ static bool record_command_buffer(
     render_pass_info.renderArea.offset.x = 0;
     render_pass_info.renderArea.offset.y = 0;
     render_pass_info.renderArea.extent = renderer->swapchain_extent;
-    render_pass_info.clearValueCount = 1;
-    render_pass_info.pClearValues = &clear_color;
+    clear_values[0].color.float32[0] = 0.025f;
+    clear_values[0].color.float32[1] = 0.035f;
+    clear_values[0].color.float32[2] = 0.065f;
+    clear_values[0].color.float32[3] = 1.0f;
+    clear_values[1].depthStencil.depth = 1.0f;
+    clear_values[1].depthStencil.stencil = 0;
+
+    render_pass_info.clearValueCount = 2;
+    render_pass_info.pClearValues = clear_values;
 
     vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->graphics_pipeline);
-    vkCmdDraw(command_buffer, 3, 1, 0, 0);
+    vkCmdPushConstants(
+        command_buffer, renderer->pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT,
+        0, (uint32_t)sizeof(renderer->view_projection), renderer->view_projection);
+
+    if (renderer->index_count > 0u) {
+        vkCmdBindVertexBuffers(
+            command_buffer, 0, 1, &renderer->vertex_buffer, &vertex_buffer_offset);
+        vkCmdBindIndexBuffer(
+            command_buffer, renderer->index_buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(command_buffer, renderer->index_count, 1, 0, 0, 0);
+    }
     vkCmdEndRenderPass(command_buffer);
 
     result = vkEndCommandBuffer(command_buffer);
