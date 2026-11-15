@@ -37,6 +37,8 @@ void test_command_line_supports_help(void);
 void test_command_line_rejects_invalid_api_arguments(void);
 void test_level_geometry_emits_four_faces_for_isolated_wall(void);
 void test_level_geometry_wall_panels_are_square_in_world_space(void);
+void test_level_geometry_uses_original_vswap_orientation_pages(void);
+void test_level_geometry_rejects_missing_vswap_texture_page(void);
 void test_level_geometry_omits_shared_faces_between_adjacent_walls(void);
 void test_level_geometry_treats_door_cells_as_openings(void);
 void test_level_door_tile_classifier_matches_retail_range(void);
@@ -117,6 +119,8 @@ int main(void)
     RUN_TEST(test_command_line_rejects_invalid_api_arguments);
     RUN_TEST(test_level_geometry_emits_four_faces_for_isolated_wall);
     RUN_TEST(test_level_geometry_wall_panels_are_square_in_world_space);
+    RUN_TEST(test_level_geometry_uses_original_vswap_orientation_pages);
+    RUN_TEST(test_level_geometry_rejects_missing_vswap_texture_page);
     RUN_TEST(test_level_geometry_omits_shared_faces_between_adjacent_walls);
     RUN_TEST(test_level_geometry_treats_door_cells_as_openings);
     RUN_TEST(test_level_door_tile_classifier_matches_retail_range);
