@@ -194,7 +194,7 @@ void test_level_door_tile_classifier_matches_retail_range(void)
     TEST_ASSERT_FALSE(wolf_level_is_door_tile(WOLF_LEVEL_AREA_TILE_FIRST));
 }
 
-void test_level_geometry_omits_info_plane_secret_door_cells(void)
+void test_level_geometry_keeps_stationary_secret_walls_in_static_geometry(void)
 {
     WolfLevel level = {0};
     VulkanQuad *quads = NULL;
@@ -206,10 +206,10 @@ void test_level_geometry_omits_info_plane_secret_door_cells(void)
     level.wall_tiles[wall_index] = 7u;
     level.object_tiles[wall_index] = WOLF_LEVEL_INFO_PUSHWALL_MARKER;
 
-    /* The info-plane marker identifies a secret door even though its wall tile looks ordinary. */
+    /* A secret wall remains an ordinary solid panel until the player pushes it. */
     TEST_ASSERT_TRUE(wolf_level_build_wall_quads(&level, UINT16_MAX, &quads, &quad_count));
-    TEST_ASSERT_NULL(quads);
-    TEST_ASSERT_EQUAL_UINT32(0u, quad_count);
+    TEST_ASSERT_EQUAL_UINT32(4u, quad_count);
+    TEST_ASSERT_NOT_NULL(quads);
 }
 
 void test_level_geometry_can_choose_a_door_as_fallback_spawn_cell(void)
