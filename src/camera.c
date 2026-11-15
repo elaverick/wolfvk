@@ -6,11 +6,13 @@
 #define WOLF_CAMERA_DEFAULT_FOV 1.22173048f
 #define WOLF_CAMERA_PI 3.14159265f
 
+/* Project vectors onto the camera basis when constructing the world-to-view transform. */
 static float vector_dot(const float left[3], const float right[3])
 {
     return left[0] * right[0] + left[1] * right[1] + left[2] * right[2];
 }
 
+/* Construct a perpendicular basis vector so camera roll stays fixed to world up. */
 static void vector_cross(
     const float left[3],
     const float right[3],
@@ -21,6 +23,7 @@ static void vector_cross(
     result[2] = left[0] * right[1] - left[1] * right[0];
 }
 
+/* Reject degenerate camera directions instead of allowing invalid values into the view matrix. */
 static bool vector_normalize(float vector[3])
 {
     float length = sqrtf(vector_dot(vector, vector));
@@ -35,6 +38,7 @@ static bool vector_normalize(float vector[3])
     return true;
 }
 
+/* Combine projection and view transforms into the single matrix consumed by the vertex shader. */
 static void matrix_multiply(
     float result[16],
     const float left[16],
