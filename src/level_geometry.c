@@ -181,6 +181,47 @@ bool wolf_level_build_wall_quads(
     return true;
 }
 
+
+bool wolf_level_find_player_start(const WolfLevel *level, WolfPlayerStart *player_start)
+{
+    /* The original engine maps info-plane markers 19..22 to four compass directions. */
+    static const float start_yaws[4] = {
+        0.0f,
+        1.57079632679f,
+        3.14159265359f,
+        4.71238898038f
+    };
+
+    if (level == NULL || player_start == NULL ||
+        level->width == 0u || level->height == 0u ||
+        level->width > WOLF_LEVEL_PLANE_WIDTH ||
+        level->height > WOLF_LEVEL_PLANE_HEIGHT) {
+        return false;
+    }
+
+    for (uint16_t y = 0u; y < level->height; ++y) {
+        for (uint16_t x = 0u; x < level->width; ++x) {
+            size_t tile_index = (size_t)y * WOLF_LEVEL_PLANE_WIDTH + x;
+            uint16_t marker = level->object_tiles[tile_index];
+
+            if (marker >= WOLF_LEVEL_PLAYER_START_FIRST &&
+                marker <= WOLF_LEVEL_PLAYER_START_LAST) {
+                if (level->wall_tiles[tile_index] != 0u) {
+                    return false;
+                }
+
+                player_start->tile_x = x;
+                player_start->tile_y = y;
+                player_start->yaw_radians =
+                    start_yaws[marker - WOLF_LEVEL_PLAYER_START_FIRST];
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 bool wolf_level_find_open_tile(
     const WolfLevel *level,
     uint16_t *tile_x,

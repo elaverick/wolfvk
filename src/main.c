@@ -44,8 +44,7 @@ static bool build_scene_geometry(
     const VulkanQuad environment_quads[2],
     VulkanQuad **scene_quads,
     uint32_t *scene_quad_count,
-    uint16_t *spawn_x,
-    uint16_t *spawn_y)
+    WolfPlayerStart *player_start)
 {
     VulkanQuad *wall_quads = NULL;
     uint32_t wall_quad_count = 0u;
@@ -53,7 +52,7 @@ static bool build_scene_geometry(
     uint32_t combined_quad_count;
 
     if (scene_quads == NULL || scene_quad_count == NULL ||
-        spawn_x == NULL || spawn_y == NULL) {
+        player_start == NULL) {
         fprintf(stderr, "Invalid level geometry output arguments.\n");
         return false;
     }
@@ -67,7 +66,9 @@ static bool build_scene_geometry(
         return false;
     }
 
-    if (!wolf_level_find_open_tile(level, spawn_x, spawn_y)) {
+    if (!wolf_level_find_player_start(level, player_start) &&
+        !wolf_level_find_open_tile(
+            level, &player_start->tile_x, &player_start->tile_y)) {
         size_t open_tile_count = 0u;
         size_t solid_tile_count = 0u;
 
@@ -86,7 +87,7 @@ static bool build_scene_geometry(
 
         fprintf(
             stderr,
-            "No open spawn cell exists in level %s (%u x %u). "
+            "No player-start marker or open floor cell exists in level %s (%u x %u). "
             "The decoded wall plane contains %zu solid cells and %zu open cells.\n",
             level->name, (unsigned int)level->width, (unsigned int)level->height,
             solid_tile_count, open_tile_count);
@@ -152,8 +153,7 @@ int main(int argc, char *argv[])
     WolfLevel level;
     VulkanQuad *scene_quads = NULL;
     uint32_t scene_quad_count = 0u;
-    uint16_t spawn_x = 0u;
-    uint16_t spawn_y = 0u;
+    WolfPlayerStart player_start = {0};
     char error_message[256];
     char window_title[128];
     Uint64 performance_frequency;
@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
 
     if (!build_scene_geometry(
             &level, environment_quads, &scene_quads, &scene_quad_count,
-            &spawn_x, &spawn_y)) {
+            &player_start)) {
         fprintf(stderr, "Level geometry initialisation failed; see the diagnostic above.\n");
         return 1;
     }
@@ -219,9 +219,10 @@ int main(int argc, char *argv[])
 
     wolf_camera_initialize(&camera);
     camera.position[0] =
-        -(float)level.width * 0.5f + (float)spawn_x + 0.5f;
+        -(float)level.width * 0.5f + (float)player_start.tile_x + 0.5f;
     camera.position[2] =
-        -(float)level.height * 0.5f + (float)spawn_y + 0.5f;
+        -(float)level.height * 0.5f + (float)player_start.tile_y + 0.5f;
+    camera.yaw = player_start.yaw_radians;
     if (!update_camera_projection(window, renderer, &camera)) {
         fprintf(stderr, "Could not initialise the camera projection.\n");
         free(scene_quads);

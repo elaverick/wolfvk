@@ -277,3 +277,50 @@ void test_level_loader_rejects_sparse_map_entries(void)
     remove(maphead_path);
     remove(gamemaps_path);
 }
+
+void test_level_loader_preserves_original_player_start_marker_in_info_plane(void)
+{
+    char maphead_path[1024];
+    char gamemaps_path[1024];
+    WolfLevel level = {0};
+    WolfPlayerStart player_start = {0};
+    char error_message[256];
+    FILE *file = NULL;
+    const char *base_path = SDL_GetBasePath();
+    char info_path[1024];
+
+    TEST_ASSERT_NOT_NULL(base_path);
+    TEST_ASSERT_TRUE(create_test_map_files(
+        maphead_path, sizeof(maphead_path),
+        gamemaps_path, sizeof(gamemaps_path), 0u));
+
+    TEST_ASSERT_TRUE(snprintf(info_path, sizeof(info_path),
+        "%swolfvk_test_gamemaps.bin", base_path) > 0);
+#if defined(_MSC_VER)
+    TEST_ASSERT_EQUAL_INT(0, fopen_s(&file, gamemaps_path, "r+b"));
+#else
+    file = fopen(gamemaps_path, "r+b");
+    TEST_ASSERT_NOT_NULL(file);
+#endif
+    TEST_ASSERT_NOT_NULL(file);
+    /* Info plane is the second plane at map header offset 38 + 10 bytes. */
+    TEST_ASSERT_EQUAL_INT(0, fseek(file, 38L + 10L + 8L, SEEK_SET));
+    {
+        const uint8_t start_word[2] = {19u, 0u};
+        TEST_ASSERT_EQUAL_UINT(sizeof(start_word),
+            fwrite(start_word, 1u, sizeof(start_word), file));
+    }
+    TEST_ASSERT_EQUAL_INT(0, fclose(file));
+
+    TEST_ASSERT_TRUE_MESSAGE(wolf_level_load(
+        maphead_path, gamemaps_path, 0u,
+        &level, error_message, sizeof(error_message)), error_message);
+    TEST_ASSERT_EQUAL_UINT16(19u, level.object_tiles[4u]);
+    TEST_ASSERT_TRUE(wolf_level_find_player_start(&level, &player_start));
+    TEST_ASSERT_EQUAL_UINT16(4u, player_start.tile_x);
+    TEST_ASSERT_EQUAL_UINT16(0u, player_start.tile_y);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.0f, player_start.yaw_radians);
+
+    remove(maphead_path);
+    remove(gamemaps_path);
+}
