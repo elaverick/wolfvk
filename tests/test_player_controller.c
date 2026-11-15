@@ -4,6 +4,7 @@
 #include "wolfvk/world.h"
 
 #include <math.h>
+#include <stdio.h>
 
 static WolfInput *create_test_input(void)
 {
@@ -232,12 +233,16 @@ void test_player_opens_door_before_crossing_and_door_closes_on_original_timer(vo
     TEST_ASSERT_EQUAL_UINT32(WOLF_WORLD_DOOR_OPEN_POSITION, world.doors[0].position);
 
     /* The player now passes through the fully-open door and stops at the next wall. */
+    printf("Door test before crossing: x=%.4f, blocked-at-door=%d\\n",
+        camera.position[0],
+        (int)wolf_world_state_position_overlaps_solid(&world, 0.0f, 0.0f, 0.20f));
     for (int frame = 0; frame < 16; ++frame) {
         bool geometry_changed = false;
         TEST_ASSERT_TRUE(wolf_world_state_update(
             &world, 0.1f, camera.position[0], camera.position[2], &geometry_changed));
         TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &world, 0.1f));
     }
+    printf("Door test after crossing: x=%.4f\\n", camera.position[0]);
     TEST_ASSERT_TRUE(camera.position[0] > 0.85f);
     TEST_ASSERT_TRUE(camera.position[0] < 0.97f);
 
