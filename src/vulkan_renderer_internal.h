@@ -45,6 +45,8 @@ struct VulkanRenderer {
     VkBuffer index_buffer;
     VkDeviceMemory index_buffer_memory;
     uint32_t index_count;
+    uint32_t quad_count;
+    VkDeviceSize vertex_buffer_size;
     float view_projection[16];
 
     VkCommandPool command_pool;
@@ -67,6 +69,10 @@ VkPresentModeKHR vulkan_renderer_choose_present_mode(
     uint32_t mode_count);
 
 bool vulkan_renderer_geometry_set_quads(
+    VulkanRenderer *renderer,
+    const VulkanQuad *quads,
+    uint32_t quad_count);
+bool vulkan_renderer_geometry_update_quads(
     VulkanRenderer *renderer,
     const VulkanQuad *quads,
     uint32_t quad_count);
