@@ -11,6 +11,9 @@ include(CTest)
 
 find_package(SDL3 CONFIG QUIET)
 find_package(Vulkan REQUIRED)
+find_program(GLSLC_EXECUTABLE NAMES glslc
+    HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin"
+    REQUIRED)
 if(NOT SDL3_FOUND)
     set(SDL_SHARED OFF CACHE BOOL "" FORCE)
     set(SDL_STATIC ON CACHE BOOL "" FORCE)
@@ -33,6 +36,43 @@ add_executable(wolfvk
 )
 target_include_directories(wolfvk PRIVATE include)
 target_link_libraries(wolfvk PRIVATE SDL3::SDL3 Vulkan::Vulkan)
+
+set(SHADER_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
+set(VERTEX_SHADER_SPIRV "${SHADER_OUTPUT_DIR}/triangle.vert.spv")
+set(FRAGMENT_SHADER_SPIRV "${SHADER_OUTPUT_DIR}/triangle.frag.spv")
+
+add_custom_command(
+    OUTPUT "${VERTEX_SHADER_SPIRV}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${SHADER_OUTPUT_DIR}"
+    COMMAND ${GLSLC_EXECUTABLE}
+        "${CMAKE_CURRENT_SOURCE_DIR}/shaders/triangle.vert"
+        -o "${VERTEX_SHADER_SPIRV}"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/triangle.vert"
+    VERBATIM
+)
+
+add_custom_command(
+    OUTPUT "${FRAGMENT_SHADER_SPIRV}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${SHADER_OUTPUT_DIR}"
+    COMMAND ${GLSLC_EXECUTABLE}
+        "${CMAKE_CURRENT_SOURCE_DIR}/shaders/triangle.frag"
+        -o "${FRAGMENT_SHADER_SPIRV}"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/triangle.frag"
+    VERBATIM
+)
+
+add_custom_target(wolfvk_shaders
+    DEPENDS "${VERTEX_SHADER_SPIRV}" "${FRAGMENT_SHADER_SPIRV}"
+)
+add_dependencies(wolfvk wolfvk_shaders)
+add_custom_command(TARGET wolfvk POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:wolfvk>/shaders"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${VERTEX_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk>/shaders/triangle.vert.spv"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${FRAGMENT_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk>/shaders/triangle.frag.spv"
+    VERBATIM
+)
 if(MSVC)
     target_compile_options(wolfvk PRIVATE /W4 /WX)
 else()
