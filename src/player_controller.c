@@ -10,6 +10,7 @@
 #define WOLF_PLAYER_MAX_STEP_DISTANCE 0.08f
 #define WOLF_PLAYER_TWO_PI 6.28318531f
 
+/* Collision mirrors the pre-door scene: omitted door cells are open, while real walls stay solid. */
 static bool position_overlaps_wall(
     const WolfLevel *level,
     float world_x,
@@ -48,9 +49,13 @@ static bool position_overlaps_wall(
                 return true;
             }
 
-            if (level->wall_tiles[
-                    (size_t)tile_z * WOLF_LEVEL_PLANE_WIDTH + (size_t)tile_x] == 0u) {
-                continue;
+            {
+                uint16_t wall_tile = level->wall_tiles[
+                    (size_t)tile_z * WOLF_LEVEL_PLANE_WIDTH + (size_t)tile_x];
+
+                if (wall_tile == 0u || wolf_level_is_door_tile(wall_tile)) {
+                    continue;
+                }
             }
 
             closest_x = fmaxf((float)tile_x, fminf(map_x, (float)tile_x + 1.0f));
@@ -68,6 +73,7 @@ static bool position_overlaps_wall(
     return false;
 }
 
+/* Subdivide movement to avoid tunnelling, then resolve axes independently to retain wall sliding. */
 static void move_with_wall_sliding(
     WolfCamera *camera,
     const WolfLevel *level,
@@ -96,6 +102,7 @@ static void move_with_wall_sliding(
     }
 }
 
+/* Apply mouse look and camera-relative movement while keeping the player inside the map. */
 bool wolf_player_update(
     WolfCamera *camera,
     const WolfInput *input,
