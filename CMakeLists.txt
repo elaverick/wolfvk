@@ -106,6 +106,14 @@ if(BUILD_TESTING)
     )
     target_include_directories(wolfvk_tests PRIVATE include src)
     target_link_libraries(wolfvk_tests PRIVATE SDL3::SDL3 Vulkan::Vulkan unity)
+    add_custom_command(TARGET wolfvk_tests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:wolfvk_tests>/shaders"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${VERTEX_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk_tests>/shaders/triangle.vert.spv"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${FRAGMENT_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk_tests>/shaders/triangle.frag.spv"
+        VERBATIM
+    )
     if(MSVC)
         target_compile_options(wolfvk_tests PRIVATE /W4 /WX)
     else()
