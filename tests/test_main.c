@@ -26,6 +26,7 @@ void test_rlew_decoder_expands_literals_and_runs(void);
 void test_rlew_decoder_rejects_truncated_and_overflowing_runs(void);
 void test_level_loader_reads_original_map_header_and_planes(void);
 void test_level_loader_converts_area_markers_to_open_cells(void);
+void test_level_loader_converts_ambush_markers_to_open_cells(void);
 void test_level_loader_rejects_sparse_map_entries(void);
 void test_command_line_defaults_to_first_level(void);
 void test_command_line_converts_one_based_level_to_zero_based_index(void);
@@ -97,6 +98,7 @@ void test_world_state_pushwall_stops_after_one_tile_when_second_cell_is_blocked(
 void test_world_state_rejects_pushwall_when_first_cell_is_blocked(void);
 void test_world_state_builds_dynamic_secret_wall_geometry(void);
 void test_world_state_uses_original_level_one_secret_wall_material_pages(void);
+void test_world_state_can_push_level_one_secret_wall_from_cleared_ambush_cell(void);
 void test_world_state_collects_original_yellow_key_marker(void);
 
 int main(void)
@@ -128,6 +130,7 @@ int main(void)
     RUN_TEST(test_rlew_decoder_rejects_truncated_and_overflowing_runs);
     RUN_TEST(test_level_loader_reads_original_map_header_and_planes);
     RUN_TEST(test_level_loader_converts_area_markers_to_open_cells);
+    RUN_TEST(test_level_loader_converts_ambush_markers_to_open_cells);
     RUN_TEST(test_level_loader_rejects_sparse_map_entries);
     RUN_TEST(test_command_line_defaults_to_first_level);
     RUN_TEST(test_command_line_converts_one_based_level_to_zero_based_index);
@@ -198,6 +201,7 @@ int main(void)
     RUN_TEST(test_world_state_rejects_pushwall_when_first_cell_is_blocked);
     RUN_TEST(test_world_state_builds_dynamic_secret_wall_geometry);
     RUN_TEST(test_world_state_uses_original_level_one_secret_wall_material_pages);
+    RUN_TEST(test_world_state_can_push_level_one_secret_wall_from_cleared_ambush_cell);
     RUN_TEST(test_world_state_collects_original_yellow_key_marker);
     return UNITY_END();
 }

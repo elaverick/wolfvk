@@ -346,3 +346,31 @@ void test_level_loader_preserves_original_player_start_marker_in_info_plane(void
     remove(maphead_path);
     remove(gamemaps_path);
 }
+
+
+void test_level_loader_converts_ambush_markers_to_open_cells(void)
+{
+    char maphead_path[1024];
+    char gamemaps_path[1024];
+    WolfLevel level = {0};
+    char error_message[256];
+
+    TEST_ASSERT_TRUE(create_test_map_files(
+        maphead_path, sizeof(maphead_path), gamemaps_path, sizeof(gamemaps_path),
+        (uint16_t)WOLF_LEVEL_AMBUSH_TILE));
+
+    TEST_ASSERT_TRUE_MESSAGE(
+        wolf_level_load(
+            maphead_path, gamemaps_path, 0u,
+            &level, error_message, sizeof(error_message)),
+        error_message);
+
+    for (size_t tile_index = 0u;
+         tile_index < WOLF_LEVEL_PLANE_WORDS;
+         ++tile_index) {
+        TEST_ASSERT_EQUAL_UINT16(0u, level.wall_tiles[tile_index]);
+    }
+
+    remove(maphead_path);
+    remove(gamemaps_path);
+}

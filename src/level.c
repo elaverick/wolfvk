@@ -451,14 +451,16 @@ bool wolf_level_load(
 
         if (plane_index == 0u) {
             /*
-             * Wolf3D uses values >= AREATILE (107) as floor-area markers,
-             * not walls. The original engine converts these cells to zero
-             * before exposing the wall map to its renderer.
+             * Match SetupGameLevel: area markers (107+) are floor, and
+             * AMBUSHTILE (106) is a temporary marker removed after
+             * ScanInfoPlane. Keeping 106 as a wall creates phantom blocks
+             * and can seal the only approach to a marked secret pushwall.
              */
             for (size_t tile_index = 0u;
                  tile_index < WOLF_LEVEL_PLANE_WORDS;
                  ++tile_index) {
-                if (destination[tile_index] >= WOLF_LEVEL_AREA_TILE_FIRST) {
+                if (destination[tile_index] == WOLF_LEVEL_AMBUSH_TILE ||
+                    destination[tile_index] >= WOLF_LEVEL_AREA_TILE_FIRST) {
                     destination[tile_index] = 0u;
                 }
             }
