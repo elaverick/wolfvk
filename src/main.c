@@ -1,4 +1,4 @@
-#include <SDL3/SDL.h>
+#include "wolfvk/vulkan_renderer.h"
 
 #include <stdio.h>
 
@@ -6,6 +6,7 @@ int main(void)
 {
     SDL_Window *window;
     SDL_Event event;
+    VulkanRenderer *renderer = NULL;
     int running = 1;
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -13,9 +14,17 @@ int main(void)
         return 1;
     }
 
-    window = SDL_CreateWindow("WolfVK", 1280, 720, SDL_WINDOW_RESIZABLE);
+    window = SDL_CreateWindow(
+        "WolfVK", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
     if (window == NULL) {
-        fprintf(stderr, "SDL window creation failed: %s\n", SDL_GetError());
+        fprintf(stderr, "SDL Vulkan window creation failed: %s\n", SDL_GetError());
+        SDL_Quit();
+        return 1;
+    }
+
+    if (!vulkan_renderer_create(window, &renderer)) {
+        fprintf(stderr, "Vulkan renderer initialisation failed.\n");
+        SDL_DestroyWindow(window);
         SDL_Quit();
         return 1;
     }
@@ -29,6 +38,7 @@ int main(void)
         SDL_Delay(1);
     }
 
+    vulkan_renderer_destroy(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
     return 0;
