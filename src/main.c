@@ -80,7 +80,8 @@ static bool build_scene_geometry(
                     size_t tile_index =
                         (size_t)tile_y * WOLF_LEVEL_PLANE_WIDTH + tile_x;
 
-                    if (level->wall_tiles[tile_index] == 0u) {
+                    if (level->wall_tiles[tile_index] == 0u ||
+                        wolf_level_is_door_tile(level->wall_tiles[tile_index])) {
                         ++open_tile_count;
                     } else {
                         ++solid_tile_count;
