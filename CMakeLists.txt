@@ -104,7 +104,7 @@ if(BUILD_TESTING)
         src/vulkan_renderer.c
         src/vulkan_renderer_frame.c
     )
-    target_include_directories(wolfvk_tests PRIVATE include)
+    target_include_directories(wolfvk_tests PRIVATE include src)
     target_link_libraries(wolfvk_tests PRIVATE SDL3::SDL3 Vulkan::Vulkan unity)
     if(MSVC)
         target_compile_options(wolfvk_tests PRIVATE /W4 /WX)
