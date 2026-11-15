@@ -18,17 +18,23 @@ static bool position_overlaps_wall(
     const float radius = WOLF_PLAYER_COLLISION_RADIUS;
     const float map_x = world_x + (float)level->width * 0.5f;
     const float map_z = world_z + (float)level->height * 0.5f;
-    const int minimum_x = (int)floorf(map_x - radius);
-    const int maximum_x = (int)floorf(map_x + radius);
-    const int minimum_z = (int)floorf(map_z - radius);
-    const int maximum_z = (int)floorf(map_z + radius);
+    int minimum_x;
+    int maximum_x;
+    int minimum_z;
+    int maximum_z;
 
     /* Keep the complete player footprint inside the level, even on malformed maps. */
-    if (map_x - radius < 0.0f || map_z - radius < 0.0f ||
+    if (!isfinite(map_x) || !isfinite(map_z) ||
+        map_x - radius < 0.0f || map_z - radius < 0.0f ||
         map_x + radius > (float)level->width ||
         map_z + radius > (float)level->height) {
         return true;
     }
+
+    minimum_x = (int)floorf(map_x - radius);
+    maximum_x = (int)floorf(map_x + radius);
+    minimum_z = (int)floorf(map_z - radius);
+    maximum_z = (int)floorf(map_z + radius);
 
     for (int tile_z = minimum_z; tile_z <= maximum_z; ++tile_z) {
         for (int tile_x = minimum_x; tile_x <= maximum_x; ++tile_x) {
@@ -120,9 +126,11 @@ bool wolf_player_update(
         return false;
     }
 
-    camera->yaw_radians = remainderf(
-        camera->yaw_radians + mouse_x * WOLF_PLAYER_MOUSE_SENSITIVITY,
-        WOLF_PLAYER_TWO_PI);
+    camera->yaw_radians += mouse_x * WOLF_PLAYER_MOUSE_SENSITIVITY;
+    if (!isfinite(camera->yaw_radians)) {
+        return false;
+    }
+    camera->yaw_radians = remainderf(camera->yaw_radians, WOLF_PLAYER_TWO_PI);
     camera->pitch_radians -= mouse_y * WOLF_PLAYER_MOUSE_SENSITIVITY;
     if (camera->pitch_radians > WOLF_PLAYER_MAX_PITCH) {
         camera->pitch_radians = WOLF_PLAYER_MAX_PITCH;
