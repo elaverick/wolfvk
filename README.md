@@ -8,9 +8,9 @@ Development follows the ordered, approval-gated steps in [roadmap.md](roadmap.md
 
 **Current roadmap step:** Ensure the window can render Vulkan 3D content in a performant manner.
 
-The SDL3 window milestone is complete. The application now requests a Vulkan-capable window, creates a Vulkan instance and surface, selects a graphics/presentation device, and creates its logical device. Swapchain creation and actual 3D drawing are still outstanding. Its Windows x64 configure and build passed in [GitHub Actions run #1](https://github.com/elaverick/WolfVK/actions/runs/43708820409).
+The SDL3 window milestone is complete. The application now creates a Vulkan instance and surface, selects a graphics/presentation device, builds a swapchain and graphics pipeline, and draws a shader-driven triangle. The swapchain is recreated when SDL reports a pixel-size change. This is the renderer bootstrap; Wolfenstein level geometry is not implemented yet.
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The test runner contains seventeen Unity tests: three SDL3 window/event integration tests and six Vulkan queue-family selection unit tests. The Vulkan build dependency is installed explicitly in Windows CI. Tests are registered with CTest and run by the GitHub Actions workflow.
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It contains 17 tests: three SDL3 window/event integration tests, 13 Vulkan queue/surface/presentation selection and renderer-guard unit tests, and one SwiftShader-backed integration test that creates a swapchain and submits/presents a triangle frame. CTest runs the suite in Windows CI.
 
 | Check | Current status |
 |---|---|
@@ -18,7 +18,7 @@ The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedica
 | C unit-test framework | Unity |
 | Automated tests | 17 Unity tests: 3 SDL3 integration tests, 13 Vulkan selection/renderer unit tests, and 1 SwiftShader-backed swapchain render/present integration test |
 | SDL3 window | Complete |
-| Vulkan instance, surface and device selection | Implemented; CI verification pending |
+| Vulkan swapchain and triangle rendering | Implemented; latest CI verification pending |
 | Original level loading | Not started |
 | Playable demo | Not started |
 
@@ -28,7 +28,7 @@ The workflow configures and compiles the Windows x64 application, then runs the 
 
 ## Build locally
 
-A C17 compiler, CMake 3.24 or newer, Git, and network access for SDL3 and Unity source dependencies are required.
+A C17 compiler, CMake 3.24 or newer, Git, the Vulkan SDK (including `glslc`), and network access for SDL3 and Unity source dependencies are required. Running the full test suite also requires a working Vulkan driver; CI uses SwiftShader.
 
 ```powershell
 cmake -S . -B build -A x64 -DBUILD_TESTING=ON
@@ -38,4 +38,4 @@ ctest --test-dir build -C Release --output-on-failure
 
 ## Controls
 
-There are no gameplay controls yet. Close the application window to exit.
+The application currently displays a coloured Vulkan triangle. There are no gameplay controls yet; close the window to exit.
