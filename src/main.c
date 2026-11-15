@@ -188,7 +188,8 @@ int main(int argc, char *argv[])
     char window_title[128];
     Uint64 performance_frequency;
     Uint64 previous_counter;
-    int running = 1;\n    bool use_was_down = false;
+    int running = 1;
+    bool use_was_down = false;
 
     if (!wolf_parse_command_line(
             argc, argv, &options, error_message, sizeof(error_message))) {
