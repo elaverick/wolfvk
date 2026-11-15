@@ -298,6 +298,7 @@ bool vulkan_renderer_create(SDL_Window *window, VulkanRenderer **renderer_out)
     }
 
     if (!select_physical_device(renderer) || !create_logical_device(renderer) ||
+        !vulkan_renderer_texture_layout_create(renderer) ||
         !vulkan_renderer_frame_resources_create(renderer)) {
         vulkan_renderer_destroy(renderer);
         return false;
@@ -318,6 +319,7 @@ void vulkan_renderer_destroy(VulkanRenderer *renderer)
         vkDeviceWaitIdle(renderer->device);
         vulkan_renderer_frame_resources_destroy(renderer);
         vulkan_renderer_geometry_destroy(renderer);
+        vulkan_renderer_texture_destroy(renderer);
         vkDestroyDevice(renderer->device, NULL);
     }
     if (renderer->surface != VK_NULL_HANDLE && renderer->instance != VK_NULL_HANDLE) {
@@ -339,6 +341,15 @@ bool vulkan_renderer_set_quads(
 }
 
 /* Store the latest camera matrix for the next submitted frame without rebuilding the pipeline. */
+/* Upload the original indexed wall pages before any frame references textured geometry. */
+bool vulkan_renderer_set_wall_textures(
+    VulkanRenderer *renderer,
+    const uint8_t *rgba_pages,
+    uint32_t page_count)
+{
+    return vulkan_renderer_texture_set(renderer, rgba_pages, page_count);
+}
+
 bool vulkan_renderer_set_view_projection(
     VulkanRenderer *renderer,
     const float view_projection[16])
