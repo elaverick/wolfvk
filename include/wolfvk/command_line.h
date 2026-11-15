@@ -2,6 +2,7 @@
 #define WOLFVK_COMMAND_LINE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 typedef struct WolfOptions {
