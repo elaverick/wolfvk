@@ -62,8 +62,8 @@ static bool build_scene_geometry(
         fprintf(
             stderr, "Could not generate wall geometry for level %s (%u x %u).\\n",
             level != NULL ? level->name : "(null)",
-            level != NULL ? level->width : 0u,
-            level != NULL ? level->height : 0u);
+            level != NULL ? (unsigned int)level->width : 0u,
+            level != NULL ? (unsigned int)level->height : 0u);
         return false;
     }
 
@@ -88,7 +88,7 @@ static bool build_scene_geometry(
             stderr,
             "No open spawn cell exists in level %s (%u x %u). "
             "The decoded wall plane contains %zu solid cells and %zu open cells.\\n",
-            level->name, level->width, level->height,
+            level->name, (unsigned int)level->width, (unsigned int)level->height,
             solid_tile_count, open_tile_count);
         fprintf(stderr, "First wall-plane row:");
         for (uint16_t tile_x = 0u; tile_x < level->width && tile_x < 16u; ++tile_x) {
