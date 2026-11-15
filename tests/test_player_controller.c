@@ -206,8 +206,8 @@ void test_player_opens_door_before_crossing_and_door_closes_on_original_timer(vo
     wolf_camera_initialize(&camera);
     TEST_ASSERT_TRUE(create_open_test_world(&world));
 
-    /* Approach the vertical normal door from the west, as the original Use action expects. */
-    camera.position[0] = -2.0f;
+    /* Start inside the west-side floor tile, then walk up to the vertical normal door. */
+    camera.position[0] = -3.2f;
     camera.position[2] = 0.0f;
     camera.yaw_radians = 1.57079633f;
     world.level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 90u;
