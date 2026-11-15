@@ -33,6 +33,7 @@ endif()
 add_executable(wolfvk
     src/main.c
     src/vulkan_renderer.c
+    src/vulkan_renderer_frame.c
 )
 target_include_directories(wolfvk PRIVATE include)
 target_link_libraries(wolfvk PRIVATE SDL3::SDL3 Vulkan::Vulkan)
