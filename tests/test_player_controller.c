@@ -2,6 +2,8 @@
 
 #include "wolfvk/player_controller.h"
 
+#include <math.h>
+
 static WolfInput *create_test_input(void)
 {
     return wolf_input_create();
