@@ -620,13 +620,6 @@ static bool create_sync_objects(VulkanRenderer *renderer)
         return false;
     }
 
-    result = vkCreateSemaphore(
-        renderer->device, &semaphore_info, NULL, &renderer->render_finished_semaphore);
-    if (result != VK_SUCCESS) {
-        fprintf(stderr, "Vulkan render-finished semaphore creation failed (%d).\n", result);
-        return false;
-    }
-
     result = vkCreateFence(renderer->device, &fence_info, NULL, &renderer->in_flight_fence);
     if (result != VK_SUCCESS) {
         fprintf(stderr, "Vulkan frame fence creation failed (%d).\n", result);
