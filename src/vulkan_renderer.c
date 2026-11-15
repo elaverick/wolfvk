@@ -229,6 +229,7 @@ bool vulkan_renderer_create(SDL_Window *window, VulkanRenderer **renderer_out)
         return false;
     }
 
+    renderer->window = window;
     required_extensions = SDL_Vulkan_GetInstanceExtensions(&extension_count);
     if (required_extensions == NULL || extension_count == 0u) {
         fprintf(stderr, "SDL could not provide Vulkan instance extensions: %s\n", SDL_GetError());
