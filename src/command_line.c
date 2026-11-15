@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Keep parser failures available to callers without requiring a non-null diagnostic buffer. */
 static void write_error(char *error_message, size_t error_message_size, const char *message)
 {
     if (error_message != NULL && error_message_size > 0u) {
