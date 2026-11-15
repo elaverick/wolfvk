@@ -8,17 +8,17 @@ Development follows the ordered, approval-gated steps in [roadmap.md](roadmap.md
 
 **Current roadmap step:** Ensure the window can render Vulkan 3D content in a performant manner.
 
-The SDL3 window milestone is complete. A resizable 1280×720 window opens and exits cleanly when closed. Its Windows x64 configure and build passed in [GitHub Actions run #1](https://github.com/elaverick/WolfVK/actions/runs/43708820409).
+The SDL3 window milestone is complete. The application now requests a Vulkan-capable window, creates a Vulkan instance and surface, selects a graphics/presentation device, and creates its logical device. Swapchain creation and actual 3D drawing are still outstanding. Its Windows x64 configure and build passed in [GitHub Actions run #1](https://github.com/elaverick/WolfVK/actions/runs/43708820409).
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The test runner currently contains assertion-based tests for window creation, resizable-window flags, and SDL quit-event queueing. Tests are registered with CTest and run by the GitHub Actions workflow.
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The test runner contains nine Unity tests: three SDL3 window/event integration tests and six Vulkan queue-family selection unit tests. The Vulkan build dependency is installed explicitly in Windows CI. Tests are registered with CTest and run by the GitHub Actions workflow.
 
 | Check | Current status |
 |---|---|
 | Windows x64 build | Tracked by the Actions badge below |
 | C unit-test framework | Unity |
-| Automated tests | 3 SDL3 window/event tests; framework integration added, pending CI verification |
+| Automated tests | 9 Unity tests: 3 SDL3 integration tests and 6 Vulkan queue-selection unit tests |
 | SDL3 window | Complete |
-| Vulkan renderer | Current development step |
+| Vulkan instance, surface and device selection | Implemented; CI verification pending |
 | Original level loading | Not started |
 | Playable demo | Not started |
 
