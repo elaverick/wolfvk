@@ -1,37 +1,53 @@
 # WolfVK
 
-WolfVK is a modern Windows reimagining of **Wolfenstein 3D**, written in C. It is being developed around SDL3 for windowing and input, and Vulkan for 3D rendering. It will load the original game's level and graphic data rather than requiring replacement assets.
+WolfVK is a modern Windows reimagining of **Wolfenstein 3D**, written in C17. It uses SDL3 for windowing and input and Vulkan for 3D rendering. The aim is to load the original game's level and graphic data rather than requiring replacement assets.
 
 Development follows the ordered, approval-gated steps in [roadmap.md](roadmap.md). The original [Wolf3D repository](https://github.com/elaverick/Wolf3D) is a read-only reference.
 
 ## Current development status
 
-**Current roadmap step:** You must draw the level using untextured quads.
+**Current milestone:** interactive, untextured level rendering. The SDL3 window and Vulkan renderer draw indexed, vertex-coloured quads with depth testing and a perspective camera. The application reads original-format MAPHEAD/GAMEMAPS data, expands the Carmack and RLEW compressed wall and object planes, generates exposed wall faces, and combines them with large floor and roof planes.
 
-The SDL3 window, Vulkan renderer, input, quad and infinite floor/roof milestones are complete. The application creates a Vulkan instance and surface, prefers discrete GPUs when selecting a graphics/presentation device, and renders indexed, vertex-coloured geometry with depth testing and a perspective camera. Large floor and roof planes extend beyond the camera far clip so their edges are not visible. The projection is recalculated on window resize. A level loader reads the original `MAPHEAD` and `GAMEMAPS` layout and expands the wall and object planes through Carmack and RLEW decompression. The application loads the selected map at startup, builds exposed wall faces as untextured quads, combines them with the floor and roof, and places the camera on an empty tile. Visual verification with an original game data set is still outstanding.
+The player can move with **WASD** and look with the mouse. Movement is relative to camera yaw, diagonal movement is normalised, and the player is kept out of wall tiles with sliding collision resolution. Relative mouse capture is released when the window loses focus and restored when it regains focus. Press **Escape** to quit.
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It contains 47 Unity test cases: three SDL3 window/event tests, three camera matrix tests, four keyboard/mouse/axis input tests, eight Carmack/RLEW and level-loader tests, six wall-geometry tests, eight command-line parser tests, 14 Vulkan selection and renderer unit tests, and one SwiftShader-backed integration test that creates a swapchain and submits/presents overlapping indexed quads. CTest runs the suite in Windows CI.
+The level loader expects `MAPHEAD.WL6` and `GAMEMAPS.WL6` in the working directory. Those original game files are not included in this repository. The parser and geometry are covered by deterministic tests, but visual verification against a genuine WL6 level remains outstanding until those files are available.
 
-| Check | Current status |
+The approval gate before texture work is the next milestone: build and present a Windows demo for review. Textures must not be added until that demo has been confirmed.
+
+## Automated tests
+
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It contains 56 Unity test cases:
+
+- 3 SDL3 window and event tests
+- 3 camera projection tests
+- 9 player movement, mouse-look and collision tests
+- 4 keyboard, mouse and gamepad input tests
+- 8 Carmack/RLEW decoder and level-loader tests
+- 6 wall-geometry tests
+- 8 command-line parser tests
+- 14 Vulkan selection and renderer unit tests
+- 1 SwiftShader-backed integration test that creates a swapchain and submits/presents overlapping indexed quads
+
+CTest runs the suite in Windows CI.
+
+| Feature | Status |
 |---|---|
-| Windows x64 build | Tracked by the Actions badge below |
-| C unit-test framework | Unity |
-| Automated tests | 47 Unity test cases: 3 SDL3, 3 camera, 4 input, 8 level, 6 wall geometry, 8 command line, 14 Vulkan unit, and 1 SwiftShader quad render/present integration |
-| SDL3 window | Complete |
-| Vulkan renderer and swapchain | Implemented and verified in Windows CI |
-| Input handling | Keyboard, relative mouse and SDL gamepad state; verified in Windows CI |
-| Quad rendering | Indexed vertex and index buffers, depth testing and view-projection transform; verified in Windows CI |\n| Untextured level walls | Exposed wall faces generated and uploaded as quads; visual validation with original files outstanding |
-| Infinite floor and roof | Large world-space planes with perspective camera; verified in Windows CI |
-| Original level loading | MAPHEAD/GAMEMAPS parser with Carmack and RLEW decompression; synthetic original-format fixture tests pass |\n| Level selection | `--level N` (one-based), defaults to level 1; validated with Unity tests |
-| Playable demo | Not started |
+| Windows x64 build | Verified by GitHub Actions |
+| SDL3 window and input | Implemented and tested |
+| Vulkan renderer and swapchain | Implemented and tested in Windows CI |
+| Indexed quad rendering and depth testing | Implemented and tested |
+| Infinite floor and roof planes | Implemented |
+| Original WL6 map decoding and level selection | Implemented; synthetic original-format fixtures pass |
+| Untextured exposed wall faces | Implemented; genuine-map visual check outstanding |
+| WASD movement and mouse-look | Implemented; player collision tests pass |
+| Pre-texture demo | Next approval-gated milestone |
+| Original textures and integer scaling | Not started; wait for demo approval |
 
 [![Windows build and tests](https://github.com/elaverick/WolfVK/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/elaverick/WolfVK/actions/workflows/build.yml)
 
-The workflow configures and compiles the Windows x64 application, then runs the Unity test suite through CTest. The badge reflects the latest workflow result for the branch.
-
 ## Build locally
 
-A C17 compiler, CMake 3.24 or newer, Git, the Vulkan SDK (including `glslc`), and network access for SDL3 and Unity source dependencies are required. Running the full test suite also requires a working Vulkan driver; CI uses SwiftShader.
+A C17 compiler, CMake 3.24 or newer, Git, the Vulkan SDK (including `glslc`), and network access for the SDL3 and Unity source dependencies are required. Running the full test suite also requires a working Vulkan driver; CI uses SwiftShader.
 
 ```powershell
 cmake -S . -B build -A x64 -DBUILD_TESTING=ON
@@ -39,6 +55,14 @@ cmake --build build --config Release --parallel
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-## Controls
+## Run
 
-The application loads `MAPHEAD.WL6` and `GAMEMAPS.WL6` from its working directory, then renders the floor, roof and exposed wall faces of the selected level. Those original game data files are not included in this repository. Use `--level N` to choose a one-based level number, or omit it to load the first level. Keyboard, relative mouse and gamepad state are tracked, but movement and mouse-look controls are the next roadmap item.
+Keep `shaders/` beside `wolfvk.exe`. Place `MAPHEAD.WL6` and `GAMEMAPS.WL6` from your own Wolfenstein 3D WL6 installation in the same working directory, then launch:
+
+```powershell
+.\wolfvk.exe
+```
+
+Use `--level N` to select a one-based level number; omit it to load the first level.
+
+**Controls:** W/A/S/D to move, mouse to look, Escape to quit. The mouse is captured while the window is focused.
