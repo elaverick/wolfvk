@@ -599,7 +599,7 @@ static bool create_graphics_pipeline(VulkanRenderer *renderer)
     shader_stages[1].pName = "main";
 
     vertex_binding.binding = 0;
-    vertex_binding.stride = sizeof(VulkanVertex);
+    vertex_binding.stride = (uint32_t)sizeof(VulkanVertex);
     vertex_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     vertex_attributes[0].location = 0;
