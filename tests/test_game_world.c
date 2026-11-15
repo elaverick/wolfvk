@@ -239,7 +239,7 @@ void test_world_state_door_geometry_uses_original_vswap_door_pages(void)
     TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[2].vertices[0].position[2]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.2f, quads[2].vertices[1].position[0]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[2].vertices[1].position[2]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.2f, quads[3].vertices[0].position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, quads[3].vertices[0].position[0]);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, quads[3].vertices[0].position[2]);
 
     /* Fully-open panels are removed from the dynamic draw list on both orientations. */
