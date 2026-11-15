@@ -7,7 +7,7 @@ You must provide GitHub build actions that allow you to build and test the code.
 You may use the main branch of the following repository as a reference point. You may only read from this repository, you may not write to it.
 
 [x] Create a Window
-[ ] Ensure the window can render Vulkan 3D content in a performant manner.
+[x] Ensure the window can render Vulkan 3D content in a performant manner.
 [ ] The window must be able to read inputs from the keyboard, mouse and a compatible game pad controller (such as an Xbox one controller).
 [ ] The engine must be able to render quads.
 [ ] There should be a floor plane and a roof plane which are infinite (you may use rendering cheats to achieve this).
