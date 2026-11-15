@@ -1,13 +1,14 @@
 #include "wolfvk/player_controller.h"
+#include "wolfvk/world.h"
 
 #include <math.h>
 
-#define WOLF_PLAYER_MOVE_SPEED 3.5f
-#define WOLF_PLAYER_COLLISION_RADIUS 0.20f
+#define WOLF_PLAYER_MOVE_SPEED_TILES_PER_SECOND 3.5f
+#define WOLF_PLAYER_COLLISION_RADIUS_TILES 0.20f
 #define WOLF_PLAYER_MOUSE_SENSITIVITY 0.0025f
 #define WOLF_PLAYER_MAX_PITCH 1.48352986f
 #define WOLF_PLAYER_MAX_FRAME_TIME 0.10f
-#define WOLF_PLAYER_MAX_STEP_DISTANCE 0.08f
+#define WOLF_PLAYER_MAX_STEP_DISTANCE_TILES 0.08f
 #define WOLF_PLAYER_TWO_PI 6.28318531f
 
 /* Collision mirrors the pre-door scene: omitted ordinary and secret doors cannot become invisible blockers. */
@@ -16,9 +17,9 @@ static bool position_overlaps_wall(
     float world_x,
     float world_z)
 {
-    const float radius = WOLF_PLAYER_COLLISION_RADIUS;
-    const float map_x = world_x + (float)level->width * 0.5f;
-    const float map_z = world_z + (float)level->height * 0.5f;
+    const float radius = WOLF_PLAYER_COLLISION_RADIUS_TILES;
+    const float map_x = world_x / WOLF_WORLD_TILE_SIZE + (float)level->width * 0.5f;
+    const float map_z = world_z / WOLF_WORLD_TILE_SIZE + (float)level->height * 0.5f;
     int minimum_x;
     int maximum_x;
     int minimum_z;
@@ -82,9 +83,11 @@ static void move_with_wall_sliding(
     float movement_z,
     float delta_seconds)
 {
-    const float distance = WOLF_PLAYER_MOVE_SPEED * delta_seconds;
-    const float step_count_float = ceilf(
-        distance / WOLF_PLAYER_MAX_STEP_DISTANCE);
+    const float distance =
+        WOLF_PLAYER_MOVE_SPEED_TILES_PER_SECOND * WOLF_WORLD_TILE_SIZE * delta_seconds;
+    const float maximum_step_distance =
+        WOLF_PLAYER_MAX_STEP_DISTANCE_TILES * WOLF_WORLD_TILE_SIZE;
+    const float step_count_float = ceilf(distance / maximum_step_distance);
     const int step_count = step_count_float > 1.0f ? (int)step_count_float : 1;
     const float step_x = movement_x * distance / (float)step_count;
     const float step_z = movement_z * distance / (float)step_count;
