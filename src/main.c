@@ -33,6 +33,8 @@ int main(void)
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) {
                 running = 0;
+            } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+                vulkan_renderer_notify_resize(renderer);
             }
         }
         if (!vulkan_renderer_draw_frame(renderer)) {
