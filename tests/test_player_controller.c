@@ -1,6 +1,7 @@
 #include "unity.h"
 
 #include "wolfvk/player_controller.h"
+#include "wolfvk/world.h"
 
 #include <math.h>
 
@@ -38,7 +39,7 @@ void test_player_moves_forward_relative_to_camera(void)
 
     TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.05f));
     TEST_ASSERT_EQUAL_FLOAT(0.0f, camera.position[0]);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, -0.175f, camera.position[2]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, -0.56f, camera.position[2]);
 
     wolf_input_destroy(input);
 }
@@ -55,7 +56,7 @@ void test_player_strafe_uses_camera_right_vector(void)
     set_key(input, SDL_SCANCODE_D, true);
 
     TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.05f));
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.175f, camera.position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.56f, camera.position[0]);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, camera.position[2]);
 
     wolf_input_destroy(input);
@@ -119,8 +120,8 @@ void test_player_cannot_walk_through_wall_tiles(void)
     set_key(input, SDL_SCANCODE_D, true);
 
     TEST_ASSERT_TRUE(wolf_player_update(&camera, input, &level, 0.1f));
-    TEST_ASSERT_TRUE(camera.position[0] > 0.20f);
-    TEST_ASSERT_TRUE(camera.position[0] < 0.31f);
+    TEST_ASSERT_TRUE(camera.position[0] > 0.85f);
+    TEST_ASSERT_TRUE(camera.position[0] < 0.97f);
 
     wolf_input_destroy(input);
 }
@@ -134,7 +135,7 @@ void test_player_slides_along_wall_when_forward_motion_is_blocked(void)
     TEST_ASSERT_NOT_NULL(input);
     wolf_camera_initialize(&camera);
     create_open_test_level(&level);
-    camera.position[0] = 0.2f;
+    camera.position[0] = 0.2f * WOLF_WORLD_TILE_SIZE;
     level.wall_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 1u;
     set_key(input, SDL_SCANCODE_W, true);
     set_key(input, SDL_SCANCODE_D, true);
@@ -217,8 +218,8 @@ void test_player_can_move_through_omitted_door_cells(void)
     }
 
     /* The player must cross the door cell and stop at the solid wall behind it. */
-    TEST_ASSERT_TRUE(camera.position[0] > 0.1f);
-    TEST_ASSERT_TRUE(camera.position[0] < 0.4f);
+    TEST_ASSERT_TRUE(camera.position[0] > 0.85f);
+    TEST_ASSERT_TRUE(camera.position[0] < 0.97f);
 
     wolf_input_destroy(input);
 }
