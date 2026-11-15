@@ -45,6 +45,12 @@ bool vulkan_renderer_set_quads(
     const VulkanQuad *quads,
     uint32_t quad_count);
 
+/* Update an existing scene mesh without reallocating its fixed-size vertex and index buffers. */
+bool vulkan_renderer_update_quads(
+    VulkanRenderer *renderer,
+    const VulkanQuad *quads,
+    uint32_t quad_count);
+
 /* Upload 64x64 RGBA wall pages as layers in the renderer's nearest-sampled texture array. */
 bool vulkan_renderer_set_wall_textures(
     VulkanRenderer *renderer,
