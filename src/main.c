@@ -30,9 +30,10 @@ int main(void)
 {
     SDL_Window *window;
     SDL_Event event;
+    /* The planes extend beyond the camera far clip so their edges remain unseen. */
     const VulkanQuad environment_quads[] = {
         {{
-            {{-1000.0f, 0.0f, -1000.0f}, {0.16f, 0.20f, 0.24f}},
+            {{-10000.0f, 0.0f, -10000.0f}, {0.16f, 0.20f, 0.24f}},
             {{1000.0f, 0.0f, -1000.0f}, {0.16f, 0.20f, 0.24f}},
             {{1000.0f, 0.0f, 1000.0f}, {0.16f, 0.20f, 0.24f}},
             {{-1000.0f, 0.0f, 1000.0f}, {0.16f, 0.20f, 0.24f}}
@@ -95,10 +96,6 @@ int main(void)
         SDL_DestroyWindow(window);
         SDL_Quit();
         return 1;
-    }
-
-    if (!SDL_SetWindowRelativeMouseMode(window, true)) {
-        fprintf(stderr, "Could not enable relative mouse mode: %s\n", SDL_GetError());
     }
 
     while (running) {
