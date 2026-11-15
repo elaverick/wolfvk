@@ -4,6 +4,7 @@
 #include "wolfvk/vulkan_renderer.h"
 
 struct VulkanRenderer {
+    SDL_Window *window;
     VkInstance instance;
     VkSurfaceKHR surface;
     VkPhysicalDevice physical_device;
