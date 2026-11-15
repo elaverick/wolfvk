@@ -47,7 +47,7 @@ static void move_with_wall_sliding(
         if (!position_overlaps_wall(world, candidate_x, camera->position[2])) {
             camera->position[0] = candidate_x;
         }
-        if (!position_overlaps_wall(level, camera->position[0], candidate_z)) {
+        if (!position_overlaps_wall(world, camera->position[0], candidate_z)) {
             camera->position[2] = candidate_z;
         }
     }
