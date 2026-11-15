@@ -30,6 +30,7 @@ bool vulkan_renderer_create(SDL_Window *window, VulkanRenderer **renderer);
 /* Release Vulkan objects in reverse dependency order. */
 /* Submit and present one frame. Returns false on an unrecoverable Vulkan error. */
 bool vulkan_renderer_draw_frame(VulkanRenderer *renderer);
+void vulkan_renderer_notify_resize(VulkanRenderer *renderer);
 
 void vulkan_renderer_destroy(VulkanRenderer *renderer);
 
