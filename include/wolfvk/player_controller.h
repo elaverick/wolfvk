@@ -9,7 +9,9 @@
 
 /*
  * Apply first-person keyboard movement and relative mouse-look.
- * World-space collision treats non-zero wall tiles and the map boundary as solid.
+ * Ordinary door tiles (90–101) and info-plane secret-door markers (98) are
+ * passable placeholders until door interaction is implemented; other wall
+ * tiles and the map boundary remain solid.
  */
 bool wolf_player_update(
     WolfCamera *camera,
