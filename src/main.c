@@ -2,6 +2,7 @@
 #include "wolfvk/command_line.h"
 #include "wolfvk/input.h"
 #include "wolfvk/level.h"
+#include "wolfvk/game_world.h"
 #include "wolfvk/level_geometry.h"
 #include "wolfvk/player_controller.h"
 #include "wolfvk/vulkan_renderer.h"
@@ -45,11 +46,12 @@ static void print_usage(const char *program_name)
 
 /* Combine the map's exposed wall faces with the large floor and roof, and resolve its spawn. */
 static bool build_scene_geometry(
-    const WolfLevel *level,
-    uint16_t texture_page_count,
+    const WolfWorldState *world,
     const VulkanQuad environment_quads[2],
     VulkanQuad **scene_quads,
     uint32_t *scene_quad_count,
+    uint32_t *base_quad_count,
+    uint32_t *dynamic_quad_count,
     WolfPlayerStart *player_start)
 {
     VulkanQuad *wall_quads = NULL;
@@ -57,30 +59,32 @@ static bool build_scene_geometry(
     VulkanQuad *combined_quads;
     uint32_t combined_quad_count;
 
-    if (scene_quads == NULL || scene_quad_count == NULL ||
+    if (world == NULL || scene_quads == NULL || scene_quad_count == NULL ||
+        base_quad_count == NULL || dynamic_quad_count == NULL ||
         player_start == NULL) {
         fprintf(stderr, "Invalid level geometry output arguments.\n");
         return false;
     }
 
-    if (!wolf_level_build_wall_quads(level, texture_page_count, &wall_quads, &wall_quad_count)) {
+    if (!wolf_level_build_wall_quads(
+            &world->level, world->texture_page_count, &wall_quads, &wall_quad_count)) {
         fprintf(
             stderr, "Could not generate wall geometry for level %s (%u x %u).\n",
-            level != NULL ? level->name : "(null)",
-            level != NULL ? (unsigned int)level->width : 0u,
-            level != NULL ? (unsigned int)level->height : 0u);
+            world->level.name,
+            (unsigned int)world->level.width,
+            (unsigned int)world->level.height);
         return false;
     }
 
     /* Custom maps may omit the original marker; a deterministic floor fallback still permits inspection. */
-    if (!wolf_level_find_player_start(level, player_start)) {
+    if (!wolf_level_find_player_start(&world->level, player_start)) {
         if (!wolf_level_find_open_tile(
-                level, &player_start->tile_x, &player_start->tile_y)) {
+                &world->level, &player_start->tile_x, &player_start->tile_y)) {
             size_t open_tile_count = 0u;
             size_t solid_tile_count = 0u;
 
-            for (uint16_t tile_y = 0u; tile_y < level->height; ++tile_y) {
-                for (uint16_t tile_x = 0u; tile_x < level->width; ++tile_x) {
+            for (uint16_t tile_y = 0u; tile_y < world->level.height; ++tile_y) {
+                for (uint16_t tile_x = 0u; tile_x < world->level.width; ++tile_x) {
                     size_t tile_index =
                         (size_t)tile_y * WOLF_LEVEL_PLANE_WIDTH + tile_x;
 
@@ -97,11 +101,12 @@ static bool build_scene_geometry(
                 stderr,
                 "No player-start marker or open floor cell exists in level %s (%u x %u). "
                 "The decoded wall plane contains %zu solid cells and %zu open cells.\n",
-                level->name, (unsigned int)level->width, (unsigned int)level->height,
+                world->level.name, (unsigned int)world->level.width,
+                (unsigned int)world->level.height,
                 solid_tile_count, open_tile_count);
             fprintf(stderr, "First wall-plane row:");
-            for (uint16_t tile_x = 0u; tile_x < level->width && tile_x < 16u; ++tile_x) {
-                fprintf(stderr, " %04X", level->wall_tiles[tile_x]);
+            for (uint16_t tile_x = 0u; tile_x < world->level.width && tile_x < 16u; ++tile_x) {
+                fprintf(stderr, " %04X", world->level.wall_tiles[tile_x]);
             }
             fputc('\n', stderr);
             free(wall_quads);
@@ -110,13 +115,15 @@ static bool build_scene_geometry(
         player_start->yaw_radians = 0.0f;
     }
 
-    if (wall_quad_count > UINT32_MAX - 2u) {
-        fprintf(stderr, "Level generated too many wall quads.\n");
+    *base_quad_count = wall_quad_count + 2u;
+    *dynamic_quad_count = wolf_world_state_dynamic_quad_count(world);
+    if (wall_quad_count > UINT32_MAX - 2u - *dynamic_quad_count) {
+        fprintf(stderr, "Level generated too many wall and door quads.\n");
         free(wall_quads);
         return false;
     }
 
-    combined_quad_count = wall_quad_count + 2u;
+    combined_quad_count = *base_quad_count + *dynamic_quad_count;
     combined_quads = malloc((size_t)combined_quad_count * sizeof(VulkanQuad));
     if (combined_quads == NULL) {
         free(wall_quads);
@@ -132,6 +139,13 @@ static bool build_scene_geometry(
     }
 
     free(wall_quads);
+    if (*dynamic_quad_count > 0u &&
+        !wolf_world_state_build_dynamic_quads(
+            world, combined_quads + *base_quad_count, *dynamic_quad_count)) {
+        free(combined_quads);
+        return false;
+    }
+
     *scene_quads = combined_quads;
     *scene_quad_count = combined_quad_count;
     return true;
@@ -170,7 +184,7 @@ int main(int argc, char *argv[])
     char window_title[128];
     Uint64 performance_frequency;
     Uint64 previous_counter;
-    int running = 1;
+    int running = 1;\n    bool use_was_down = false;
 
     if (!wolf_parse_command_line(
             argc, argv, &options, error_message, sizeof(error_message))) {
@@ -198,9 +212,15 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if (!wolf_world_state_init(&world, &level, wall_textures.page_count)) {
+        fprintf(stderr, "Could not initialise the original door and secret-wall data.\n");
+        wolf_wall_textures_destroy(&wall_textures);
+        return 1;
+    }
+
     if (!build_scene_geometry(
-            &level, wall_textures.page_count, environment_quads,
-            &scene_quads, &scene_quad_count, &player_start)) {
+            &world, environment_quads, &scene_quads, &scene_quad_count,
+            &base_quad_count, &dynamic_quad_count, &player_start)) {
         fprintf(stderr, "Level geometry initialisation failed; check the VSWAP wall page range.\n");
         wolf_wall_textures_destroy(&wall_textures);
         return 1;
@@ -276,8 +296,7 @@ int main(int argc, char *argv[])
         SDL_Quit();
         return 1;
     }
-    free(scene_quads);
-    scene_quads = NULL;
+    geometry_revision = wolf_world_state_geometry_revision(&world);
 
     input = wolf_input_create();
     if (input == NULL) {
@@ -326,10 +345,61 @@ int main(int argc, char *argv[])
             : 0.0f;
         previous_counter = current_counter;
 
-        if (!wolf_player_update(&camera, input, &level, delta_seconds) ||
-            !update_camera_projection(window, renderer, &camera)) {
-            fprintf(stderr, "Player update or camera projection failed.\n");
-            running = 0;
+        {
+            bool dynamic_geometry_changed = false;
+            bool use_down;
+            bool geometry_changed = false;
+
+            if (!wolf_world_state_update(
+                    &world, delta_seconds, camera.position[0], camera.position[2],
+                    &dynamic_geometry_changed) ||
+                !wolf_player_update(&camera, input, &world, delta_seconds)) {
+                fprintf(stderr, "Player, door or pushwall update failed.\n");
+                running = 0;
+            }
+
+            (void)wolf_world_state_collect_key(
+                &world, camera.position[0], camera.position[2]);
+
+            use_down = wolf_input_key_down(input, SDL_SCANCODE_E) ||
+                wolf_input_key_down(input, SDL_SCANCODE_SPACE) ||
+                wolf_input_gamepad_button_down(input, SDL_GAMEPAD_BUTTON_NORTH);
+            if (use_down && !use_was_down) {
+                dynamic_geometry_changed = wolf_world_state_use(
+                    &world, camera.position[0], camera.position[2],
+                    camera.yaw_radians) || dynamic_geometry_changed;
+            }
+            use_was_down = use_down;
+
+            if (!update_camera_projection(window, renderer, &camera)) {
+                fprintf(stderr, "Could not update the camera projection.\n");
+                running = 0;
+            }
+
+            {
+                uint32_t current_revision = wolf_world_state_geometry_revision(&world);
+                geometry_changed = current_revision != geometry_revision;
+                geometry_revision = current_revision;
+            }
+            if (running && geometry_changed) {
+                free(scene_quads);
+                scene_quads = NULL;
+                if (!build_scene_geometry(
+                        &world, environment_quads, &scene_quads, &scene_quad_count,
+                        &base_quad_count, &dynamic_quad_count, &player_start) ||
+                    !vulkan_renderer_set_quads(renderer, scene_quads, scene_quad_count)) {
+                    fprintf(stderr, "Could not rebuild static geometry after a pushwall move.\n");
+                    running = 0;
+                }
+            } else if (running &&
+                (dynamic_geometry_changed || wolf_world_state_has_animated_geometry(&world))) {
+                if (!wolf_world_state_build_dynamic_quads(
+                        &world, scene_quads + base_quad_count, dynamic_quad_count) ||
+                    !vulkan_renderer_update_quads(renderer, scene_quads, scene_quad_count)) {
+                    fprintf(stderr, "Could not update animated door or pushwall geometry.\n");
+                    running = 0;
+                }
+            }
         }
 
         if (running && !vulkan_renderer_draw_frame(renderer)) {
