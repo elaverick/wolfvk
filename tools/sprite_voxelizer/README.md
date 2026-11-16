@@ -129,7 +129,7 @@ Every pose is rendered orthographically from each original direction (cubes at t
 
 - 261 poses in 77 subject files. All files were written and read back identically.
 - 260 of 261 poses pass:
-  - All 233 camera-facing poses reproduce their frames exactly.
+  - All 231 camera-facing poses reproduce their frames exactly.
   - All 5 hand-built objects keep their sprite's width and palette.
   - The rocket's side views score 1.00 and 0.86.
 - Every rotation-set pose is a single connected piece.
