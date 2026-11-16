@@ -4,6 +4,7 @@
 #include "test_vox_builder.h"
 
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
 
@@ -23,6 +24,7 @@ static bool write_test_weapon_assets(void)
         "player_knife", "player_pistol", "player_machinegun", "player_chaingun"
     };
 
+    (void)SDL_CreateDirectory("./wolfvk_test");
     for (size_t weapon = 0u; weapon < 4u; ++weapon) {
         TestVoxBytes bytes;
         TestVoxAnimation sequences[] = {
@@ -35,7 +37,7 @@ static bool write_test_weapon_assets(void)
 
         (void)snprintf(ready_name, sizeof(ready_name), "%s_ready", animations[weapon]);
         (void)snprintf(attack_name, sizeof(attack_name), "%s_attack", animations[weapon]);
-        (void)snprintf(path, sizeof(path), "./wolfvk_test_%s.vox", subjects[weapon]);
+        (void)snprintf(path, sizeof(path), "./wolfvk_test/%s.vox", subjects[weapon]);
         sequences[0].name = ready_name;
         sequences[1].name = attack_name;
         if (!test_vox_build(sequences, 2u, 64u, true, &bytes)) {
@@ -63,9 +65,10 @@ static void remove_test_weapon_assets(void)
     char path[128];
 
     for (size_t weapon = 0u; weapon < 4u; ++weapon) {
-        (void)snprintf(path, sizeof(path), "./wolfvk_test_%s.vox", subjects[weapon]);
+        (void)snprintf(path, sizeof(path), "./wolfvk_test/%s.vox", subjects[weapon]);
         (void)remove(path);
     }
+    (void)SDL_RemovePath("./wolfvk_test");
 }
 
 void test_weapon_starts_with_ready_pistol(void)
@@ -259,7 +262,7 @@ void test_weapon_scene_keeps_available_subjects_when_one_file_is_missing(void)
     WolfWeaponScene scene;
 
     TEST_ASSERT_TRUE(write_test_weapon_assets());
-    TEST_ASSERT_TRUE(remove("./wolfvk_test_chain.vox") == 0);
+    TEST_ASSERT_TRUE(remove("./wolfvk_test/chain.vox") == 0);
     TEST_ASSERT_TRUE(wolf_weapon_scene_load(&scene, "./wolfvk_test"));
     TEST_ASSERT_EQUAL_UINT32(5u, scene.unavailable_pose_count);
     TEST_ASSERT_TRUE(scene.ready[WOLF_WEAPON_PISTOL].available);
