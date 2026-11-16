@@ -276,16 +276,19 @@ bool wolf_weapon_build_view_projection(
             forward[axis] * 1.0f + right[axis] * 0.38f - up[axis] * (0.48f + attack_offset);
     }
 
-    /* VOX weapon models face -Z, so their depth axis is the negative camera-forward vector. */
+    /*
+     * First-person VOX assets extend along local +y into the screen (hand
+     * nearest, muzzle furthest). Keep local +x horizontal and +z vertical.
+     */
     model[0] = right[0] * scale;
     model[1] = right[1] * scale;
     model[2] = right[2] * scale;
-    model[4] = up[0] * scale;
-    model[5] = up[1] * scale;
-    model[6] = up[2] * scale;
-    model[8] = -forward[0] * scale;
-    model[9] = -forward[1] * scale;
-    model[10] = -forward[2] * scale;
+    model[4] = forward[0] * scale;
+    model[5] = forward[1] * scale;
+    model[6] = forward[2] * scale;
+    model[8] = up[0] * scale;
+    model[9] = up[1] * scale;
+    model[10] = up[2] * scale;
     model[12] = position[0];
     model[13] = position[1];
     model[14] = position[2];
