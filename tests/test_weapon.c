@@ -234,10 +234,10 @@ void test_weapon_scene_loads_all_twenty_original_named_poses(void)
     TEST_ASSERT_TRUE(scene.quad_count > 0u);
     for (uint32_t weapon = 0u; weapon < WOLF_WEAPON_COUNT; ++weapon) {
         TEST_ASSERT_TRUE(scene.ready[weapon].available);
-        TEST_ASSERT_EQUAL_UINT32(1u, scene.ready[weapon].quad_count);
+        TEST_ASSERT_EQUAL_UINT32(6u, scene.ready[weapon].quad_count);
         for (uint32_t frame = 0u; frame < 4u; ++frame) {
             TEST_ASSERT_TRUE(scene.attack[weapon][frame].available);
-            TEST_ASSERT_EQUAL_UINT32(1u, scene.attack[weapon][frame].quad_count);
+            TEST_ASSERT_EQUAL_UINT32(6u, scene.attack[weapon][frame].quad_count);
         }
     }
     wolf_weapon_scene_destroy(&scene);
