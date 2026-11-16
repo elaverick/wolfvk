@@ -121,7 +121,6 @@ static bool create_swapchain(VulkanRenderer *renderer)
     uint32_t queue_family_indices[2];
     VkSwapchainCreateInfoKHR create_info = {0};
     VkResult result;
-    VkPipelineDepthStencilStateCreateInfo overlay_depth_stencil = {0};
 
     result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
         renderer->physical_device, renderer->surface, &capabilities);
