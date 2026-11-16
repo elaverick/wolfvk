@@ -286,7 +286,7 @@ void test_flag_model_pleats_the_cloth_round_the_pole(void)
     WolfVoxelModel *flag = wolf_voxel_model_create();
     WolfVoxelModel *plain = wolf_voxel_model_create();
     WolfSpriteImage reference;
-    WolfSingleViewOptions lathe = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false};
+    WolfSingleViewOptions lathe = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false, false, 0, 0, false};
 
     wolf_sprite_image_clear(&reference);
     test_fill_rectangle(&reference, 31, 4, 33, 60, 210u);   /* pole */
