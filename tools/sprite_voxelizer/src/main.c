@@ -16,9 +16,11 @@ static void print_usage(const char *program)
         "Options:\n"
         "  --output <dir>             Output directory (default: sprite_voxels)\n"
         "  --only <model>             Rebuild one model, e.g. grd_s or stat_1\n"
-        "  --carve-misses <n>         Views allowed to disagree before carving (default 0)\n"
+        "  --carve-misses <n>         Views allowed to disagree before carving (default 1)\n"
+        "  --no-prune                 Keep excess material that a minority of views reject\n"
         "  --diagonal-tolerance <n>   Extra columns accepted in diagonal views (default 0)\n"
         "  --min-fragment <n>         Drop carved fragments smaller than n voxels (default 8)\n"
+        "  --max-shift <n>            Largest frame registration shift in columns (default 3)\n"
         "  --no-sheets                Skip PNG comparison sheets and the HTML report\n"
         "  --help                     Show this message\n",
         program);
@@ -56,6 +58,10 @@ int main(int argc, char **argv)
             print_usage(argv[0]);
             return 0;
         }
+        if (strcmp(name, "--no-prune") == 0) {
+            options.multi_view.prune_excess_voxels = false;
+            continue;
+        }
         if (strcmp(name, "--no-sheets") == 0) {
             options.write_comparison_sheets = false;
             continue;
@@ -75,6 +81,8 @@ int main(int argc, char **argv)
             options.multi_view.allowed_silhouette_misses = count;
         } else if (strcmp(name, "--diagonal-tolerance") == 0 && parse_count(value, 4, &count)) {
             options.multi_view.diagonal_tolerance_columns = count;
+        } else if (strcmp(name, "--max-shift") == 0 && parse_count(value, 8, &count)) {
+            options.multi_view.maximum_registration_shift = count;
         } else if (strcmp(name, "--min-fragment") == 0 && parse_count(value, 100000, &count)) {
             options.multi_view.minimum_fragment_voxels = (size_t)count;
         } else {

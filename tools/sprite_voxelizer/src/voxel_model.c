@@ -71,17 +71,33 @@ WolfViewBasis wolf_view_basis(double rotation_degrees)
     return basis;
 }
 
+void wolf_voxel_footprint_columns(
+    const WolfViewBasis *basis,
+    int x,
+    int y,
+    int column_offset,
+    int *first_column,
+    int *last_column)
+{
+    double screen_u = wolf_voxel_center_offset(x) * basis->right_x + wolf_voxel_center_offset(y) * basis->right_y;
+    /* Shrink the footprint slightly so a face-on cube never bleeds into a neighbour column. */
+    double coverage = basis->half_footprint - 1e-6;
+
+    /* Pixel centres sit at column + 0.5 - 32 in actor-relative units. */
+    *first_column = (int)ceil(screen_u - coverage + 31.5) + column_offset;
+    *last_column = (int)floor(screen_u + coverage + 31.5) + column_offset;
+}
+
 void wolf_voxel_render_view(
     const WolfVoxelModel *model,
     double rotation_degrees,
+    int column_offset,
     WolfSpriteImage *image,
     int32_t *voxel_for_pixel)
 {
     WolfViewBasis basis = wolf_view_basis(rotation_degrees);
     double depth[WOLF_SPRITE_PIXELS];
     double centre_distance[WOLF_SPRITE_PIXELS];
-    /* Shrink the footprint slightly so a face-on cube never bleeds into a neighbour column. */
-    double coverage = basis.half_footprint - 1e-6;
 
     wolf_sprite_image_clear(image);
     for (size_t pixel = 0u; pixel < WOLF_SPRITE_PIXELS; ++pixel) {
@@ -113,9 +129,7 @@ void wolf_voxel_render_view(
                 screen_u = offset_x * basis.right_x + offset_y * basis.right_y;
                 voxel_depth = offset_x * basis.toward_viewer_x + offset_y * basis.toward_viewer_y;
 
-                /* Pixel centres sit at column + 0.5 - 32 in actor-relative units. */
-                first_column = (int)ceil(screen_u - coverage + 31.5);
-                last_column = (int)floor(screen_u + coverage + 31.5);
+                wolf_voxel_footprint_columns(&basis, x, y, column_offset, &first_column, &last_column);
                 for (int column = first_column; column <= last_column; ++column) {
                     size_t pixel;
                     double distance;
@@ -124,7 +138,7 @@ void wolf_voxel_render_view(
                         continue;
                     }
                     pixel = wolf_sprite_pixel_index(column, row);
-                    distance = fabs(screen_u - ((double)column - 31.5));
+                    distance = fabs(screen_u - ((double)(column - column_offset) - 31.5));
 
                     /*
                      * The nearest cube wins. Cubes at equal depth (common on

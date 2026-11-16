@@ -24,10 +24,14 @@ typedef struct AssetResult {
     size_t voxel_count;
     double depth_scale_used;
     WolfViewMetrics views[WOLF_ROTATION_COUNT];
+    int registration_shifts[WOLF_ROTATION_COUNT];
     size_t view_count;
     double mean_silhouette_iou;
     double minimum_silhouette_iou;
+    /* Best mean IoU any solid could reach against these frames (1 for single views). */
+    double silhouette_ceiling;
     double mean_colour_accuracy;
+    double mean_near_colour_accuracy;
     double mean_colour_error;
 } AssetResult;
 
@@ -116,7 +120,8 @@ static void reconstruct_asset(PipelineState *state, size_t asset_index)
             angles[rotation] = wolf_rotation_degrees(rotation);
         }
         result->processed = wolf_reconstruct_multi_view(
-            views, angles, WOLF_ROTATION_COUNT, &state->options->multi_view, result->model);
+            views, angles, WOLF_ROTATION_COUNT, &state->options->multi_view, result->model,
+            result->registration_shifts);
         result->depth_scale_used = wolf_voxel_model_depth_ratio(result->model);
     } else {
         WolfSingleViewOptions single_view = asset->single_view;
@@ -191,15 +196,18 @@ static void write_and_validate_asset(PipelineState *state, size_t asset_index,
     result->mean_silhouette_iou = 0.0;
     result->minimum_silhouette_iou = 1.0;
     result->mean_colour_accuracy = 0.0;
+    result->mean_near_colour_accuracy = 0.0;
     result->mean_colour_error = 0.0;
     for (size_t view = 0u; view < result->view_count; ++view) {
         WolfViewMetrics *metrics = &result->views[view];
 
         originals[view] = &state->archive.sprites[asset->first_sprite + (int)view];
-        wolf_voxel_render_view(validated_model, wolf_rotation_degrees((int)view), &rendered[view], NULL);
+        wolf_voxel_render_view(validated_model, wolf_rotation_degrees((int)view),
+            result->registration_shifts[view], &rendered[view], NULL);
         wolf_compare_views(originals[view], &rendered[view], wolf_game_palette_rgba, metrics);
         result->mean_silhouette_iou += metrics->silhouette_iou;
         result->mean_colour_accuracy += metrics->colour_accuracy;
+        result->mean_near_colour_accuracy += metrics->near_colour_accuracy;
         result->mean_colour_error += metrics->mean_colour_error;
         if (metrics->silhouette_iou < result->minimum_silhouette_iou) {
             result->minimum_silhouette_iou = metrics->silhouette_iou;
@@ -207,7 +215,12 @@ static void write_and_validate_asset(PipelineState *state, size_t asset_index,
     }
     result->mean_silhouette_iou /= (double)result->view_count;
     result->mean_colour_accuracy /= (double)result->view_count;
+    result->mean_near_colour_accuracy /= (double)result->view_count;
     result->mean_colour_error /= (double)result->view_count;
+
+    result->silhouette_ceiling = asset->kind == WOLF_ASSET_ROTATION_SET ?
+        wolf_rotation_set_silhouette_ceiling(originals, 2 * state->options->multi_view.maximum_registration_shift) :
+        1.0;
 
     if (asset->kind == WOLF_ASSET_SINGLE_VIEW) {
         /* A camera-facing frame is reconstructed to reproduce the original exactly. */
@@ -216,9 +229,10 @@ static void write_and_validate_asset(PipelineState *state, size_t asset_index,
             result->views[0].exact_colour_pixels == result->views[0].shared_pixels;
     } else {
         result->passed = result->readback_matches &&
-            result->mean_silhouette_iou >= WOLF_ROTATION_MIN_MEAN_SILHOUETTE_IOU &&
+            result->mean_silhouette_iou >= WOLF_ROTATION_MIN_FRACTION_OF_CEILING * result->silhouette_ceiling &&
             result->minimum_silhouette_iou >= WOLF_ROTATION_MIN_VIEW_SILHOUETTE_IOU &&
-            result->mean_colour_accuracy >= WOLF_ROTATION_MIN_MEAN_COLOUR_ACCURACY;
+            result->mean_near_colour_accuracy >= WOLF_ROTATION_MIN_MEAN_NEAR_COLOUR_ACCURACY &&
+            result->mean_colour_error <= WOLF_ROTATION_MAX_MEAN_COLOUR_ERROR;
     }
 
     if (state->options->write_comparison_sheets) {
@@ -280,15 +294,18 @@ static void write_animations(PipelineState *state, const char *animation_directo
 static void write_metrics_json(FILE *file, const AssetResult *result)
 {
     fprintf(file, "\"validation\": {\"passed\": %s, \"readback_matches\": %s, "
-        "\"mean_silhouette_iou\": %.4f, \"minimum_silhouette_iou\": %.4f, "
-        "\"mean_colour_accuracy\": %.4f, \"mean_colour_error\": %.2f, \"views\": [",
+        "\"mean_silhouette_iou\": %.4f, \"minimum_silhouette_iou\": %.4f, \"silhouette_ceiling\": %.4f, "
+        "\"mean_colour_accuracy\": %.4f, \"mean_near_colour_accuracy\": %.4f, "
+        "\"mean_colour_error\": %.2f, \"views\": [",
         result->passed ? "true" : "false", result->readback_matches ? "true" : "false",
-        result->mean_silhouette_iou, result->minimum_silhouette_iou,
-        result->mean_colour_accuracy, result->mean_colour_error);
+        result->mean_silhouette_iou, result->minimum_silhouette_iou, result->silhouette_ceiling,
+        result->mean_colour_accuracy, result->mean_near_colour_accuracy, result->mean_colour_error);
     for (size_t view = 0u; view < result->view_count; ++view) {
-        fprintf(file, "%s{\"rotation\": %u, \"silhouette_iou\": %.4f, \"colour_accuracy\": %.4f}",
-            view > 0u ? ", " : "", (unsigned)view,
-            result->views[view].silhouette_iou, result->views[view].colour_accuracy);
+        fprintf(file, "%s{\"rotation\": %u, \"registration_offset_columns\": %d, "
+            "\"silhouette_iou\": %.4f, \"colour_accuracy\": %.4f, \"near_colour_accuracy\": %.4f}",
+            view > 0u ? ", " : "", (unsigned)view, result->registration_shifts[view],
+            result->views[view].silhouette_iou, result->views[view].colour_accuracy,
+            result->views[view].near_colour_accuracy);
     }
     fprintf(file, "]}");
 }
@@ -374,19 +391,20 @@ static bool write_metrics_csv(const PipelineState *state, const char *path)
     if (file == NULL) {
         return false;
     }
-    fprintf(file, "model,kind,views,voxels,mean_silhouette_iou,min_silhouette_iou,mean_colour_accuracy,mean_colour_error,readback,passed\n");
+    fprintf(file, "model,kind,views,voxels,mean_silhouette_iou,min_silhouette_iou,silhouette_ceiling,mean_colour_accuracy,"
+        "mean_near_colour_accuracy,mean_colour_error,readback,passed\n");
     for (size_t asset_index = 0u; asset_index < state->catalog.asset_count; ++asset_index) {
         const AssetResult *result = &state->results[asset_index];
 
         if (!result->written) {
             continue;
         }
-        fprintf(file, "%s,%s,%u,%u,%.4f,%.4f,%.4f,%.2f,%s,%s\n",
+        fprintf(file, "%s,%s,%u,%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.2f,%s,%s\n",
             state->catalog.assets[asset_index].name,
             state->catalog.assets[asset_index].kind == WOLF_ASSET_ROTATION_SET ? "rotation_set" : "single_view",
             (unsigned)result->view_count, (unsigned)result->voxel_count,
-            result->mean_silhouette_iou, result->minimum_silhouette_iou,
-            result->mean_colour_accuracy, result->mean_colour_error,
+            result->mean_silhouette_iou, result->minimum_silhouette_iou, result->silhouette_ceiling,
+            result->mean_colour_accuracy, result->mean_near_colour_accuracy, result->mean_colour_error,
             result->readback_matches ? "match" : "MISMATCH", result->passed ? "pass" : "FAIL");
     }
     return fclose(file) == 0;
@@ -416,14 +434,17 @@ static bool write_html_report(const PipelineState *state, const char *path)
             continue;
         }
         fprintf(file, "<section><h2>%s <span class=\"%s\">%s</span></h2>"
-            "<p>%s &middot; %s &middot; %u voxels &middot; silhouette IoU mean %.3f (min %.3f) "
-            "&middot; exact colour %.1f%% &middot; mean colour error %.1f</p>"
+            "<p>%s &middot; %s &middot; %u voxels &middot; silhouette IoU mean %.3f (min %.3f, "
+            "best possible for these frames %.3f) "
+            "&middot; exact colour %.1f%% (within 1px %.1f%%) &middot; mean colour error %.1f</p>"
             "<img src=\"%s.png\" alt=\"%s comparison\"></section>",
             asset->name, result->passed ? "pass" : "fail", result->passed ? "PASS" : "FAIL",
             asset->description != NULL ? asset->description : "",
             asset->kind == WOLF_ASSET_ROTATION_SET ? "8 rotations" : profile_name(asset->single_view.profile),
             (unsigned)result->voxel_count, result->mean_silhouette_iou, result->minimum_silhouette_iou,
-            result->mean_colour_accuracy * 100.0, result->mean_colour_error, asset->name, asset->name);
+            result->silhouette_ceiling,
+            result->mean_colour_accuracy * 100.0, result->mean_near_colour_accuracy * 100.0,
+            result->mean_colour_error, asset->name, asset->name);
     }
     fprintf(file, "</body></html>\n");
     return fclose(file) == 0;
@@ -508,12 +529,15 @@ int wolf_pipeline_run(const WolfPipelineOptions *options)
             write_and_validate_asset(state, asset, model_directory, validation_directory);
             ++processed;
             passed += state->results[asset].passed ? 1u : 0u;
-            printf("  %-24s %-12s voxels %6u  IoU %.3f (min %.3f)  colour %5.1f%%  %s\n",
+            printf("  %-14s %-12s voxels %6u  IoU %.3f (min %.3f, ceiling %.3f)  colour %5.1f%% near %5.1f%% err %4.1f  %s\n",
                 state->catalog.assets[asset].name,
                 kind == WOLF_ASSET_ROTATION_SET ? "8 rotations" : profile_name(state->catalog.assets[asset].single_view.profile),
                 (unsigned)state->results[asset].voxel_count,
                 state->results[asset].mean_silhouette_iou, state->results[asset].minimum_silhouette_iou,
+                state->results[asset].silhouette_ceiling,
                 state->results[asset].mean_colour_accuracy * 100.0,
+                state->results[asset].mean_near_colour_accuracy * 100.0,
+                state->results[asset].mean_colour_error,
                 state->results[asset].passed ? "pass" : "FAIL");
         }
     }

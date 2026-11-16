@@ -23,10 +23,17 @@ typedef struct WolfViewMetrics {
     size_t union_pixels;
     /* Shared pixels with exactly the original palette index. */
     size_t exact_colour_pixels;
+    /* Shared pixels whose colour appears in the original within one pixel. */
+    size_t near_colour_pixels;
     /* Shared / union: 1.0 means identical outlines. */
     double silhouette_iou;
     /* Exact / shared: 1.0 means every overlapping pixel has the original colour. */
     double colour_accuracy;
+    /*
+     * Near / shared: tolerates a detail drawn one pixel away, which is how
+     * the hand-drawn rotation frames differ from any single solid.
+     */
+    double near_colour_accuracy;
     /* Mean absolute RGB difference per channel over shared pixels, 0-255. */
     double mean_colour_error;
 } WolfViewMetrics;
@@ -36,6 +43,22 @@ void wolf_compare_views(
     const WolfSpriteImage *rendered,
     const uint8_t *palette_rgba,
     WolfViewMetrics *metrics);
+
+/*
+ * Upper bound on the mean silhouette IoU that ANY solid can achieve against
+ * an eight-way rotation set. Views k and k+4 look at a solid from opposite
+ * sides, so a solid's silhouettes in those views are exact mirror images.
+ * Jaccard distance (1 - IoU) obeys the triangle inequality, so for a pair
+ * whose drawn silhouettes mirror each other with IoU m, the two views'
+ * IoUs against any one solid sum to at most 1 + m. Averaging (1 + m) / 2
+ * over the four opposite pairs bounds the achievable mean IoU.
+ *
+ * m is taken at the best relative sideways shift up to max_relative_shift
+ * columns, matching the freedom frame registration has.
+ */
+double wolf_rotation_set_silhouette_ceiling(
+    const WolfSpriteImage *const *views,
+    int max_relative_shift);
 
 /* Expand an indexed sprite to RGBA with transparent background. */
 void wolf_sprite_to_rgba(const WolfSpriteImage *image, const uint8_t *palette_rgba, uint8_t *rgba);

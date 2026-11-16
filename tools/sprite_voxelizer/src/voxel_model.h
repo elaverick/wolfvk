@@ -76,14 +76,30 @@ static inline double wolf_voxel_center_offset(int coordinate)
 }
 
 /*
+ * Canvas columns covered by the cube at horizontal voxel position (x, y) when
+ * seen from the given basis. A face-on cube covers exactly one column; a
+ * diagonal one covers its full projected width, which may span two.
+ */
+void wolf_voxel_footprint_columns(
+    const WolfViewBasis *basis,
+    int x,
+    int y,
+    int column_offset,
+    int *first_column,
+    int *last_column);
+
+/*
  * Render the model as the original engine would draw a sprite: orthographic,
  * one canvas pixel per voxel, viewed horizontally from the given rotation.
  * Each voxel is treated as a cube, so at diagonal angles it covers its true
- * projected width. Optionally records which voxel supplied each pixel.
+ * projected width. column_offset shifts the image sideways, matching the
+ * registration offset found for a hand-drawn frame. Optionally records
+ * which voxel supplied each pixel.
  */
 void wolf_voxel_render_view(
     const WolfVoxelModel *model,
     double rotation_degrees,
+    int column_offset,
     WolfSpriteImage *image,
     int32_t *voxel_for_pixel);
 

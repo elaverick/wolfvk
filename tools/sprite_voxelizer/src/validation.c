@@ -7,6 +7,29 @@
 static const uint8_t sheet_background[4] = {38u, 40u, 52u, 255u};
 static const uint8_t cell_background[4] = {62u, 66u, 82u, 255u};
 
+/* Does the original show this palette index at the pixel or one of its eight neighbours? */
+static bool colour_nearby(const WolfSpriteImage *original, uint8_t palette_index, size_t pixel)
+{
+    int column = (int)(pixel % WOLF_SPRITE_SIZE);
+    int row = (int)(pixel / WOLF_SPRITE_SIZE);
+
+    for (int neighbour_row = row - 1; neighbour_row <= row + 1; ++neighbour_row) {
+        for (int neighbour_column = column - 1; neighbour_column <= column + 1; ++neighbour_column) {
+            size_t neighbour;
+
+            if (neighbour_row < 0 || neighbour_column < 0 ||
+                neighbour_row >= WOLF_SPRITE_SIZE || neighbour_column >= WOLF_SPRITE_SIZE) {
+                continue;
+            }
+            neighbour = wolf_sprite_pixel_index(neighbour_column, neighbour_row);
+            if (original->opaque[neighbour] && original->palette_index[neighbour] == palette_index) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void wolf_compare_views(
     const WolfSpriteImage *original,
     const WolfSpriteImage *rendered,
@@ -31,6 +54,9 @@ void wolf_compare_views(
             if (original->palette_index[pixel] == rendered->palette_index[pixel]) {
                 ++metrics->exact_colour_pixels;
             }
+            if (colour_nearby(original, rendered->palette_index[pixel], pixel)) {
+                ++metrics->near_colour_pixels;
+            }
             for (int channel = 0; channel < 3; ++channel) {
                 colour_error_sum += (double)abs((int)expected[channel] - (int)actual[channel]);
             }
@@ -42,8 +68,49 @@ void wolf_compare_views(
         (double)metrics->shared_pixels / (double)metrics->union_pixels : 1.0;
     metrics->colour_accuracy = metrics->shared_pixels > 0u ?
         (double)metrics->exact_colour_pixels / (double)metrics->shared_pixels : 1.0;
+    metrics->near_colour_accuracy = metrics->shared_pixels > 0u ?
+        (double)metrics->near_colour_pixels / (double)metrics->shared_pixels : 1.0;
     metrics->mean_colour_error = metrics->shared_pixels > 0u ?
         colour_error_sum / (3.0 * (double)metrics->shared_pixels) : 0.0;
+}
+
+double wolf_rotation_set_silhouette_ceiling(
+    const WolfSpriteImage *const *views,
+    int max_relative_shift)
+{
+    double total = 0.0;
+
+    for (int pair = 0; pair < 4; ++pair) {
+        const WolfSpriteImage *near_view = views[pair];
+        const WolfSpriteImage *far_view = views[pair + 4];
+        double best_iou = 0.0;
+
+        for (int shift = -max_relative_shift; shift <= max_relative_shift; ++shift) {
+            size_t shared = 0u;
+            size_t either = 0u;
+
+            for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+                for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+                    /* The far view, mirrored about the actor axis and shifted. */
+                    int mirrored_column = WOLF_SPRITE_SIZE - 1 - column + shift;
+                    bool in_near = near_view->opaque[wolf_sprite_pixel_index(column, row)] != 0u;
+                    bool in_far = mirrored_column >= 0 && mirrored_column < WOLF_SPRITE_SIZE &&
+                        far_view->opaque[wolf_sprite_pixel_index(mirrored_column, row)] != 0u;
+
+                    shared += (in_near && in_far) ? 1u : 0u;
+                    either += (in_near || in_far) ? 1u : 0u;
+                }
+            }
+            if (either > 0u && (double)shared / (double)either > best_iou) {
+                best_iou = (double)shared / (double)either;
+            }
+            if (either == 0u) {
+                best_iou = 1.0;
+            }
+        }
+        total += (1.0 + best_iou) * 0.5;
+    }
+    return total / 4.0;
 }
 
 void wolf_sprite_to_rgba(const WolfSpriteImage *image, const uint8_t *palette_rgba, uint8_t *rgba)

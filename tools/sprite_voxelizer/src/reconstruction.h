@@ -19,22 +19,41 @@ typedef struct WolfMultiViewOptions {
     int diagonal_tolerance_columns;
     /* Connected fragments smaller than this many voxels are discarded as carving noise. */
     size_t minimum_fragment_voxels;
+    /*
+     * Largest sideways shift, in canvas columns, tried when registering each
+     * frame to the shared vertical axis. The artists did not centre every
+     * rotation on exactly the same column; 0 disables registration.
+     */
+    int maximum_registration_shift;
+    /*
+     * After tolerant carving, remove voxels that cover transparent pixels as
+     * long as every drawn pixel stays covered, cutting back the excess
+     * outline that frames rejecting the material would otherwise show.
+     */
+    bool prune_excess_voxels;
 } WolfMultiViewOptions;
 
 WolfMultiViewOptions wolf_multi_view_default_options(void);
 
 /*
- * Rebuild one solid from several rotation frames by space carving (the
- * visual hull), then colour every visible surface voxel by a vote among the
- * frames that see it, weighted toward the frame that faces that surface.
- * Voxels no frame can see inherit the colour of the nearest seen voxel.
+ * Rebuild one solid from several rotation frames. Each frame is first
+ * registered (shifted sideways by whole columns) so that the silhouettes
+ * agree as well as possible; the solid is then space-carved from the
+ * registered silhouettes (the visual hull). Every visible surface voxel
+ * takes the colour that most of the pixels showing it have in the original
+ * frames, ties going to the frame that faces the surface. Voxels no frame
+ * can see inherit the colour of the nearest seen voxel.
+ *
+ * registration_shifts (optional, view_count entries) receives the column
+ * offset of each frame; the first frame is the fixed reference.
  */
 bool wolf_reconstruct_multi_view(
     const WolfSpriteImage *const *views,
     const double *rotation_degrees,
     size_t view_count,
     const WolfMultiViewOptions *options,
-    WolfVoxelModel *model);
+    WolfVoxelModel *model,
+    int *registration_shifts);
 
 /* How depth is invented for a sprite that was only ever drawn from the front. */
 typedef enum WolfDepthProfile {
