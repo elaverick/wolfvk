@@ -25,11 +25,12 @@ typedef struct WolfMultiViewOptions {
     /* Connected fragments smaller than this many voxels are discarded as carving noise. */
     size_t minimum_fragment_voxels;
     /*
-     * Remove material the diagonal frames reject, provided every drawn pixel
-     * of the face-on frames stays covered. This removes the phantom limbs a
-     * four-view hull invents (a walking figure otherwise grows four legs).
+     * Remove material any frame rejects, provided every drawn pixel of the
+     * face-on frames stays covered. This removes the phantom limbs a
+     * four-view hull invents (a walking figure otherwise grows four legs)
+     * and the excess left where opposite frames disagree.
      */
-    bool prune_with_diagonal_views;
+    bool prune_excess_voxels;
 } WolfMultiViewOptions;
 
 WolfMultiViewOptions wolf_multi_view_default_options(void);
@@ -39,10 +40,12 @@ bool wolf_rotation_is_face_on(double rotation_degrees);
 
 /*
  * Rebuild one solid from several rotation frames:
- *  1. register the face-on frames to a common axis and carve their visual hull;
+ *  1. register the face-on frames to a common axis and carve their visual
+ *     hull, taking the union of each opposite pair;
  *  2. register each diagonal frame against that hull;
- *  3. prune hull material the diagonal frames reject without uncovering any
- *     face-on drawn pixel;
+ *  3. prune hull material any frame rejects without uncovering any
+ *     face-on drawn pixel, then restore any face-on drawn pixel the
+ *     intersection lost with a voxel next to the body;
  *  4. colour each surface voxel from the frame that looks most squarely at
  *     it, so every face keeps the crisp texture of the frame drawn for it.
  * Voxels no frame can see inherit the colour of the nearest seen voxel.

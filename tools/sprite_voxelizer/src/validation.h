@@ -54,8 +54,15 @@ void wolf_compare_views(
  * over the four opposite pairs bounds the achievable mean IoU.
  *
  * m is taken at the best relative sideways shift up to max_relative_shift
- * columns, matching the freedom frame registration has.
+ * columns, matching the freedom frame registration has. The pair function
+ * returns (1 + m) / 2 for one pair: the best mean IoU the two views can
+ * reach together, and so the most either can be expected to reach.
  */
+double wolf_opposite_pair_ceiling(
+    const WolfSpriteImage *view,
+    const WolfSpriteImage *opposite_view,
+    int max_relative_shift);
+
 double wolf_rotation_set_silhouette_ceiling(
     const WolfSpriteImage *const *views,
     int max_relative_shift);

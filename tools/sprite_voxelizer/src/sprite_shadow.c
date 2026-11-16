@@ -81,6 +81,62 @@ static void keep_flat_patches(uint8_t *candidates)
     }
 }
 
+/*
+ * After the shadow is lifted, a few shadow-coloured pixels can remain as
+ * crumbs (the dither at a shadow's edge). Any tiny group of shadow colours
+ * in the floor band that no longer touches the object is removed too.
+ */
+static void remove_shadow_crumbs(const WolfSpriteImage *source, int band_top, uint8_t *candidates)
+{
+    uint8_t visited[WOLF_SPRITE_PIXELS];
+    int stack[WOLF_SPRITE_PIXELS];
+    int members[WOLF_SPRITE_PIXELS];
+    const int largest_crumb = 4;
+
+    memset(visited, 0, sizeof(visited));
+    for (int seed = 0; seed < WOLF_SPRITE_PIXELS; ++seed) {
+        int stack_size = 0;
+        int member_count = 0;
+        bool crumb = true;
+
+        if (!source->opaque[seed] || candidates[seed] || visited[seed]) {
+            continue;
+        }
+        visited[seed] = 1u;
+        stack[stack_size++] = seed;
+        while (stack_size > 0) {
+            int pixel = stack[--stack_size];
+            int column = pixel % WOLF_SPRITE_SIZE;
+            int row = pixel / WOLF_SPRITE_SIZE;
+
+            members[member_count++] = pixel;
+            crumb = crumb && row >= band_top && wolf_palette_index_is_shadow(source->palette_index[pixel]);
+            /* Eight-connected, so a diagonal touch still counts as attached to the object. */
+            for (int dy = -1; dy <= 1; ++dy) {
+                for (int dx = -1; dx <= 1; ++dx) {
+                    int next_column = column + dx;
+                    int next_row = row + dy;
+                    int next;
+
+                    if (next_column < 0 || next_row < 0 || next_column >= WOLF_SPRITE_SIZE || next_row >= WOLF_SPRITE_SIZE) {
+                        continue;
+                    }
+                    next = (int)wolf_sprite_pixel_index(next_column, next_row);
+                    if (source->opaque[next] && !candidates[next] && !visited[next]) {
+                        visited[next] = 1u;
+                        stack[stack_size++] = next;
+                    }
+                }
+            }
+        }
+        if (crumb && member_count <= largest_crumb) {
+            for (int member = 0; member < member_count; ++member) {
+                candidates[members[member]] = 1u;
+            }
+        }
+    }
+}
+
 size_t wolf_sprite_remove_floor_shadow(
     const WolfSpriteImage *source,
     WolfSpriteImage *shadow_free,
@@ -126,6 +182,13 @@ size_t wolf_sprite_remove_floor_shadow(
     }
 
     keep_flat_patches(candidates);
+    /* Crumbs only exist where a shadow was found; an object without one is left untouched. */
+    for (size_t pixel = 0u; pixel < WOLF_SPRITE_PIXELS; ++pixel) {
+        if (candidates[pixel]) {
+            remove_shadow_crumbs(source, band_top, candidates);
+            break;
+        }
+    }
     for (size_t pixel = 0u; pixel < WOLF_SPRITE_PIXELS; ++pixel) {
         if (candidates[pixel]) {
             shadow_free->opaque[pixel] = 0u;

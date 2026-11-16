@@ -26,6 +26,8 @@ typedef struct AssetResult {
     double depth_scale_used;
     int depth_extent;
     WolfViewMetrics views[WOLF_ROTATION_COUNT];
+    /* Best IoU this view and its opposite frame allow any solid to reach together. */
+    double pair_ceilings[WOLF_ROTATION_COUNT];
     int registration_shifts[WOLF_ROTATION_COUNT];
     size_t view_count;
     double mean_silhouette_iou;
@@ -33,8 +35,8 @@ typedef struct AssetResult {
     double mean_colour_accuracy;
     double mean_near_colour_accuracy;
     double mean_colour_error;
-    /* Short reason when validation fails, empty otherwise. */
-    char failure[96];
+    /* Every reason validation failed, separated by semicolons; empty when it passed. */
+    char failure[256];
 } AssetResult;
 
 typedef struct SubjectResult {
@@ -232,6 +234,15 @@ static void reconstruct_asset(PipelineState *state, size_t asset_index)
     result->depth_extent = wolf_voxel_model_depth_extent(result->model);
 }
 
+/* Record one more reason for failing validation. */
+static void add_failure(AssetResult *result, const char *reason)
+{
+    size_t used = strlen(result->failure);
+
+    result->passed = false;
+    (void)snprintf(result->failure + used, sizeof(result->failure) - used, "%s%s", used > 0u ? "; " : "", reason);
+}
+
 /* Render the model from each original direction, score it, and decide pass or fail. */
 static void validate_asset(PipelineState *state, size_t asset_index, const char *validation_directory)
 {
@@ -243,6 +254,7 @@ static void validate_asset(PipelineState *state, size_t asset_index, const char 
     WolfSpriteImage rendered[WOLF_ROTATION_COUNT];
     double face_on_near_colour = 0.0;
     int face_on_views = 0;
+    char reason[128];
 
     result->view_count = (size_t)asset->sprite_count;
     result->mean_silhouette_iou = 0.0;
@@ -286,23 +298,28 @@ static void validate_asset(PipelineState *state, size_t asset_index, const char 
         for (size_t view = 0u; view < result->view_count; ++view) {
             double minimum = view % 2u == 0u ? WOLF_ROTATION_MIN_FACE_ON_IOU : WOLF_ROTATION_MIN_DIAGONAL_IOU;
 
+            result->pair_ceilings[view] = wolf_opposite_pair_ceiling(targets[view], targets[(view + 4u) % 8u],
+                2 * state->options->multi_view.maximum_registration_shift);
+            if (view % 2u == 0u && minimum > WOLF_ROTATION_MIN_FRACTION_OF_PAIR_CEILING * result->pair_ceilings[view]) {
+                minimum = WOLF_ROTATION_MIN_FRACTION_OF_PAIR_CEILING * result->pair_ceilings[view];
+            }
             if (result->views[view].silhouette_iou < minimum) {
-                result->passed = false;
-                (void)snprintf(result->failure, sizeof(result->failure),
-                    "rotation %u silhouette IoU %.3f < %.2f", (unsigned)view, result->views[view].silhouette_iou, minimum);
+                (void)snprintf(reason, sizeof(reason), "rotation %u silhouette IoU %.3f < %.2f",
+                    (unsigned)view, result->views[view].silhouette_iou, minimum);
+                add_failure(result, reason);
             }
         }
         if (face_on_near_colour < WOLF_ROTATION_MIN_FACE_ON_NEAR_COLOUR) {
-            result->passed = false;
-            (void)snprintf(result->failure, sizeof(result->failure),
-                "face-on colour within 1px %.3f < %.2f", face_on_near_colour, WOLF_ROTATION_MIN_FACE_ON_NEAR_COLOUR);
+            (void)snprintf(reason, sizeof(reason), "face-on colour within 1px %.3f < %.2f",
+                face_on_near_colour, WOLF_ROTATION_MIN_FACE_ON_NEAR_COLOUR);
+            add_failure(result, reason);
         }
         break;
     case WOLF_ASSET_HAND_BUILT:
         if (result->views[0].silhouette_iou < WOLF_HAND_BUILT_MIN_FRONT_IOU) {
-            result->passed = false;
-            (void)snprintf(result->failure, sizeof(result->failure),
-                "front IoU against reference %.3f < %.2f", result->views[0].silhouette_iou, WOLF_HAND_BUILT_MIN_FRONT_IOU);
+            (void)snprintf(reason, sizeof(reason), "front IoU against reference %.3f < %.2f",
+                result->views[0].silhouette_iou, WOLF_HAND_BUILT_MIN_FRONT_IOU);
+            add_failure(result, reason);
         }
         break;
     case WOLF_ASSET_SINGLE_VIEW:
@@ -311,13 +328,11 @@ static void validate_asset(PipelineState *state, size_t asset_index, const char 
         /* A camera-facing frame must reproduce its shadow-free original exactly. */
         if (result->views[0].shared_pixels != result->views[0].union_pixels ||
             result->views[0].exact_colour_pixels != result->views[0].shared_pixels) {
-            result->passed = false;
-            (void)snprintf(result->failure, sizeof(result->failure), "front view differs from the original");
+            add_failure(result, "front view differs from the original");
         }
         if (is_first_person(asset) && result->depth_extent < WOLF_FIRST_PERSON_MIN_DEPTH) {
-            result->passed = false;
-            (void)snprintf(result->failure, sizeof(result->failure),
-                "weapon reaches only %d voxels into the screen", result->depth_extent);
+            (void)snprintf(reason, sizeof(reason), "weapon reaches only %d voxels into the screen", result->depth_extent);
+            add_failure(result, reason);
         }
         break;
     }
@@ -449,9 +464,11 @@ static void write_pose_json(FILE *file, const PipelineState *state, int asset_in
         result->mean_colour_error);
     for (size_t view = 0u; view < result->view_count; ++view) {
         fprintf(file, "%s{\"rotation\": %u, \"registration_offset_columns\": %d, \"silhouette_iou\": %.4f, "
-            "\"colour_accuracy\": %.4f, \"near_colour_accuracy\": %.4f}",
+            "\"pair_ceiling\": %.4f, \"colour_accuracy\": %.4f, \"near_colour_accuracy\": %.4f}",
             view > 0u ? ", " : "", (unsigned)view, result->registration_shifts[view],
-            result->views[view].silhouette_iou, result->views[view].colour_accuracy,
+            result->views[view].silhouette_iou,
+            asset->method == WOLF_ASSET_ROTATION_SET ? result->pair_ceilings[view] : 1.0,
+            result->views[view].colour_accuracy,
             result->views[view].near_colour_accuracy);
     }
     fprintf(file, "]}}");

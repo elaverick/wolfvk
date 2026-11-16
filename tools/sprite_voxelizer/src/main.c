@@ -18,8 +18,8 @@ static void print_usage(const char *program)
         "  --output <dir>             Output directory (default: sprite_voxels)\n"
         "  --only <subject>           Rebuild one subject, e.g. grd, dog or stat_1\n"
         "  --max-shift <n>            Largest frame registration shift in columns (default 3)\n"
-        "  --min-fragment <n>         Drop carved fragments smaller than n voxels (default 8)\n"
-        "  --no-diagonal-prune        Keep material only the diagonal frames reject\n"
+        "  --min-fragment <n>         Drop carved fragments smaller than n voxels (default 20)\n"
+        "  --no-prune                 Keep hull material that some frames reject\n"
         "  --no-sheets                Skip PNG comparison sheets and the HTML report\n"
         "  --no-viewer-data           Skip viewer_data.js for the HTML viewer\n"
         "  --help                     Show this message\n",
@@ -59,8 +59,8 @@ int main(int argc, char **argv)
             print_usage(argv[0]);
             return 0;
         }
-        if (strcmp(name, "--no-diagonal-prune") == 0) {
-            options.multi_view.prune_with_diagonal_views = false;
+        if (strcmp(name, "--no-prune") == 0) {
+            options.multi_view.prune_excess_voxels = false;
             continue;
         }
         if (strcmp(name, "--no-sheets") == 0) {

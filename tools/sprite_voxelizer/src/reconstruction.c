@@ -13,8 +13,8 @@ WolfMultiViewOptions wolf_multi_view_default_options(void)
     WolfMultiViewOptions options;
 
     options.maximum_registration_shift = 3;
-    options.minimum_fragment_voxels = 8u;
-    options.prune_with_diagonal_views = true;
+    options.minimum_fragment_voxels = 20u;
+    options.prune_excess_voxels = true;
     return options;
 }
 
@@ -38,7 +38,14 @@ static bool view_draws(const WolfSpriteImage *view, int column, int row)
     return column >= 0 && column < WOLF_SPRITE_SIZE && view->opaque[wolf_sprite_pixel_index(column, row)] != 0u;
 }
 
-/* Keep exactly the voxels whose centres every listed view draws. */
+/*
+ * Carve the hull of the listed views. Opposite views look along the same
+ * axis and should draw mirror-image outlines, but the artists' front and
+ * back (or left and right) frames disagree by a few pixels. Intersecting
+ * them would cut away material one of them draws, so for each viewing axis
+ * a voxel survives if either view of the pair draws it; the axes are then
+ * intersected. Excess this leaves is pruned afterwards.
+ */
 static void carve_hull(
     const WolfSpriteImage *const *views,
     const WolfViewBasis *bases,
@@ -47,18 +54,45 @@ static void carve_hull(
     size_t list_count,
     WolfVoxelModel *model)
 {
+    int axis_of[MAX_VIEWS];
+    int axis_count = 0;
+
+    for (size_t entry = 0u; entry < list_count; ++entry) {
+        const WolfViewBasis *basis = &bases[view_list[entry]];
+
+        axis_of[entry] = -1;
+        for (size_t earlier = 0u; earlier < entry; ++earlier) {
+            const WolfViewBasis *other = &bases[view_list[earlier]];
+
+            if (fabs(basis->right_x * other->right_x + basis->right_y * other->right_y) > 0.999) {
+                axis_of[entry] = axis_of[earlier];
+                break;
+            }
+        }
+        if (axis_of[entry] < 0) {
+            axis_of[entry] = axis_count++;
+        }
+    }
+
     wolf_voxel_model_clear(model);
     for (int z = 0; z < WOLF_VOXEL_DIM; ++z) {
         int row = wolf_voxel_row_for_layer(z);
 
         for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
             for (int x = 0; x < WOLF_VOXEL_DIM; ++x) {
+                bool axis_drawn[MAX_VIEWS] = {false};
                 bool inside = true;
 
-                for (size_t entry = 0u; entry < list_count && inside; ++entry) {
+                for (size_t entry = 0u; entry < list_count; ++entry) {
                     size_t view = view_list[entry];
 
-                    inside = view_draws(views[view], centre_column(&bases[view], x, y, shifts[view]), row);
+                    if (!axis_drawn[axis_of[entry]]) {
+                        axis_drawn[axis_of[entry]] =
+                            view_draws(views[view], centre_column(&bases[view], x, y, shifts[view]), row);
+                    }
+                }
+                for (int axis = 0; axis < axis_count && inside; ++axis) {
+                    inside = axis_drawn[axis];
                 }
                 model->occupied[wolf_voxel_index(x, y, z)] = inside ? 1u : 0u;
             }
@@ -237,13 +271,15 @@ static int compare_prune_candidates(const void *left, const void *right)
 
 /*
  * Four orthogonal silhouettes cannot tell which leg is forward, so the
- * face-on hull of a walking figure holds both legs in both positions. The
- * diagonal frames disambiguate: remove every voxel a diagonal frame
- * rejects, as long as each drawn pixel of every face-on frame remains
- * covered by another voxel. The face-on frames are therefore always
- * reproduced in outline, while the phantom material is cut away.
+ * face-on hull of a walking figure holds both legs in both positions, and
+ * the paired hull also keeps whatever only one of two opposite frames
+ * draws. Remove every voxel some frame rejects, most-rejected and outermost
+ * first, as long as each drawn pixel of every face-on frame remains covered
+ * by another voxel. The face-on frames are therefore always reproduced in
+ * outline, while phantom and excess material is cut away; the diagonal
+ * frames decide which of the ambiguous material survives.
  */
-static void prune_with_diagonal_views(
+static void prune_excess_voxels(
     const WolfSpriteImage *const *views,
     const WolfViewBasis *bases,
     const int *shifts,
@@ -271,7 +307,6 @@ static void prune_with_diagonal_views(
             for (int x = 0; x < WOLF_VOXEL_DIM; ++x) {
                 size_t voxel = wolf_voxel_index(x, y, z);
                 int rejections = 0;
-                bool diagonal_rejects = false;
 
                 if (!model->occupied[voxel]) {
                     continue;
@@ -282,7 +317,6 @@ static void prune_with_diagonal_views(
                     bool rejected = !view_draws(views[view], centre_column(&bases[view], x, y, shifts[view]), row);
 
                     rejections += rejected ? 1 : 0;
-                    diagonal_rejects = diagonal_rejects || (rejected && !face_on[view]);
                     wolf_voxel_footprint_columns(&bases[view], x, y, shifts[view], &first_column, &last_column);
                     for (int column = first_column; column <= last_column; ++column) {
                         if (column >= 0 && column < WOLF_SPRITE_SIZE) {
@@ -290,7 +324,7 @@ static void prune_with_diagonal_views(
                         }
                     }
                 }
-                if (diagonal_rejects) {
+                if (rejections > 0) {
                     candidates[candidate_count].voxel = (uint32_t)voxel;
                     candidates[candidate_count].rejections = rejections;
                     candidates[candidate_count].radius_squared =
@@ -349,6 +383,100 @@ static void prune_with_diagonal_views(
     }
     free(coverage);
     free(candidates);
+}
+
+/*
+ * Where the face-on frames disagree about a limb (the side frame's stride
+ * foot sits at a height the front frame does not draw), intersecting their
+ * silhouettes cuts the limb away. For every face-on drawn pixel left
+ * uncovered, add voxels on that pixel's line of sight at the position
+ * closest to the existing body in the same layer, so the frame's outline is
+ * complete and the restored part attaches to the body. Restored parts are
+ * three voxels deep so a foot becomes a block rather than a paper-thin plate.
+ */
+static void repair_face_on_coverage(
+    const WolfSpriteImage *const *views,
+    const double *rotation_degrees,
+    const WolfViewBasis *bases,
+    const int *shifts,
+    const size_t *view_list,
+    size_t list_count,
+    WolfVoxelModel *model)
+{
+    WolfSpriteImage rendered;
+
+    for (size_t entry = 0u; entry < list_count; ++entry) {
+        size_t view = view_list[entry];
+
+        wolf_voxel_render_view(model, rotation_degrees[view], shifts[view], &rendered, NULL);
+        for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+            int z = wolf_voxel_row_for_layer(row);
+            int layer_x[WOLF_VOXEL_DIM * WOLF_VOXEL_DIM];
+            int layer_y[WOLF_VOXEL_DIM * WOLF_VOXEL_DIM];
+            int layer_count = 0;
+
+            /* The body's voxels in this layer, as they stand before this row is repaired. */
+            for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
+                for (int x = 0; x < WOLF_VOXEL_DIM; ++x) {
+                    if (model->occupied[wolf_voxel_index(x, y, z)]) {
+                        layer_x[layer_count] = x;
+                        layer_y[layer_count] = y;
+                        ++layer_count;
+                    }
+                }
+            }
+            for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+                size_t pixel = wolf_sprite_pixel_index(column, row);
+                int best_x = -1;
+                int best_y = -1;
+                double best_distance = DBL_MAX;
+
+                if (!views[view]->opaque[pixel] || rendered.opaque[pixel]) {
+                    continue;
+                }
+                for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
+                    for (int x = 0; x < WOLF_VOXEL_DIM; ++x) {
+                        double nearest = layer_count == 0 ?
+                            fabs(wolf_voxel_center_offset(x)) + fabs(wolf_voxel_center_offset(y)) : DBL_MAX;
+
+                        if (centre_column(&bases[view], x, y, shifts[view]) != column) {
+                            continue;
+                        }
+                        for (int member = 0; member < layer_count; ++member) {
+                            double dx = (double)(x - layer_x[member]);
+                            double dy = (double)(y - layer_y[member]);
+                            double distance = dx * dx + dy * dy;
+
+                            nearest = distance < nearest ? distance : nearest;
+                        }
+                        if (nearest < best_distance) {
+                            best_distance = nearest;
+                            best_x = x;
+                            best_y = y;
+                        }
+                    }
+                }
+                /*
+                 * Only restore parts that attach to the body; a pixel whose
+                 * line of sight passes nowhere near it is a contradiction
+                 * between frames, and filling it would leave a floating block.
+                 */
+                if (best_x >= 0 && best_distance <= 25.0) {
+                    int step_x = (int)lround(bases[view].toward_viewer_x);
+                    int step_y = (int)lround(bases[view].toward_viewer_y);
+
+                    for (int offset = -1; offset <= 1; ++offset) {
+                        int x = best_x + offset * step_x;
+                        int y = best_y + offset * step_y;
+
+                        if (wolf_voxel_in_bounds(x, y, z)) {
+                            model->occupied[wolf_voxel_index(x, y, z)] = 1u;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 /*
@@ -434,11 +562,31 @@ static void propagate_colours(WolfVoxelModel *model, uint8_t *coloured)
     free(queue);
 }
 
+/* True when a drawn pixel touches transparency, i.e. lies on the frame's outline. */
+static bool on_silhouette_outline(const WolfSpriteImage *view, size_t pixel)
+{
+    int column = (int)(pixel % WOLF_SPRITE_SIZE);
+    int row = (int)(pixel / WOLF_SPRITE_SIZE);
+
+    return !view_draws(view, column - 1, row) || !view_draws(view, column + 1, row) ||
+        row == 0 || row == WOLF_SPRITE_SIZE - 1 ||
+        !view->opaque[wolf_sprite_pixel_index(column, row - 1)] ||
+        !view->opaque[wolf_sprite_pixel_index(column, row + 1)];
+}
+
 /*
  * Colour each visible voxel from the frame that faces it most squarely.
  * Mixing frames voxel by voxel turns the dithered shading into noise; this
- * keeps each side's texture intact. Face-on frames get a small preference
- * because they were drawn consistently with one another.
+ * keeps each side's texture intact. Face-on frames always take precedence
+ * over diagonal ones, so the front, sides and back reproduce their own
+ * frames and the independently drawn diagonals only colour what no face-on
+ * frame shows.
+ *
+ * Pixel art outlines every silhouette in dark colours. A voxel on a frame's
+ * outline is usually the side of the body, which another frame sees face
+ * on, so outline pixels lose to any frame that sees the voxel inside its
+ * silhouette; otherwise the outlines would become dark blotches on the
+ * model's surfaces.
  */
 static bool colour_from_facing_views(
     const WolfSpriteImage *const *views,
@@ -463,7 +611,7 @@ static bool colour_from_facing_views(
     }
 
     for (size_t view = 0u; view < view_count; ++view) {
-        double preference = fabs(bases[view].half_footprint - 0.5) < 1e-6 ? 0.15 : 0.0;
+        double preference = fabs(bases[view].half_footprint - 0.5) < 1e-6 ? 10.0 : 0.0;
 
         wolf_voxel_render_view(model, rotation_degrees[view], shifts[view], &rendered, voxel_for_pixel);
         for (size_t pixel = 0u; pixel < WOLF_SPRITE_PIXELS; ++pixel) {
@@ -481,6 +629,9 @@ static bool colour_from_facing_views(
                 (int)((size_t)voxel / (WOLF_VOXEL_DIM * WOLF_VOXEL_DIM)),
                 &normal_x, &normal_y);
             facing = normal_x * bases[view].toward_viewer_x + normal_y * bases[view].toward_viewer_y + preference;
+            if (on_silhouette_outline(views[view], pixel)) {
+                facing -= 2.5;
+            }
             if (facing > best_facing[voxel]) {
                 best_facing[voxel] = facing;
                 model->palette_index[voxel] = views[view]->palette_index[pixel];
@@ -553,10 +704,13 @@ bool wolf_reconstruct_multi_view(
     }
 
     remove_small_fragments(model, options->minimum_fragment_voxels);
-    if (options->prune_with_diagonal_views && any_diagonal) {
-        prune_with_diagonal_views(views, bases, shifts, view_count, model);
+    if (options->prune_excess_voxels) {
+        prune_excess_voxels(views, bases, shifts, view_count, model);
         remove_small_fragments(model, options->minimum_fragment_voxels);
     }
+    repair_face_on_coverage(views, rotation_degrees, bases, shifts, face_on_views, face_on_count, model);
+    /* A repair with no body nearby (a lone ear tip) would float; drop such specks. */
+    remove_small_fragments(model, options->minimum_fragment_voxels);
     if (registration_shifts != NULL) {
         memcpy(registration_shifts, shifts, sizeof(int) * view_count);
     }

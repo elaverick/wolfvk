@@ -74,6 +74,39 @@ void wolf_compare_views(
         colour_error_sum / (3.0 * (double)metrics->shared_pixels) : 0.0;
 }
 
+double wolf_opposite_pair_ceiling(
+    const WolfSpriteImage *view,
+    const WolfSpriteImage *opposite_view,
+    int max_relative_shift)
+{
+    double best_iou = 0.0;
+
+    for (int shift = -max_relative_shift; shift <= max_relative_shift; ++shift) {
+        size_t shared = 0u;
+        size_t either = 0u;
+
+        for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+            for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+                /* The opposite view, mirrored about the actor axis and shifted. */
+                int mirrored_column = WOLF_SPRITE_SIZE - 1 - column + shift;
+                bool in_view = view->opaque[wolf_sprite_pixel_index(column, row)] != 0u;
+                bool in_opposite = mirrored_column >= 0 && mirrored_column < WOLF_SPRITE_SIZE &&
+                    opposite_view->opaque[wolf_sprite_pixel_index(mirrored_column, row)] != 0u;
+
+                shared += (in_view && in_opposite) ? 1u : 0u;
+                either += (in_view || in_opposite) ? 1u : 0u;
+            }
+        }
+        if (either == 0u) {
+            return 1.0;
+        }
+        if ((double)shared / (double)either > best_iou) {
+            best_iou = (double)shared / (double)either;
+        }
+    }
+    return (1.0 + best_iou) * 0.5;
+}
+
 double wolf_rotation_set_silhouette_ceiling(
     const WolfSpriteImage *const *views,
     int max_relative_shift)
@@ -81,34 +114,7 @@ double wolf_rotation_set_silhouette_ceiling(
     double total = 0.0;
 
     for (int pair = 0; pair < 4; ++pair) {
-        const WolfSpriteImage *near_view = views[pair];
-        const WolfSpriteImage *far_view = views[pair + 4];
-        double best_iou = 0.0;
-
-        for (int shift = -max_relative_shift; shift <= max_relative_shift; ++shift) {
-            size_t shared = 0u;
-            size_t either = 0u;
-
-            for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
-                for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
-                    /* The far view, mirrored about the actor axis and shifted. */
-                    int mirrored_column = WOLF_SPRITE_SIZE - 1 - column + shift;
-                    bool in_near = near_view->opaque[wolf_sprite_pixel_index(column, row)] != 0u;
-                    bool in_far = mirrored_column >= 0 && mirrored_column < WOLF_SPRITE_SIZE &&
-                        far_view->opaque[wolf_sprite_pixel_index(mirrored_column, row)] != 0u;
-
-                    shared += (in_near && in_far) ? 1u : 0u;
-                    either += (in_near || in_far) ? 1u : 0u;
-                }
-            }
-            if (either > 0u && (double)shared / (double)either > best_iou) {
-                best_iou = (double)shared / (double)either;
-            }
-            if (either == 0u) {
-                best_iou = 1.0;
-            }
-        }
-        total += (1.0 + best_iou) * 0.5;
+        total += wolf_opposite_pair_ceiling(views[pair], views[pair + 4], max_relative_shift);
     }
     return total / 4.0;
 }
