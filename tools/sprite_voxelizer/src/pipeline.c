@@ -45,9 +45,23 @@ typedef struct PipelineState {
     bool animation_written[WOLF_ANIMATION_CAPACITY];
 } PipelineState;
 
+/*
+ * Join a directory and a file name. An over-long result is truncated to an
+ * empty path, so a later open fails cleanly instead of touching a
+ * different, cut-short file name.
+ */
 static void join_path(char *path, const char *directory, const char *leaf)
 {
-    (void)snprintf(path, PATH_LENGTH, "%s/%s", directory, leaf);
+    size_t directory_length = strlen(directory);
+    size_t leaf_length = strlen(leaf);
+
+    if (directory_length + 1u + leaf_length + 1u > PATH_LENGTH) {
+        path[0] = '\0';
+        return;
+    }
+    memcpy(path, directory, directory_length);
+    path[directory_length] = '/';
+    memcpy(path + directory_length + 1u, leaf, leaf_length + 1u);
 }
 
 static const char *profile_name(WolfDepthProfile profile)

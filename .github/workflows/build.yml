@@ -86,3 +86,29 @@ jobs:
           path: build/WolfVK-textured-demo-windows-x64.zip
           if-no-files-found: error
           retention-days: 30
+
+  # The offline sprite voxelizer is a separate CMake project under tools/.
+  # Its tests use synthetic original-format data, so no game files are needed.
+  sprite-voxelizer:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: cmake -S tools/sprite_voxelizer -B build-tools -A x64 -DBUILD_TESTING=ON
+
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S tools/sprite_voxelizer -B build-tools -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+
+      - name: Build
+        run: cmake --build build-tools --config Release --parallel
+
+      - name: Run tests
+        run: ctest --test-dir build-tools -C Release --output-on-failure

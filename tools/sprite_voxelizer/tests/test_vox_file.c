@@ -97,7 +97,7 @@ void test_vox_colour_mapping_handles_the_last_palette_entry(void)
     TEST_ASSERT_EQUAL_UINT8(1u, wolf_vox_colour_for_palette_index(wolf_game_palette_rgba, 0u));
     TEST_ASSERT_EQUAL_UINT8(255u, wolf_vox_colour_for_palette_index(wolf_game_palette_rgba, 254u));
     substitute = wolf_vox_colour_for_palette_index(wolf_game_palette_rgba, 255u);
-    TEST_ASSERT_TRUE(substitute >= 1u && substitute <= 255u);
+    TEST_ASSERT_NOT_EQUAL(0, substitute);
     chosen = wolf_game_palette_rgba + (size_t)(substitute - 1u) * 4u;
     TEST_ASSERT_INT_WITHIN(64, original[0], chosen[0]);
     TEST_ASSERT_INT_WITHIN(64, original[2], chosen[2]);
