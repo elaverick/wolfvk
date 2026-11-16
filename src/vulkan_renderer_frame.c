@@ -574,6 +574,7 @@ static bool create_graphics_pipelines(VulkanRenderer *renderer)
     VkVertexInputBindingDescription vertex_binding = {0};
     VkVertexInputAttributeDescription vertex_attributes[5] = {0};
     VkPipelineDepthStencilStateCreateInfo depth_stencil = {0};
+    VkPipelineDepthStencilStateCreateInfo overlay_depth_stencil = {0};
     VkPushConstantRange view_projection_range = {0};
     VkPipelineInputAssemblyStateCreateInfo input_assembly = {0};
     VkViewport viewport = {0};
