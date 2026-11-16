@@ -1,5 +1,7 @@
 #include "unity.h"
 
+#include <stdlib.h>
+
 #include "game_palette.h"
 #include "reconstruction.h"
 #include "test_support.h"
@@ -347,6 +349,149 @@ void test_cage_profile_puts_bars_around_the_contents(void)
     TEST_ASSERT_TRUE(model->occupied[wolf_voxel_index(31, 31, 63 - 35)]);
     TEST_ASSERT_EQUAL_UINT8(16u, model->palette_index[wolf_voxel_index(31, 31, 63 - 35)]);
     wolf_voxel_model_destroy(model);
+}
+
+/* A bar crossing in front of the prisoner does not cut it in two: the prisoner continues behind it. */
+void test_cage_prisoner_continues_behind_bars(void)
+{
+    WolfSpriteImage cage;
+    WolfVoxelModel *model = wolf_voxel_model_create();
+    uint8_t bar_colours[256] = {0};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_CAGE, 1.0, 32.0, 0.0, bar_colours, false};
+
+    bar_colours[60] = 1u;
+    wolf_sprite_image_clear(&cage);
+    test_fill_rectangle(&cage, 28, 28, 36, 42, 16u);   /* the prisoner, drawn first */
+    test_fill_rectangle(&cage, 20, 20, 43, 21, 60u);   /* top hoop */
+    test_fill_rectangle(&cage, 20, 49, 43, 50, 60u);   /* bottom hoop */
+    test_fill_rectangle(&cage, 20, 22, 20, 48, 60u);   /* outer bars */
+    test_fill_rectangle(&cage, 43, 22, 43, 48, 60u);
+    test_fill_rectangle(&cage, 32, 22, 32, 48, 60u);   /* a bar across the prisoner */
+    test_fill_rectangle(&cage, 20, 35, 43, 36, 60u);   /* a hoop across the prisoner */
+    wolf_reconstruct_single_view(&cage, &options, model);
+    assert_front_view_exact(model, &cage);
+
+    /* Behind the vertical bar and the horizontal hoop the prisoner is solid, in its own colour. */
+    TEST_ASSERT_TRUE(model->occupied[wolf_voxel_index(32, 31, 63 - 30)]);
+    TEST_ASSERT_EQUAL_UINT8(16u, model->palette_index[wolf_voxel_index(32, 31, 63 - 30)]);
+    TEST_ASSERT_TRUE(model->occupied[wolf_voxel_index(30, 31, 63 - 35)]);
+    TEST_ASSERT_EQUAL_UINT8(16u, model->palette_index[wolf_voxel_index(30, 31, 63 - 35)]);
+    /* Outside the prisoner the cage stays empty in the middle. */
+    TEST_ASSERT_FALSE(model->occupied[wolf_voxel_index(24, 31, 63 - 30)]);
+    wolf_voxel_model_destroy(model);
+}
+
+/* Number of occupied voxels joined through faces to the first occupied voxel. */
+static size_t piece_containing_first_voxel(const WolfVoxelModel *model)
+{
+    static const int offsets[6][3] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+    uint8_t *seen = calloc(WOLF_VOXEL_COUNT, 1u);
+    size_t *queue = malloc(sizeof(size_t) * WOLF_VOXEL_COUNT);
+    size_t head = 0u;
+    size_t tail = 0u;
+
+    TEST_ASSERT_NOT_NULL(seen);
+    TEST_ASSERT_NOT_NULL(queue);
+    for (size_t voxel = 0u; voxel < WOLF_VOXEL_COUNT && tail == 0u; ++voxel) {
+        if (model->occupied[voxel]) {
+            seen[voxel] = 1u;
+            queue[tail++] = voxel;
+        }
+    }
+    while (head < tail) {
+        size_t voxel = queue[head++];
+        int x = (int)(voxel % WOLF_VOXEL_DIM);
+        int y = (int)((voxel / WOLF_VOXEL_DIM) % WOLF_VOXEL_DIM);
+        int z = (int)(voxel / (WOLF_VOXEL_DIM * WOLF_VOXEL_DIM));
+
+        for (int face = 0; face < 6; ++face) {
+            int nx = x + offsets[face][0];
+            int ny = y + offsets[face][1];
+            int nz = z + offsets[face][2];
+            size_t neighbour;
+
+            if (!wolf_voxel_in_bounds(nx, ny, nz)) {
+                continue;
+            }
+            neighbour = wolf_voxel_index(nx, ny, nz);
+            if (model->occupied[neighbour] && !seen[neighbour]) {
+                seen[neighbour] = 1u;
+                queue[tail++] = neighbour;
+            }
+        }
+    }
+    free(seen);
+    free(queue);
+    return tail;
+}
+
+/* Occupied face neighbours of a voxel; the floor supports a voxel standing on it. */
+static int face_neighbours(const WolfVoxelModel *model, int x, int y, int z)
+{
+    static const int offsets[6][3] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+    int count = z == 0 ? 1 : 0;
+
+    for (int face = 0; face < 6; ++face) {
+        int nx = x + offsets[face][0];
+        int ny = y + offsets[face][1];
+        int nz = z + offsets[face][2];
+
+        if (wolf_voxel_in_bounds(nx, ny, nz) && model->occupied[wolf_voxel_index(nx, ny, nz)]) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+/*
+ * A figure with a thin arm rebuilt from its eight views comes out as one
+ * piece with no loose flakes: everything joins the body, the arm survives,
+ * and no voxel hangs by a single face.
+ */
+void test_multi_view_result_is_one_solid_piece(void)
+{
+    WolfVoxelModel *truth = wolf_voxel_model_create();
+    WolfVoxelModel *rebuilt = wolf_voxel_model_create();
+    WolfSpriteImage views[8];
+    const WolfSpriteImage *view_pointers[8];
+    double angles[8];
+    int shifts[8];
+    WolfMultiViewOptions options = wolf_multi_view_default_options();
+    size_t weak = 0u;
+    bool arm = false;
+
+    test_make_cylinder_model(truth, 7.0, 44);
+    /* An arm two voxels thick held out to the side at shoulder height. */
+    for (int z = 30; z <= 31; ++z) {
+        for (int y = 31; y <= 32; ++y) {
+            for (int x = 38; x <= 48; ++x) {
+                truth->occupied[wolf_voxel_index(x, y, z)] = 1u;
+                truth->palette_index[wolf_voxel_index(x, y, z)] = 90u;
+            }
+        }
+    }
+    render_rotations(truth, views, angles);
+    for (int rotation = 0; rotation < 8; ++rotation) {
+        view_pointers[rotation] = &views[rotation];
+    }
+    TEST_ASSERT_TRUE(wolf_reconstruct_multi_view(view_pointers, angles, 8u, &options, rebuilt, shifts));
+    TEST_ASSERT_EQUAL_size_t(wolf_voxel_model_count(rebuilt), piece_containing_first_voxel(rebuilt));
+
+    for (int z = 0; z < WOLF_VOXEL_DIM; ++z) {
+        for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
+            for (int x = 0; x < WOLF_VOXEL_DIM; ++x) {
+                if (!rebuilt->occupied[wolf_voxel_index(x, y, z)]) {
+                    continue;
+                }
+                weak += face_neighbours(rebuilt, x, y, z) < 2 ? 1u : 0u;
+                arm = arm || (x >= 46 && rebuilt->palette_index[wolf_voxel_index(x, y, z)] == 90u);
+            }
+        }
+    }
+    TEST_ASSERT_EQUAL_size_t(0u, weak);
+    TEST_ASSERT_TRUE(arm);
+    wolf_voxel_model_destroy(truth);
+    wolf_voxel_model_destroy(rebuilt);
 }
 
 /* A figure drawn only from the front gets one face: hair on the back of the head, plain body behind. */

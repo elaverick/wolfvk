@@ -116,3 +116,86 @@ void test_gibs_model_lays_blood_flat_under_the_skull(void)
     TEST_ASSERT_TRUE(wolf_voxel_model_depth_extent(model) >= 12);
     wolf_voxel_model_destroy(model);
 }
+
+/* A well sprite: grey brick wall, a light rim along the top and an opening showing the inside. */
+static void make_well_reference(WolfSpriteImage *reference, uint8_t inside)
+{
+    wolf_sprite_image_clear(reference);
+    test_fill_rectangle(reference, 16, 40, 47, 59, 24u);    /* brick wall */
+    test_fill_rectangle(reference, 20, 60, 43, 61, 24u);    /* bottom edge, narrowed by perspective */
+    test_fill_rectangle(reference, 16, 40, 47, 42, 16u);    /* light rim */
+    test_fill_rectangle(reference, 20, 44, 43, 45, inside); /* the opening */
+}
+
+/* Leftmost and rightmost occupied x on the row y = 31 at layer z, through the wall. */
+static void ring_extent(const WolfVoxelModel *model, int z, int *left, int *right)
+{
+    *left = -1;
+    *right = -1;
+    for (int x = 0; x < WOLF_VOXEL_DIM; ++x) {
+        if (model->occupied[wolf_voxel_index(x, 31, z)]) {
+            *left = *left < 0 ? x : *left;
+            *right = x;
+        }
+    }
+}
+
+/* The well is a hollow ring of one radius from bottom to rim, open above a dark floor. */
+void test_well_model_is_a_hollow_ring_of_constant_radius(void)
+{
+    WolfVoxelModel *model = wolf_voxel_model_create();
+    WolfSpriteImage reference;
+    int bottom_left;
+    int bottom_right;
+    int top_left;
+    int top_right;
+    int front = -1;
+    int back = -1;
+
+    make_well_reference(&reference, 8u);
+    TEST_ASSERT_TRUE(wolf_build_hand_model(WOLF_HAND_BUILT_WELL, &reference, model));
+    ring_extent(model, 1, &bottom_left, &bottom_right);
+    ring_extent(model, 15, &top_left, &top_right);
+    /* No narrowing neck: the perspective-narrowed bottom rows do not shrink the wall. */
+    TEST_ASSERT_EQUAL_INT(top_left, bottom_left);
+    TEST_ASSERT_EQUAL_INT(top_right, bottom_right);
+    TEST_ASSERT_INT_WITHIN(1, 32, bottom_right - bottom_left + 1);
+    /* As deep as it is wide, and hollow: the centre is open above the floor. */
+    TEST_ASSERT_DOUBLE_WITHIN(0.1, 1.0, wolf_voxel_model_depth_ratio(model));
+    TEST_ASSERT_FALSE(model->occupied[wolf_voxel_index(31, 31, 8)]);
+    TEST_ASSERT_EQUAL_UINT8(8u, model->palette_index[wolf_voxel_index(31, 31, 0)]);
+    /* Bricks below, the light rim on top, all round the back as well as the front. */
+    for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
+        if (model->occupied[wolf_voxel_index(31, y, 5)]) {
+            front = front < 0 ? y : front;
+            back = y;
+        }
+    }
+    TEST_ASSERT_TRUE(front >= 0 && front <= 17 && back >= 46);
+    TEST_ASSERT_EQUAL_UINT8(24u, model->palette_index[wolf_voxel_index(31, front, 5)]);
+    TEST_ASSERT_EQUAL_UINT8(24u, model->palette_index[wolf_voxel_index(31, back, 5)]);
+    TEST_ASSERT_TRUE(has_colour_at_or_above(model, 16u, 17));
+    TEST_ASSERT_FALSE(has_colour_at_or_above(model, 1u, 18));
+    wolf_voxel_model_destroy(model);
+}
+
+/* Water seen through the opening fills the shaft to just below the rim. */
+void test_well_model_holds_the_sprite_water(void)
+{
+    WolfVoxelModel *model = wolf_voxel_model_create();
+    WolfSpriteImage reference;
+
+    make_well_reference(&reference, 151u);
+    TEST_ASSERT_TRUE(wolf_build_hand_model(WOLF_HAND_BUILT_WELL, &reference, model));
+    TEST_ASSERT_EQUAL_UINT8(151u, model->palette_index[wolf_voxel_index(31, 31, 12)]);
+    TEST_ASSERT_TRUE(model->occupied[wolf_voxel_index(31, 31, 12)]);
+    TEST_ASSERT_FALSE(model->occupied[wolf_voxel_index(31, 31, 13)]);
+
+    /* A sprite too short to be a well builds nothing. */
+    wolf_voxel_model_clear(model);
+    wolf_sprite_image_clear(&reference);
+    test_fill_rectangle(&reference, 16, 58, 47, 63, 24u);
+    TEST_ASSERT_TRUE(wolf_build_hand_model(WOLF_HAND_BUILT_WELL, &reference, model));
+    TEST_ASSERT_EQUAL_size_t(0u, wolf_voxel_model_count(model));
+    wolf_voxel_model_destroy(model);
+}

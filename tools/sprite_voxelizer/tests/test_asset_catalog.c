@@ -144,6 +144,8 @@ void test_catalog_assigns_reconstruction_methods(void)
     TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_FOOD, asset_for(catalog, "SPR_STAT_24")->hand_built);
     TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_FIRST_AID, asset_for(catalog, "SPR_STAT_25")->hand_built);
     TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_GIBS, asset_for(catalog, "SPR_STAT_34")->hand_built);
+    TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_WELL, asset_for(catalog, "SPR_STAT_36")->hand_built);
+    TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_WELL, asset_for(catalog, "SPR_STAT_37")->hand_built);
     /* Actors drawn only from the front get one face; objects keep their drawing all through. */
     TEST_ASSERT_TRUE(asset_for(catalog, "SPR_BOSS_W1")->single_view.plain_back);
     TEST_ASSERT_TRUE(asset_for(catalog, "SPR_GRD_DIE_1")->single_view.plain_back);

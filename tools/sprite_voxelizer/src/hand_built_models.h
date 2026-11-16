@@ -27,7 +27,15 @@ typedef enum WolfHandBuiltModel {
      * is laid out in perspective (rows higher up the sprite lie further
      * away) so the puddle and bones lie flat.
      */
-    WOLF_HAND_BUILT_GIBS
+    WOLF_HAND_BUILT_GIBS,
+    /*
+     * SPR_STAT_36 and SPR_STAT_37: a round well built from its sprite. The
+     * sprite's narrowing bottom is only perspective, so the wall is a hollow
+     * cylinder of one radius, four voxels thick, its bricks taken from the
+     * sprite and laid evenly around the circumference, a light rim on top,
+     * and inside either a dark floor or the sprite's water.
+     */
+    WOLF_HAND_BUILT_WELL
 } WolfHandBuiltModel;
 
 /*

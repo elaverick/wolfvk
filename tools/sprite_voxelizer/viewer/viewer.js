@@ -419,7 +419,8 @@ class Viewer {
 
   /*
    * Deep links such as #subject=dog&animation=1&pose=2&yaw=90 open a pose
-   * directly; rotation=k snaps to original rotation k (0-7).
+   * directly; rotation=k snaps to original rotation k (0-7), and zoom and
+   * height frame a detail (#subject=ofc&yaw=-40&zoom=4&height=46).
    */
   applyLocationHash() {
     const parameters = new URLSearchParams(window.location.hash.slice(1));
@@ -439,6 +440,13 @@ class Viewer {
       this.snapToRotation(Number(parameters.get('rotation')));
     } else if (parameters.has('yaw')) {
       this.camera.yaw = (Number(parameters.get('yaw')) * Math.PI) / 180;
+    }
+    /* zoom=2 halves the camera distance; height=48 aims the camera at that height (a head). */
+    if (parameters.has('zoom')) {
+      this.camera.distance /= Math.max(0.1, Number(parameters.get('zoom')));
+    }
+    if (parameters.has('height')) {
+      this.camera.target[1] = Number(parameters.get('height'));
     }
     this.updatePanels();
   }

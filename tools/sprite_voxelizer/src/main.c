@@ -20,6 +20,7 @@ static void print_usage(const char *program)
         "  --max-shift <n>            Largest frame registration shift in columns (default 3)\n"
         "  --min-fragment <n>         Drop carved fragments smaller than n voxels (default 20)\n"
         "  --no-prune                 Keep hull material that some frames reject\n"
+        "  --min-neighbours <n>       Face neighbours every carved voxel needs (default 3, 0 = off)\n"
         "  --no-sheets                Skip PNG comparison sheets and the HTML report\n"
         "  --no-viewer-data           Skip viewer_data.js for the HTML viewer\n"
         "  --help                     Show this message\n",
@@ -84,6 +85,8 @@ int main(int argc, char **argv)
             options.only_subject = value;
         } else if (strcmp(name, "--max-shift") == 0 && parse_count(value, 8, &count)) {
             options.multi_view.maximum_registration_shift = count;
+        } else if (strcmp(name, "--min-neighbours") == 0 && parse_count(value, 6, &count)) {
+            options.multi_view.minimum_face_neighbours = count;
         } else if (strcmp(name, "--min-fragment") == 0 && parse_count(value, 100000, &count)) {
             options.multi_view.minimum_fragment_voxels = (size_t)count;
         } else {

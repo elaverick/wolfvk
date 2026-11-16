@@ -66,6 +66,11 @@ static bool build_synthetic_wl6_vswap(const char *path)
                 /* Gibs are built from their sprite: a pool of blood with a skull in it. */
                 test_fill_rectangle(&sprites[sprite], 4, 58, 60, 63, 40u);
                 test_fill_rectangle(&sprites[sprite], 12, 50, 19, 57, 16u);
+            } else if (asset->method == WOLF_ASSET_HAND_BUILT && asset->hand_built == WOLF_HAND_BUILT_WELL) {
+                /* Wells are built from their sprite: a brick wall under a light rim, dark inside. */
+                test_fill_rectangle(&sprites[sprite], 16, 40, 47, 61, 24u);
+                test_fill_rectangle(&sprites[sprite], 16, 40, 47, 42, 16u);
+                test_fill_rectangle(&sprites[sprite], 20, 44, 43, 45, 8u);
             } else if (asset->method == WOLF_ASSET_HAND_BUILT) {
                 /* The hand-built object's reference is its own front view here. */
                 WolfVoxelModel *furniture = wolf_voxel_model_create();

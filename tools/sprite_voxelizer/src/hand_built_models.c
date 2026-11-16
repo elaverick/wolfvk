@@ -464,6 +464,157 @@ static void build_gibs(const WolfSpriteImage *reference, WolfVoxelModel *model)
     }
 }
 
+/* Most common opaque palette entry within a rectangle of the sprite (inclusive), or -1. */
+static int dominant_colour_in(const WolfSpriteImage *image, int left, int top, int right, int bottom)
+{
+    int tally[256] = {0};
+    int best = -1;
+
+    for (int row = top; row <= bottom; ++row) {
+        for (int column = left; column <= right; ++column) {
+            size_t pixel;
+
+            if (row < 0 || column < 0 || row >= WOLF_SPRITE_SIZE || column >= WOLF_SPRITE_SIZE) {
+                continue;
+            }
+            pixel = wolf_sprite_pixel_index(column, row);
+            if (image->opaque[pixel]) {
+                ++tally[image->palette_index[pixel]];
+                if (best < 0 || tally[image->palette_index[pixel]] > tally[best]) {
+                    best = image->palette_index[pixel];
+                }
+            }
+        }
+    }
+    return best;
+}
+
+/* The sprite's colour at a column of a row, or the nearest drawn pixel along that row. */
+static int colour_along_row(const WolfSpriteImage *image, int column, int row)
+{
+    for (int distance = 0; distance < WOLF_SPRITE_SIZE; ++distance) {
+        int candidates[2] = {column - distance, column + distance};
+
+        for (int pick = 0; pick < 2; ++pick) {
+            int candidate = candidates[pick];
+
+            if (candidate >= 0 && candidate < WOLF_SPRITE_SIZE && image->opaque[wolf_sprite_pixel_index(candidate, row)]) {
+                return image->palette_index[wolf_sprite_pixel_index(candidate, row)];
+            }
+        }
+    }
+    return 0;
+}
+
+static bool is_water(int palette_index)
+{
+    const uint8_t *colour = wolf_game_palette_rgba + (size_t)palette_index * 4u;
+
+    return colour[2] > colour[0] + 40 && colour[2] > colour[1] + 40;
+}
+
+/* Well wall height in voxels: sixteen courses of brick, a rim band and the rim top. */
+#define WELL_BRICK_LAYERS 16
+#define WELL_WALL_THICKNESS 4.0
+#define WELL_WATER_LAYER 12
+
+/*
+ * A round brick well. The widest row of the sprite gives the radius and
+ * centre; the brick rows (below the rim and the opening) are wrapped around
+ * the wall by arc length, so courses run evenly all the way round and the
+ * back mirrors the front. The top of the wall takes the sprite's light rim.
+ * The sprite's opening shows what is inside: water fills the shaft to near
+ * the top, otherwise the shaft is open down to a dark floor.
+ */
+static void build_well(const WolfSpriteImage *reference, WolfVoxelModel *model)
+{
+    int top_row = -1;
+    int bottom_row = -1;
+    int widest = 0;
+    int widest_left = 0;
+    int widest_right = 0;
+    double centre;
+    double radius;
+    int interior;
+    int water_row;
+
+    if (reference == NULL) {
+        return;
+    }
+    for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+        int left = -1;
+        int right = -1;
+
+        for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+            if (reference->opaque[wolf_sprite_pixel_index(column, row)]) {
+                left = left < 0 ? column : left;
+                right = column;
+            }
+        }
+        if (left < 0) {
+            continue;
+        }
+        top_row = top_row < 0 ? row : top_row;
+        bottom_row = row;
+        if (right - left + 1 > widest) {
+            widest = right - left + 1;
+            widest_left = left;
+            widest_right = right;
+        }
+    }
+    if (top_row < 0 || bottom_row - top_row < 10) {
+        return;
+    }
+    centre = (double)(widest_left + widest_right + 1) * 0.5;
+    radius = (double)widest * 0.5;
+    /* The opening is drawn a few rows below the top edge of the rim. */
+    water_row = top_row + 5;
+    interior = dominant_colour_in(reference, (int)(centre - radius * 0.5), top_row + 4, (int)(centre + radius * 0.5), top_row + 5);
+    if (interior < 0) {
+        interior = 0;
+    }
+
+    for (int z = 0; z <= WELL_BRICK_LAYERS + 1; ++z) {
+        /* Bricks from the sprite's wall rows; the rim band and the light rim top above them. */
+        int row = z < WELL_BRICK_LAYERS ? bottom_row - 2 - z : (z == WELL_BRICK_LAYERS ? top_row + 2 : top_row + 1);
+
+        for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
+            for (int x = 0; x < WOLF_VOXEL_DIM; ++x) {
+                double dx = (double)x + 0.5 - centre;
+                double dy = (double)y + 0.5 - (double)(WOLF_VOXEL_DIM / 2);
+                double distance = sqrt(dx * dx + dy * dy);
+
+                if (distance <= radius && distance >= radius - WELL_WALL_THICKNESS) {
+                    /* Arc length around the wall: 0 at the front, +-1 at the sides, +-2 at the back. */
+                    double around = atan2(dx, -dy) / (3.14159265358979323846 * 0.5);
+                    double unfolded = fabs(around) <= 1.0 ? around : (around > 0.0 ? 2.0 - around : -2.0 - around);
+                    int column = (int)floor(centre + unfolded * (radius - 0.5));
+
+                    if (column < widest_left) {
+                        column = widest_left;
+                    }
+                    if (column > widest_right) {
+                        column = widest_right;
+                    }
+                    set_voxel(model, x, y, z, colour_along_row(reference, column, row));
+                } else if (distance < radius - WELL_WALL_THICKNESS) {
+                    if (z == 0) {
+                        set_voxel(model, x, y, z, is_water(interior) ? 0 : interior);
+                    } else if (is_water(interior) && z <= WELL_WATER_LAYER) {
+                        int column = (int)floor((double)x + 0.5);
+                        int water = column >= 0 && column < WOLF_SPRITE_SIZE &&
+                            reference->opaque[wolf_sprite_pixel_index(column, water_row)] &&
+                            is_water(reference->palette_index[wolf_sprite_pixel_index(column, water_row)]) ?
+                            reference->palette_index[wolf_sprite_pixel_index(column, water_row)] : interior;
+
+                        set_voxel(model, x, y, z, water);
+                    }
+                }
+            }
+        }
+    }
+}
+
 bool wolf_build_hand_model(WolfHandBuiltModel which, const WolfSpriteImage *reference, WolfVoxelModel *model)
 {
     wolf_voxel_model_clear(model);
@@ -482,6 +633,9 @@ bool wolf_build_hand_model(WolfHandBuiltModel which, const WolfSpriteImage *refe
         return true;
     case WOLF_HAND_BUILT_GIBS:
         build_gibs(reference, model);
+        return true;
+    case WOLF_HAND_BUILT_WELL:
+        build_well(reference, model);
         return true;
     case WOLF_HAND_BUILT_NONE:
     default:

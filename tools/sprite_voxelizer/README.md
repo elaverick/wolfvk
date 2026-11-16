@@ -82,10 +82,15 @@ The original `rotate` flags identify the 25 sets; 24 are carved as below and the
 1. **Register** the face-on frames to a common axis by shifting them sideways by whole columns. The artists did not centre every frame on the same column.
 2. **Carve** the hull of the face-on frames. Each opposite pair is combined as a union (front *or* back draws it), so neither frame's small disagreements cut material away. The two viewing axes are then intersected.
 3. **Register** each diagonal frame against that hull.
-4. **Prune** material that any frame rejects, most-rejected and outermost first, provided every drawn pixel of every face-on frame stays covered. This removes the phantom limbs that four orthogonal silhouettes invent (a walking figure would otherwise have four legs). The diagonal frames decide which ambiguous material survives.
+4. **Prune** material that at least two frames reject, most-rejected and outermost first, provided every drawn pixel of every face-on frame stays covered. This removes the phantom limbs that four orthogonal silhouettes invent (a walking figure would otherwise have four legs). The diagonal frames decide which ambiguous material survives. Pruning peels from the surface inwards. A single dissenting frame is not enough to remove material: otherwise one diagonal that draws the head a little narrower would carve the solid into thin shells, which look like loose flakes.
 5. **Repair** face-on pixels the axis intersection still lost, such as a stride foot drawn at a height the front frame doesn't show. Each restored voxel goes at the point on that pixel's line of sight closest in 3D to the existing body, searching neighbouring layers as well. That puts a foot under its own shin and an ear on the head, not on the actor's axis. The search prefers positions the other face-on frames also draw, and restored parts are three voxels deep.
-6. **Join** any remaining fragment within six voxels of the body with a short line of voxels, and remove anything further away. Every pose is a single connected piece.
-7. **Colour** each voxel from the face-on frame that looks most squarely at it. Among face-on frames, the front wins over the back, and the back over the sides. This stops a profile eye from a side frame being painted onto the face. Diagonal frames only colour what no face-on frame shows. Outline pixels lose to a frame that sees the voxel inside its silhouette, so drawn outlines don't become dark blotches.
+6. **Round the head.** Four orthogonal silhouettes carve a square head, so the front frame's outer eye sits on a flat face several voxels in from the corner, and the side frame paints its own view of that eye on the side of the box. The result is a third eye. The head's vertical corners (the top fifth of the figure, when it is no more than 16 voxels across) are peeled for three passes. This makes the front eye the corner piece that the side view sees.
+7. **Remove weak voxels.** Every voxel should touch at least three occupied face neighbours (the floor counts). Weaker voxels are removed repeatedly: loose flakes, spurs and one-voxel strands. A voxel is kept if it is the only voxel drawing part of a face-on frame, so nothing the original shows is lost. `--min-neighbours n` changes the requirement, and 0 turns it off.
+8. **Join** any remaining fragment within six voxels of the body with a short line of voxels, and remove anything further away. The line is thickened to 2×2 only where it lies inside the face-on silhouettes, so a join never adds anything to the outline. Every pose is a single connected piece.
+9. **Colour** each voxel from the face-on frame that looks most squarely at it:
+   - Among face-on frames, the front always wins over the back, and the back over the sides. A detail that a side or back frame draws near the face (an eye in profile, hair behind an ear) is never painted onto the front.
+   - Diagonal frames only colour what no face-on frame shows, and never a surface turned away from them.
+   - Outline pixels lose to a frame that sees the voxel inside its silhouette, so drawn outlines don't become dark blotches. The front frame is the exception: what it draws at the edge of the face stays.
 
 ### The rocket
 
@@ -97,11 +102,11 @@ The rocket's nose-on frames are drawn wider than they are tall, so carving flatt
 |---|---|---|
 | `pose_transfer` | pain and attack frames of guards, SS, officers, mutants | The frame is built on the actor's own rotation-set body. The front face shows the frame; the body's real depth, sides and back stay underneath. Parts the body lacks (a levelled gun, a raised arm) are inflated around its centre line. |
 | `inflate` | death frames, bosses, BJ, ghosts, effects, armour, bones | Rounded by the outline's local thickness. Death frames use the actor's body depth ratio; bosses use 0.8. |
-| `lathe` | barrels, pillars, lamps, plants, wells, urns, chalice, crown | Each horizontal run becomes a disc. |
-| `cage` | hanging cage, skeleton in cage | Bars (the empty cage's colours) go on a cylinder around the outside, front and back. Mostly-filled rows become hoops, with the top and bottom capped, and anything else (the skeleton) hangs inside. |
+| `lathe` | barrels, pillars, lamps, plants, urns, chalice, crown | Each horizontal run becomes a disc. |
+| `cage` | hanging cage, skeleton in cage | Bars (the empty cage's colours) go on a cylinder around the outside, front and back. Mostly-filled rows become hoops, with the top and bottom capped, and anything else (the skeleton) hangs inside. Behind a bar or hoop with the skeleton on both sides of it (within three pixels), the skeleton continues in its neighbour's colour, so the bars no longer cut it into pieces. |
 | `extrude` | keys, cross, chest, flag, signs, racks | Constant thickness. |
 | `first_person` | the 20 first-person weapon frames | Each row higher up the screen sits further from the eye, so the barrel reaches into the screen. Thickness across the gun matches the sprite's width. |
-| `hand_built` | table and chairs (`stat_2`), bed (`stat_22`), food (`stat_24`), first aid kit (`stat_25`), gibs (`stat_34`) | Modelled in voxels using only the sprite's proportions and palette entries:<br>• a round pedestal table with candles and two ladder-back chairs<br>• a metal-framed bed with mattress and pillow<br>• a turkey leg with its bone, potato and greens on a cyan-rimmed plate<br>• a flat white box with blue trim and a red cross on the lid<br>• the sprite's own skull standing in a puddle of blood, with the bones lying in it (the floor is laid out in perspective from the drawing) |
+| `hand_built` | table and chairs (`stat_2`), bed (`stat_22`), food (`stat_24`), first aid kit (`stat_25`), gibs (`stat_34`), wells (`stat_36`, `stat_37`) | Modelled in voxels using only the sprite's proportions and palette entries:<br>• a round pedestal table with candles and two ladder-back chairs<br>• a metal-framed bed with mattress and pillow<br>• a turkey leg with its bone, potato and greens on a cyan-rimmed plate<br>• a flat white box with blue trim and a red cross on the lid<br>• the sprite's own skull standing in a puddle of blood, with the bones lying in it (the floor is laid out in perspective from the drawing)<br>• a round brick well: a hollow wall four voxels thick and the same radius all the way down (the sprite's narrowing base is only perspective), with no shadow. The sprite's brick rows are wrapped evenly around the wall, with its light rim on top. Inside is either a dark floor or the sprite's water, filled to just below the rim. |
 
 In every method except `hand_built`, each pixel's line of sight reproduces that pixel's colour at the front, so the front view matches the shadow-free original exactly.
 
@@ -128,16 +133,15 @@ Every pose is rendered orthographically from each original direction (cubes at t
 ### Results on the GOG retail WL6 data
 
 - 261 poses in 77 subject files. All files were written and read back identically.
-- 260 of 261 poses pass:
+- All 261 poses pass:
   - All 231 camera-facing poses reproduce their frames exactly.
-  - All 5 hand-built objects keep their sprite's width and palette.
+  - All 7 hand-built objects keep their sprite's width and palette.
   - The rocket's side views score 1.00 and 0.86.
-- Every rotation-set pose is a single connected piece.
+- Every rotation-set pose is a single connected piece with no loose flakes.
 - Rotation sets:
-  - Standing poses reach a mean silhouette IoU of 0.93–0.95 (face-on views 0.92–0.99, diagonals 0.87–0.96).
-  - Walking poses reach 0.77–0.86. Their face-on views score 0.80–0.97. Their diagonal frames contradict the face-on ones and score 0.60–0.87.
-  - Face-on colour within one pixel is 66–83%.
-- **One pose fails, by a hair:** `dog_w3`'s back view scores 0.799 against the 0.80 bar. It is left failing rather than hidden behind a looser threshold; its comparison sheet in `validation/` shows where.
+  - Standing poses reach a mean silhouette IoU of 0.92–0.95 (face-on views 0.92–1.00, diagonals 0.84–0.95).
+  - Walking poses reach 0.77–0.87. Their face-on views score 0.81–0.98. Their diagonal frames contradict the face-on ones and score 0.64–0.84.
+  - Face-on colour within one pixel is 67–87%.
 
 Colour agreement is limited by geometry. With one voxel per pixel, a voxel on the edge of a narrow figure is seen by both the front and the side frame, which drew it differently, so it can match only one of them. The front frame is given priority.
 
