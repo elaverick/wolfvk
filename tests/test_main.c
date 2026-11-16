@@ -57,6 +57,7 @@ void test_level_geometry_reports_missing_player_start_marker(void);
 void test_level_loader_preserves_original_player_start_marker_in_info_plane(void);
 void test_keyboard_events_update_key_state(void);
 void test_mouse_motion_accumulates_until_next_frame(void);
+void test_mouse_button_events_update_held_state(void);
 void test_gamepad_axis_normalization_applies_deadzone(void);
 void test_input_queries_handle_invalid_arguments(void);
 void test_graphics_and_present_on_same_queue_family(void);
@@ -203,6 +204,7 @@ int main(void)
     RUN_TEST(test_level_loader_preserves_original_player_start_marker_in_info_plane);
     RUN_TEST(test_keyboard_events_update_key_state);
     RUN_TEST(test_mouse_motion_accumulates_until_next_frame);
+    RUN_TEST(test_mouse_button_events_update_held_state);
     RUN_TEST(test_gamepad_axis_normalization_applies_deadzone);
     RUN_TEST(test_input_queries_handle_invalid_arguments);
     RUN_TEST(test_graphics_and_present_on_same_queue_family);
