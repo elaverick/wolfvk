@@ -448,11 +448,11 @@ int main(int argc, char *argv[])
             weapon_assets_uploaded = true;
             printf("Loaded all four voxel weapons (%u quads).\n", (unsigned int)weapon_scene.quad_count);
         } else {
-            fprintf(stderr, "First-person weapons are incomplete and will be hidden (%s).\\n",
+            fprintf(stderr, "First-person weapons are incomplete and will be hidden (%s).\n",
                 weapon_scene.first_problem);
         }
     } else {
-        fprintf(stderr, "No voxel asset directory was found; first-person weapons will not be drawn.\\n");
+        fprintf(stderr, "No voxel asset directory was found; first-person weapons will not be drawn.\n");
     }
     wolf_weapon_state_initialize(&weapon_state);
 
