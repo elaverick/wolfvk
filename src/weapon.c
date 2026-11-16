@@ -14,7 +14,7 @@ static const char *const weapon_subjects[WOLF_WEAPON_COUNT] = {
 };
 
 static const char *const weapon_animations[WOLF_WEAPON_COUNT] = {
-    "knife", "pistol", "machinegun", "chain"
+    "player_knife", "player_pistol", "player_machinegun", "player_chaingun"
 };
 
 /* Keep the first missing asset visible in the startup diagnostic without failing the level. */
@@ -67,11 +67,13 @@ static bool load_weapon_subject(
     const char *subject = weapon_subjects[weapon];
     const char *animation = weapon_animations[weapon];
 
-    if (snprintf(path, sizeof(path), "%s/%s.vox", asset_directory, subject) < 0 ||
-        strlen(path) >= sizeof(path)) {
+    {
+        int path_length = snprintf(path, sizeof(path), "%s/%s.vox", asset_directory, subject);
+        if (path_length < 0 || (size_t)path_length >= sizeof(path)) {
         record_problem(scene, subject, "asset path is too long");
-        scene->unavailable_pose_count += 5u;
-        return true;
+            scene->unavailable_pose_count += 5u;
+            return true;
+        }
     }
     if (!wolf_vox_file_load(path, &file, error_message, sizeof(error_message))) {
         record_problem(scene, subject, error_message);
@@ -213,8 +215,10 @@ bool wolf_weapon_state_update(WolfWeaponState *state, bool fire_down, float delt
         state->tic_remainder = elapsed_tics;
     }
 
-    if (!fire_down && state->attack_frame == 0u && state->tic_remainder == 0.0f) {
+    if (!fire_down && state->selected >= WOLF_WEAPON_MACHINEGUN) {
         state->firing = false;
+        state->attack_frame = 0u;
+        state->tic_remainder = 0.0f;
     }
     return true;
 }
