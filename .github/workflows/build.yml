@@ -80,14 +80,18 @@ jobs:
           Controls
           - W / A / S / D: move
           - Mouse: look
+          - Left mouse button or Left Ctrl: fire
+          - 1 / 2 / 3 / 4: select knife / pistol / machine gun / chaingun
+          - Right shoulder or right trigger on a gamepad: fire
           - Escape: quit
 
           The mouse is captured while the window is focused. Wall textures and animated
           door panels are loaded from VSWAP.WL6. Press E or Space to operate doors
           and marked secret pushwalls; locked doors require their matching key.
-          Actors and objects are voxel models standing in their spawn pose; animation,
-          enemy AI and pickups other than keys are not yet implemented. Integer
-          scaling remains a follow-on step.
+          The four voxel weapons are anchored to the player's view and use the original
+          six-tic attack animation timing. Firing is currently visual only: hit detection,
+          damage, ammunition and weapon pickups are not implemented yet. Actors and
+          objects remain in their spawn poses; enemy AI and most pickups are follow-on work.
           '@
           Set-Content -LiteralPath (Join-Path $packageDir "README.txt") -Value $instructions -Encoding utf8
           Compress-Archive -Path (Join-Path $packageDir "*") -DestinationPath "build\WolfVK-textured-demo-windows-x64.zip" -Force
