@@ -72,3 +72,8 @@ Keep `shaders/` beside `wolfvk.exe`. Place `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VS
 Use `--level N` to select a one-based level number; omit it to load the first level.
 
 **Controls:** W/A/S/D to move, mouse to look, **E** or **Space** to operate a door or push marked secret wall, Escape to quit. Locked doors require their corresponding key. The mouse is captured while the window is focused.
+
+## Tools
+
+`tools/sprite_voxelizer` is a standalone offline tool, not part of the game build. It extracts all 436 WL6 sprites from `VSWAP.WL6`, rebuilds them as 64×64×64 MagicaVoxel models (eight-way rotation sets are space-carved into one solid; camera-facing frames get invented depth), writes the original animations as animated `.vox` files, and validates every written model against the original frames. See [its README](tools/sprite_voxelizer/README.md). Its output is derived from your own game data and is not committed.
+
