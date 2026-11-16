@@ -8,8 +8,8 @@
 #define FIRST_STATIC_SPRITE 2
 #define STATIC_SPRITE_COUNT 48
 
-/* Default thickness, relative to width, for people with no rotation frames (bosses, BJ). */
-#define DEFAULT_HUMANOID_DEPTH_SCALE 0.6
+/* Thickness relative to width for people with no rotation frames (the bosses, BJ). */
+#define DEFAULT_HUMANOID_DEPTH_SCALE 0.8
 
 typedef struct StaticObjectProfile {
     const char *description;
@@ -17,135 +17,263 @@ typedef struct StaticObjectProfile {
     double depth_scale;
     double maximum_half_depth;
     double extrude_half_depth;
+    WolfHandBuiltModel hand_built;
 } StaticObjectProfile;
 
 /*
  * Depth choices for the WL6 static objects, in SPR_STAT order. Descriptions
  * follow the comments of statinfo[] in WL_ACT1.C (with the retail WL6 art
  * where the comment is stale). Round objects use the lathe; flat treasure,
- * signs and racks are extruded; irregular shapes are inflated.
+ * signs and racks are extruded; irregular shapes are inflated; furniture no
+ * profile can represent is modelled by hand.
  */
 static const StaticObjectProfile static_object_profiles[STATIC_SPRITE_COUNT] = {
-    {"puddle", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"green barrel", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    /* Drawn as a long rectangular table; a lathe would merge seats and table into one disc. */
-    {"table and chairs", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 10.0},
-    {"floor lamp", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"chandelier", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"hanged skeleton", WOLF_DEPTH_PROFILE_INFLATE, 0.6, 32.0, 0.0},
-    {"dog food", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"white pillar", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"potted tree", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"skeleton lying flat", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 4.0, 0.0},
-    {"sink", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"potted plant", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"blue urn", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"bare table", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"ceiling light", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"kitchen utensils", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.5},
-    {"suit of armour", WOLF_DEPTH_PROFILE_INFLATE, 0.6, 32.0, 0.0},
-    {"hanging cage", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"skeleton in cage", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"pile of bones", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 6.0, 0.0},
-    {"gold key", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.0},
-    {"silver key", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.0},
-    {"bed", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 16.0},
-    {"basket", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"food", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"first aid kit", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 6.0},
-    {"ammunition clip", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 2.0},
-    {"machine gun", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 2.5, 0.0},
-    {"chain gun", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0},
-    {"cross", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.5},
-    {"chalice", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"treasure chest", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 5.0},
-    {"crown", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"extra life", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0},
-    {"gibs", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 4.0, 0.0},
-    {"wooden barrel", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"well with water", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"empty well", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"pool of blood", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"flag", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.0},
-    {"junk", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0},
-    {"junk", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0},
-    {"junk", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0},
-    {"junk", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0},
-    {"hanging pots", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 4.0, 0.0},
-    {"stove", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"spear rack", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 2.0},
-    {"vines", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 0.5},
+    {"puddle", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"green barrel", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"table and chairs", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_TABLE_AND_CHAIRS},
+    {"floor lamp", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"chandelier", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"hanged skeleton", WOLF_DEPTH_PROFILE_INFLATE, 0.6, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"dog food", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"white pillar", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"potted tree", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"skeleton lying flat", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 4.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"sink", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"potted plant", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"blue urn", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"bare table", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"ceiling light", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"kitchen utensils", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.5, WOLF_HAND_BUILT_NONE},
+    {"suit of armour", WOLF_DEPTH_PROFILE_INFLATE, 0.6, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"hanging cage", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"skeleton in cage", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"pile of bones", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 6.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"gold key", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.0, WOLF_HAND_BUILT_NONE},
+    {"silver key", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.0, WOLF_HAND_BUILT_NONE},
+    {"bed", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_BED},
+    {"basket", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"food", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"first aid kit", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 6.0, WOLF_HAND_BUILT_NONE},
+    {"ammunition clip", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 2.0, WOLF_HAND_BUILT_NONE},
+    {"machine gun", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 2.5, 0.0, WOLF_HAND_BUILT_NONE},
+    {"chain gun", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"cross", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.5, WOLF_HAND_BUILT_NONE},
+    {"chalice", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"treasure chest", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 5.0, WOLF_HAND_BUILT_NONE},
+    {"crown", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"extra life", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"gibs", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 4.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"wooden barrel", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"well with water", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"empty well", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"pool of blood", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"flag", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.0, WOLF_HAND_BUILT_NONE},
+    {"junk", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"junk", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"junk", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"junk", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"hanging pots", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 4.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"stove", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"spear rack", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 2.0, WOLF_HAND_BUILT_NONE},
+    {"vines", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 0.5, WOLF_HAND_BUILT_NONE},
 };
+
+/* First-person weapons: subject prefixes in the order of the sprite enum. */
+static const char *const weapon_prefixes[4] = {"KNIFE", "PISTOL", "MACHINEGUN", "CHAIN"};
+
+/*
+ * Families whose sprites have a painted floor shadow. Effects, projectiles,
+ * the title lettering and the first-person weapons have none, and their dark
+ * pixels must not be mistaken for one.
+ */
+static const char *const shadowed_actor_subjects[] = {
+    "GRD", "DOG", "SS", "MUT", "OFC", "BLINKY", "PINKY", "CLYDE", "INKY", "BOSS", "SCHABB",
+    "FAKE", "MECHA", "HITLER", "GIFT", "GRETEL", "FAT", "BJ"
+};
+
+/* Animation names that show an upright actor and can borrow the rotation-set body. */
+static const char *const upright_animation_keys[] = {"PAIN", "SHOOT"};
 
 double wolf_rotation_degrees(int rotation)
 {
     return 45.0 * (double)rotation;
 }
 
-/* "SPR_GRD_W1_1" -> "grd_w1_1"; the original also has one enum without the prefix. */
-static void lowercase_asset_name(const char *sprite_name, char *name, size_t name_size)
+static void copy_lowercase(const char *source, size_t length, char *destination, size_t destination_size)
 {
-    const char *source = strncmp(sprite_name, "SPR_", 4u) == 0 ? sprite_name + 4 : sprite_name;
-    size_t length = 0u;
+    size_t written = 0u;
 
-    while (source[length] != '\0' && length + 1u < name_size) {
-        name[length] = (char)tolower((unsigned char)source[length]);
-        ++length;
+    while (written < length && source[written] != '\0' && written + 1u < destination_size) {
+        destination[written] = (char)tolower((unsigned char)source[written]);
+        ++written;
     }
-    name[length] = '\0';
+    destination[written] = '\0';
 }
 
-/* The first name token after "SPR_" identifies the actor or object family. */
-static void subject_for_sprite(const char *sprite_name, char *subject, size_t subject_size)
+/*
+ * Split a sprite name into its subject and animation keys (upper case, as in
+ * the enum). "SPR_GRD_W1_1" -> GRD / W, "SPR_HYPO3" -> HYPO / "",
+ * "SPR_PISTOLATK2" -> PISTOL / ATK, "SPR_STAT_7" -> STAT_7 / "".
+ */
+static void split_sprite_name(const char *sprite_name, char *subject, size_t subject_size,
+    char *animation, size_t animation_size)
 {
     const char *source = strncmp(sprite_name, "SPR_", 4u) == 0 ? sprite_name + 4 : sprite_name;
-    size_t length = 0u;
+    size_t source_length = strlen(source);
+    size_t subject_length = 0u;
+    size_t animation_length;
+    const char *remainder;
 
-    while (source[length] != '\0' && source[length] != '_' && length + 1u < subject_size) {
-        subject[length] = source[length];
-        ++length;
+    for (int weapon = 0; weapon < 4 && subject_length == 0u; ++weapon) {
+        size_t prefix_length = strlen(weapon_prefixes[weapon]);
+
+        if (strncmp(source, weapon_prefixes[weapon], prefix_length) == 0) {
+            subject_length = prefix_length;
+        }
     }
-    subject[length] = '\0';
+    if (subject_length == 0u && strncmp(source, "STAT_", 5u) == 0) {
+        /* Every static object is its own subject. */
+        subject_length = source_length;
+    }
+    if (subject_length == 0u) {
+        while (subject_length < source_length && source[subject_length] != '_' &&
+            !isdigit((unsigned char)source[subject_length])) {
+            ++subject_length;
+        }
+    }
+    (void)snprintf(subject, subject_size, "%.*s", (int)subject_length, source);
+
+    remainder = source + subject_length;
+    while (*remainder == '_') {
+        ++remainder;
+    }
+    animation_length = strlen(remainder);
+    /* Trailing frame and rotation numbers ("W1_1", "DIE_3", "SHOOT2") do not name the animation. */
+    while (animation_length > 0u &&
+        (isdigit((unsigned char)remainder[animation_length - 1u]) || remainder[animation_length - 1u] == '_')) {
+        --animation_length;
+    }
+    (void)snprintf(animation, animation_size, "%.*s", (int)animation_length, remainder);
 }
 
-static bool sprite_starts_with(int sprite, const char *prefix)
+static bool name_in_list(const char *name, const char *const *list, size_t count)
 {
-    return strncmp(wolf_wl6_sprite_names[sprite], prefix, strlen(prefix)) == 0;
+    for (size_t entry = 0u; entry < count; ++entry) {
+        if (strcmp(name, list[entry]) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int wolf_asset_catalog_find_subject(const WolfAssetCatalog *catalog, const char *name)
+{
+    for (size_t subject = 0u; subject < catalog->subject_count; ++subject) {
+        if (strcmp(catalog->subjects[subject].name, name) == 0) {
+            return (int)subject;
+        }
+    }
+    return -1;
+}
+
+/* Find or add the subject and animation an asset belongs to, and append it as the next pose. */
+static void place_asset(WolfAssetCatalog *catalog, int asset_index, const char *subject_key, const char *animation_key)
+{
+    char subject_name[WOLF_ASSET_NAME_LENGTH];
+    char animation_name[WOLF_ASSET_NAME_LENGTH];
+    int subject_index;
+    WolfSubject *subject;
+    WolfSubjectAnimation *animation = NULL;
+
+    copy_lowercase(subject_key, strlen(subject_key), subject_name, sizeof(subject_name));
+    subject_index = wolf_asset_catalog_find_subject(catalog, subject_name);
+    if (subject_index < 0) {
+        subject_index = (int)catalog->subject_count++;
+        subject = &catalog->subjects[subject_index];
+        memset(subject, 0, sizeof(*subject));
+        (void)snprintf(subject->name, sizeof(subject->name), "%s", subject_name);
+        subject->reference_asset = -1;
+    }
+    subject = &catalog->subjects[subject_index];
+
+    /* A subject drawn as one animation (a static object, the rocket) names it after itself. */
+    if (animation_key[0] == '\0') {
+        (void)snprintf(animation_name, sizeof(animation_name), "%s", subject_name);
+    } else {
+        char lowered[WOLF_ASSET_NAME_LENGTH];
+
+        copy_lowercase(animation_key, strlen(animation_key), lowered, sizeof(lowered));
+        (void)snprintf(animation_name, sizeof(animation_name), "%s_%s", subject_name, lowered);
+    }
+    for (size_t existing = 0u; existing < subject->animation_count; ++existing) {
+        if (strcmp(subject->animations[existing].name, animation_name) == 0) {
+            animation = &subject->animations[existing];
+        }
+    }
+    if (animation == NULL && subject->animation_count < WOLF_SUBJECT_MAX_ANIMATIONS) {
+        animation = &subject->animations[subject->animation_count++];
+        memset(animation, 0, sizeof(*animation));
+        (void)snprintf(animation->name, sizeof(animation->name), "%s", animation_name);
+    }
+    if (animation != NULL && animation->pose_count < WOLF_ANIMATION_MAX_POSES) {
+        animation->assets[animation->pose_count++] = asset_index;
+        catalog->assets[asset_index].subject = subject_index;
+        catalog->assets[asset_index].animation = (int)(animation - subject->animations);
+    }
+    if (catalog->assets[asset_index].method == WOLF_ASSET_ROTATION_SET && subject->reference_asset < 0) {
+        subject->reference_asset = asset_index;
+    }
 }
 
 /* Choose how a camera-facing sprite gains depth when it is not a static object. */
-static void configure_dynamic_single_view(WolfVoxelAsset *asset)
+static void configure_dynamic_single_view(WolfAssetCatalog *catalog, WolfVoxelAsset *asset,
+    const char *subject_key, const char *animation_key)
 {
     int sprite = asset->first_sprite;
+    char subject_name[WOLF_ASSET_NAME_LENGTH];
 
+    asset->method = WOLF_ASSET_SINGLE_VIEW;
     asset->single_view.profile = WOLF_DEPTH_PROFILE_INFLATE;
     asset->single_view.depth_scale = 1.0;
     asset->single_view.maximum_half_depth = 32.0;
     asset->single_view.extrude_half_depth = 0.0;
     asset->depth_from_subject = false;
+    asset->strip_shadow = name_in_list(subject_key, shadowed_actor_subjects,
+        sizeof(shadowed_actor_subjects) / sizeof(shadowed_actor_subjects[0]));
 
-    if (sprite_starts_with(sprite, "SPR_DEMO") || sprite_starts_with(sprite, "SPR_DEATHCAM")) {
+    copy_lowercase(subject_key, strlen(subject_key), subject_name, sizeof(subject_name));
+    if (strcmp(subject_key, "DEMO") == 0 || strcmp(subject_key, "DEATHCAM") == 0) {
         asset->description = "title lettering";
         asset->single_view.profile = WOLF_DEPTH_PROFILE_EXTRUDE;
         asset->single_view.extrude_half_depth = 1.0;
-    } else if (sprite_starts_with(sprite, "SPR_SMOKE") || sprite_starts_with(sprite, "SPR_BOOM") ||
-        sprite_starts_with(sprite, "SPR_FIRE") || sprite_starts_with(sprite, "SPR_BLINKY") ||
-        sprite_starts_with(sprite, "SPR_PINKY") || sprite_starts_with(sprite, "SPR_CLYDE") ||
-        sprite_starts_with(sprite, "SPR_INKY")) {
+    } else if (strcmp(subject_key, "SMOKE") == 0 || strcmp(subject_key, "BOOM") == 0 ||
+        strcmp(subject_key, "FIRE") == 0 || strcmp(subject_key, "BLINKY") == 0 ||
+        strcmp(subject_key, "PINKY") == 0 || strcmp(subject_key, "CLYDE") == 0 ||
+        strcmp(subject_key, "INKY") == 0) {
         /* Puffs, fireballs and the ghost bonus enemies are round. */
         asset->description = "round effect or ghost";
-    } else if (sprite_starts_with(sprite, "SPR_HYPO")) {
+    } else if (strcmp(subject_key, "HYPO") == 0) {
         asset->description = "thrown syringe";
         asset->single_view.depth_scale = 0.6;
     } else if (sprite >= WOLF_WL6_SPRITE_COUNT - 20) {
         /* The last twenty sprites are the player's first-person weapon frames. */
         asset->description = "first-person weapon";
-        asset->single_view.depth_scale = 0.6;
+        asset->single_view.profile = WOLF_DEPTH_PROFILE_FIRST_PERSON;
+        asset->single_view.depth_scale = 1.0;
+        asset->single_view.maximum_half_depth = 6.0;
     } else {
         /* Pain, attack, death and boss frames: people and dogs facing the camera. */
-        asset->description = "camera-facing actor frame";
+        int subject_index = wolf_asset_catalog_find_subject(catalog, subject_name);
+        bool has_reference = subject_index >= 0 && catalog->subjects[subject_index].reference_asset >= 0;
+
+        asset->description = has_reference ? "camera-facing actor frame" : "camera-facing boss or character frame";
         asset->single_view.depth_scale = DEFAULT_HUMANOID_DEPTH_SCALE;
-        asset->depth_from_subject = true;
+        asset->depth_from_subject = has_reference;
+        if (has_reference && name_in_list(animation_key, upright_animation_keys,
+                sizeof(upright_animation_keys) / sizeof(upright_animation_keys[0]))) {
+            asset->method = WOLF_ASSET_POSE_TRANSFER;
+            asset->description = "camera-facing actor frame on the actor's own body";
+        }
     }
 }
 
@@ -168,67 +296,96 @@ void wolf_asset_catalog_build(WolfAssetCatalog *catalog)
         }
     }
 
-    for (int sprite = 0; sprite < WOLF_WL6_SPRITE_COUNT; ++sprite) {
-        WolfVoxelAsset *asset;
-        int asset_index;
+    /*
+     * Rotation sets are placed first so every subject knows its reference
+     * body before its camera-facing frames are configured.
+     */
+    for (int pass = 0; pass < 2; ++pass) {
+        for (int sprite = 0; sprite < WOLF_WL6_SPRITE_COUNT; ++sprite) {
+            char subject_key[WOLF_ASSET_NAME_LENGTH];
+            char animation_key[WOLF_ASSET_NAME_LENGTH];
+            WolfVoxelAsset *asset;
+            int asset_index;
+            bool is_rotation = rotation_base[sprite] && sprite + WOLF_ROTATION_COUNT <= WOLF_WL6_SPRITE_COUNT;
 
-        if (catalog->asset_for_sprite[sprite] >= 0) {
-            continue;
-        }
-        asset_index = (int)catalog->asset_count++;
-        asset = &catalog->assets[asset_index];
-        asset->first_sprite = sprite;
-        subject_for_sprite(wolf_wl6_sprite_names[sprite], asset->subject, sizeof(asset->subject));
-
-        if (rotation_base[sprite] && sprite + WOLF_ROTATION_COUNT <= WOLF_WL6_SPRITE_COUNT) {
-            size_t length;
-
-            asset->kind = WOLF_ASSET_ROTATION_SET;
-            asset->sprite_count = WOLF_ROTATION_COUNT;
-            asset->description = "eight-way rotation set";
-            /* Drop the "_1" frame suffix: SPR_GRD_W1_1 becomes grd_w1. */
-            lowercase_asset_name(wolf_wl6_sprite_names[sprite], asset->name, sizeof(asset->name));
-            length = strlen(asset->name);
-            if (length >= 2u && asset->name[length - 2u] == '_' && asset->name[length - 1u] == '1') {
-                asset->name[length - 2u] = '\0';
+            if (catalog->asset_for_sprite[sprite] >= 0 || (pass == 0) != is_rotation) {
+                continue;
             }
-            for (int rotation = 0; rotation < WOLF_ROTATION_COUNT; ++rotation) {
-                catalog->asset_for_sprite[sprite + rotation] = asset_index;
-                catalog->rotation_for_sprite[sprite + rotation] = rotation;
+            split_sprite_name(wolf_wl6_sprite_names[sprite], subject_key, sizeof(subject_key),
+                animation_key, sizeof(animation_key));
+            asset_index = (int)catalog->asset_count++;
+            asset = &catalog->assets[asset_index];
+            asset->first_sprite = sprite;
+            asset->hand_built = WOLF_HAND_BUILT_NONE;
+
+            if (is_rotation) {
+                size_t length;
+
+                asset->method = WOLF_ASSET_ROTATION_SET;
+                asset->sprite_count = WOLF_ROTATION_COUNT;
+                asset->description = "eight-way rotation set";
+                asset->strip_shadow = name_in_list(subject_key, shadowed_actor_subjects,
+                    sizeof(shadowed_actor_subjects) / sizeof(shadowed_actor_subjects[0]));
+                /* Drop the "_1" frame suffix: SPR_GRD_W1_1 becomes grd_w1. */
+                copy_lowercase(wolf_wl6_sprite_names[sprite] + 4, 64u, asset->name, sizeof(asset->name));
+                length = strlen(asset->name);
+                if (length >= 2u && asset->name[length - 2u] == '_' && asset->name[length - 1u] == '1') {
+                    asset->name[length - 2u] = '\0';
+                }
+                for (int rotation = 0; rotation < WOLF_ROTATION_COUNT; ++rotation) {
+                    catalog->asset_for_sprite[sprite + rotation] = asset_index;
+                    catalog->rotation_for_sprite[sprite + rotation] = rotation;
+                }
+                place_asset(catalog, asset_index, subject_key, animation_key);
+                continue;
             }
-            continue;
-        }
 
-        asset->kind = WOLF_ASSET_SINGLE_VIEW;
-        asset->sprite_count = 1;
-        lowercase_asset_name(wolf_wl6_sprite_names[sprite], asset->name, sizeof(asset->name));
-        catalog->asset_for_sprite[sprite] = asset_index;
-        catalog->rotation_for_sprite[sprite] = 0;
+            asset->sprite_count = 1;
+            {
+                const char *source = wolf_wl6_sprite_names[sprite];
 
-        if (sprite >= FIRST_STATIC_SPRITE && sprite < FIRST_STATIC_SPRITE + STATIC_SPRITE_COUNT) {
-            const StaticObjectProfile *profile = &static_object_profiles[sprite - FIRST_STATIC_SPRITE];
+                copy_lowercase(strncmp(source, "SPR_", 4u) == 0 ? source + 4 : source, 64u,
+                    asset->name, sizeof(asset->name));
+            }
+            catalog->asset_for_sprite[sprite] = asset_index;
+            catalog->rotation_for_sprite[sprite] = 0;
 
-            asset->description = profile->description;
-            asset->single_view.profile = profile->profile;
-            asset->single_view.depth_scale = profile->depth_scale;
-            asset->single_view.maximum_half_depth = profile->maximum_half_depth;
-            asset->single_view.extrude_half_depth = profile->extrude_half_depth;
-            asset->depth_from_subject = false;
-        } else {
-            configure_dynamic_single_view(asset);
+            if (sprite >= FIRST_STATIC_SPRITE && sprite < FIRST_STATIC_SPRITE + STATIC_SPRITE_COUNT) {
+                const StaticObjectProfile *profile = &static_object_profiles[sprite - FIRST_STATIC_SPRITE];
+
+                asset->method = profile->hand_built != WOLF_HAND_BUILT_NONE ? WOLF_ASSET_HAND_BUILT : WOLF_ASSET_SINGLE_VIEW;
+                asset->hand_built = profile->hand_built;
+                asset->description = profile->description;
+                asset->single_view.profile = profile->profile;
+                asset->single_view.depth_scale = profile->depth_scale;
+                asset->single_view.maximum_half_depth = profile->maximum_half_depth;
+                asset->single_view.extrude_half_depth = profile->extrude_half_depth;
+                asset->depth_from_subject = false;
+                asset->strip_shadow = true;
+            } else {
+                configure_dynamic_single_view(catalog, asset, subject_key, animation_key);
+            }
+            place_asset(catalog, asset_index, subject_key, animation_key);
         }
     }
-}
 
-int wolf_asset_catalog_reference_for_subject(const WolfAssetCatalog *catalog, const char *subject)
-{
-    for (size_t asset = 0u; asset < catalog->asset_count; ++asset) {
-        if (catalog->assets[asset].kind == WOLF_ASSET_ROTATION_SET &&
-            strcmp(catalog->assets[asset].subject, subject) == 0) {
-            return (int)asset;
+    /* Poses were placed rotation sets first; restore original drawing order within each animation. */
+    for (size_t subject = 0u; subject < catalog->subject_count; ++subject) {
+        for (size_t animation = 0u; animation < catalog->subjects[subject].animation_count; ++animation) {
+            WolfSubjectAnimation *entry = &catalog->subjects[subject].animations[animation];
+
+            for (size_t pose = 1u; pose < entry->pose_count; ++pose) {
+                int moving = entry->assets[pose];
+                size_t slot = pose;
+
+                while (slot > 0u && catalog->assets[entry->assets[slot - 1u]].first_sprite > catalog->assets[moving].first_sprite) {
+                    entry->assets[slot] = entry->assets[slot - 1u];
+                    --slot;
+                }
+                entry->assets[slot] = moving;
+            }
         }
     }
-    return -1;
 }
 
 /* "s_grdchase1s" -> "grdchase": the family shared by one sequence's states. */

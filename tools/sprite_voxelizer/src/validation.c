@@ -153,23 +153,27 @@ static void blit_scaled(WolfComparisonSheet *sheet, uint32_t left, uint32_t top,
     }
 }
 
-/* Colour-code where the rendered model departs from the original frame. */
-static void build_difference_image(const WolfSpriteImage *original, const WolfSpriteImage *rendered, uint8_t *rgba)
+/* Colour-code where the rendered model departs from the shadow-free original frame. */
+static void build_difference_image(const WolfSpriteImage *target, const uint8_t *shadow_mask,
+    const WolfSpriteImage *rendered, uint8_t *rgba)
 {
     static const uint8_t matching[4] = {150u, 150u, 150u, 255u};
     static const uint8_t wrong_colour[4] = {240u, 200u, 40u, 255u};
     static const uint8_t missing[4] = {230u, 50u, 50u, 255u};
     static const uint8_t extra[4] = {60u, 120u, 255u, 255u};
+    static const uint8_t removed_shadow[4] = {170u, 60u, 200u, 255u};
 
     for (size_t pixel = 0u; pixel < WOLF_SPRITE_PIXELS; ++pixel) {
         const uint8_t *colour = NULL;
 
-        if (original->opaque[pixel] && rendered->opaque[pixel]) {
-            colour = original->palette_index[pixel] == rendered->palette_index[pixel] ? matching : wrong_colour;
-        } else if (original->opaque[pixel]) {
+        if (target->opaque[pixel] && rendered->opaque[pixel]) {
+            colour = target->palette_index[pixel] == rendered->palette_index[pixel] ? matching : wrong_colour;
+        } else if (target->opaque[pixel]) {
             colour = missing;
         } else if (rendered->opaque[pixel]) {
             colour = extra;
+        } else if (shadow_mask != NULL && shadow_mask[pixel]) {
+            colour = removed_shadow;
         }
         if (colour != NULL) {
             memcpy(rgba + pixel * 4u, colour, 4u);
@@ -181,6 +185,8 @@ static void build_difference_image(const WolfSpriteImage *original, const WolfSp
 
 bool wolf_comparison_sheet_build(
     const WolfSpriteImage *const *originals,
+    const WolfSpriteImage *const *targets,
+    const uint8_t *const *shadow_masks,
     const WolfSpriteImage *rendered,
     size_t view_count,
     const WolfVoxelModel *model,
@@ -218,11 +224,12 @@ bool wolf_comparison_sheet_build(
         blit_scaled(sheet, left, WOLF_SHEET_MARGIN, cell_rgba, WOLF_SPRITE_SIZE, WOLF_SHEET_CELL_SCALE);
         wolf_sprite_to_rgba(&rendered[view], palette_rgba, cell_rgba);
         blit_scaled(sheet, left, WOLF_SHEET_MARGIN + step, cell_rgba, WOLF_SPRITE_SIZE, WOLF_SHEET_CELL_SCALE);
-        build_difference_image(originals[view], &rendered[view], cell_rgba);
+        build_difference_image(targets != NULL ? targets[view] : originals[view],
+            shadow_masks != NULL ? shadow_masks[view] : NULL, &rendered[view], cell_rgba);
         blit_scaled(sheet, left, WOLF_SHEET_MARGIN + 2u * step, cell_rgba, WOLF_SPRITE_SIZE, WOLF_SHEET_CELL_SCALE);
     }
 
-    /* Front-left and back-right three-quarter views show the reconstructed depth. */
+    /* Front and back three-quarter views show the reconstructed depth. */
     preview_left = WOLF_SHEET_MARGIN + (uint32_t)view_count * step;
     for (uint32_t preview = 0u; preview < preview_count; ++preview) {
         double yaw = preview == 0u ? -35.0 : 145.0;

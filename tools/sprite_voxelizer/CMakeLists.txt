@@ -20,10 +20,12 @@ set(WOLFVK_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../src")
 add_library(sprite_voxelizer_core STATIC
     src/asset_catalog.c
     src/file_io.c
+    src/hand_built_models.c
     src/pipeline.c
     src/png_writer.c
     src/reconstruction.c
     src/sprite_image.c
+    src/sprite_shadow.c
     src/validation.c
     src/vox_file.c
     src/voxel_model.c

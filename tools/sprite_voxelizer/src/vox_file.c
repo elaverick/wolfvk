@@ -6,6 +6,7 @@
 
 #define VOX_VERSION 150u
 #define VOX_CHUNK_HEADER_SIZE 12u
+#define MAX_SCENE_NODES 256
 
 uint8_t wolf_vox_colour_for_palette_index(const uint8_t *palette_rgba, uint8_t palette_index)
 {
@@ -98,12 +99,13 @@ static void append_model(WolfByteBuffer *buffer, const WolfVoxelModel *model, co
 }
 
 /*
- * Scene graph for an animated object: root transform -> group -> transform
- * -> one shape node whose models are the keyframes 0..N-1.
+ * Scene graph: root transform 0 -> group 1 -> for each object a named
+ * transform (2 + 2i) -> shape (3 + 2i) listing that object's keyframes.
  */
-static void append_animation_scene(WolfByteBuffer *buffer, size_t frame_count)
+static void append_scene(WolfByteBuffer *buffer, const WolfVoxObject *objects, size_t object_count)
 {
     size_t chunk;
+    uint32_t next_model = 0u;
 
     chunk = begin_chunk(buffer, "nTRN");
     wolf_buffer_append_u32_le(buffer, 0u);
@@ -118,47 +120,64 @@ static void append_animation_scene(WolfByteBuffer *buffer, size_t frame_count)
     chunk = begin_chunk(buffer, "nGRP");
     wolf_buffer_append_u32_le(buffer, 1u);
     wolf_buffer_append_u32_le(buffer, 0u);
-    wolf_buffer_append_u32_le(buffer, 1u);
-    wolf_buffer_append_u32_le(buffer, 2u);
-    end_chunk(buffer, chunk);
-
-    chunk = begin_chunk(buffer, "nTRN");
-    wolf_buffer_append_u32_le(buffer, 2u);
-    wolf_buffer_append_u32_le(buffer, 0u);
-    wolf_buffer_append_u32_le(buffer, 3u);
-    wolf_buffer_append_u32_le(buffer, UINT32_MAX);
-    wolf_buffer_append_u32_le(buffer, 0u);
-    wolf_buffer_append_u32_le(buffer, 1u);
-    wolf_buffer_append_u32_le(buffer, 0u);
-    end_chunk(buffer, chunk);
-
-    chunk = begin_chunk(buffer, "nSHP");
-    wolf_buffer_append_u32_le(buffer, 3u);
-    wolf_buffer_append_u32_le(buffer, 0u);
-    wolf_buffer_append_u32_le(buffer, (uint32_t)frame_count);
-    for (size_t frame = 0u; frame < frame_count; ++frame) {
-        char frame_text[16];
-
-        (void)snprintf(frame_text, sizeof(frame_text), "%u", (unsigned)frame);
-        wolf_buffer_append_u32_le(buffer, (uint32_t)frame);
-        wolf_buffer_append_u32_le(buffer, 1u);
-        append_string(buffer, "_f");
-        append_string(buffer, frame_text);
+    wolf_buffer_append_u32_le(buffer, (uint32_t)object_count);
+    for (size_t object = 0u; object < object_count; ++object) {
+        wolf_buffer_append_u32_le(buffer, (uint32_t)(2u + 2u * object));
     }
     end_chunk(buffer, chunk);
+
+    for (size_t object = 0u; object < object_count; ++object) {
+        char translation[48];
+        long offset = (long)(((double)object - (double)(object_count - 1u) * 0.5) * WOLF_VOX_OBJECT_SPACING);
+
+        (void)snprintf(translation, sizeof(translation), "%ld 0 %d", offset, WOLF_VOXEL_DIM / 2);
+        chunk = begin_chunk(buffer, "nTRN");
+        wolf_buffer_append_u32_le(buffer, (uint32_t)(2u + 2u * object));
+        wolf_buffer_append_u32_le(buffer, 1u);
+        append_string(buffer, "_name");
+        append_string(buffer, objects[object].name);
+        wolf_buffer_append_u32_le(buffer, (uint32_t)(3u + 2u * object));
+        wolf_buffer_append_u32_le(buffer, UINT32_MAX);
+        wolf_buffer_append_u32_le(buffer, 0u);
+        wolf_buffer_append_u32_le(buffer, 1u);
+        wolf_buffer_append_u32_le(buffer, 1u);
+        append_string(buffer, "_t");
+        append_string(buffer, translation);
+        end_chunk(buffer, chunk);
+
+        chunk = begin_chunk(buffer, "nSHP");
+        wolf_buffer_append_u32_le(buffer, (uint32_t)(3u + 2u * object));
+        wolf_buffer_append_u32_le(buffer, 0u);
+        wolf_buffer_append_u32_le(buffer, (uint32_t)objects[object].frame_count);
+        for (size_t frame = 0u; frame < objects[object].frame_count; ++frame) {
+            char frame_text[16];
+
+            (void)snprintf(frame_text, sizeof(frame_text), "%u", (unsigned)frame);
+            wolf_buffer_append_u32_le(buffer, next_model++);
+            wolf_buffer_append_u32_le(buffer, 1u);
+            append_string(buffer, "_f");
+            append_string(buffer, frame_text);
+        }
+        end_chunk(buffer, chunk);
+    }
 }
 
-bool wolf_vox_encode(
-    const WolfVoxelModel *const *frames,
-    size_t frame_count,
+bool wolf_vox_encode_objects(
+    const WolfVoxObject *objects,
+    size_t object_count,
     const uint8_t *palette_rgba,
     WolfByteBuffer *output)
 {
     size_t main_children_offset;
     size_t chunk;
 
-    if (frames == NULL || frame_count == 0u || palette_rgba == NULL || output == NULL) {
+    if (objects == NULL || object_count == 0u || palette_rgba == NULL || output == NULL) {
         return false;
+    }
+    for (size_t object = 0u; object < object_count; ++object) {
+        if (objects[object].name == NULL || objects[object].frames == NULL || objects[object].frame_count == 0u) {
+            return false;
+        }
     }
 
     wolf_buffer_append(output, "VOX ", 4u);
@@ -168,12 +187,12 @@ bool wolf_vox_encode(
     main_children_offset = output->size;
     wolf_buffer_append_u32_le(output, 0u);
 
-    for (size_t frame = 0u; frame < frame_count; ++frame) {
-        append_model(output, frames[frame], palette_rgba);
+    for (size_t object = 0u; object < object_count; ++object) {
+        for (size_t frame = 0u; frame < objects[object].frame_count; ++frame) {
+            append_model(output, objects[object].frames[frame], palette_rgba);
+        }
     }
-    if (frame_count > 1u) {
-        append_animation_scene(output, frame_count);
-    }
+    append_scene(output, objects, object_count);
 
     chunk = begin_chunk(output, "RGBA");
     for (uint32_t entry = 0u; entry < 256u; ++entry) {
@@ -192,23 +211,22 @@ bool wolf_vox_encode(
     return !output->failed;
 }
 
-bool wolf_vox_write_file(
+bool wolf_vox_write_objects_file(
     const char *path,
-    const WolfVoxelModel *const *frames,
-    size_t frame_count,
+    const WolfVoxObject *objects,
+    size_t object_count,
     const uint8_t *palette_rgba)
 {
     WolfByteBuffer buffer = {0};
     bool written = false;
 
-    if (wolf_vox_encode(frames, frame_count, palette_rgba, &buffer)) {
+    if (wolf_vox_encode_objects(objects, object_count, palette_rgba, &buffer)) {
         written = wolf_write_entire_file(path, buffer.data, buffer.size);
     }
     wolf_buffer_free(&buffer);
     return written;
 }
 
-/* Read a length-prefixed string and report whether it equals the expected key. */
 static bool read_string(const uint8_t *data, size_t end, size_t *cursor, const uint8_t **text, uint32_t *length)
 {
     if (*cursor + 4u > end) {
@@ -224,8 +242,12 @@ static bool read_string(const uint8_t *data, size_t end, size_t *cursor, const u
     return true;
 }
 
-/* Skip a dictionary, extracting the integer "_f" value if one is present. */
-static bool read_dictionary(const uint8_t *data, size_t end, size_t *cursor, int32_t *frame_value)
+/*
+ * Read a dictionary, extracting the "_f" integer and the "_name" string when
+ * the caller asks for them.
+ */
+static bool read_dictionary(const uint8_t *data, size_t end, size_t *cursor, int32_t *frame_value,
+    char *name, size_t name_size)
 {
     uint32_t pair_count;
 
@@ -244,43 +266,78 @@ static bool read_dictionary(const uint8_t *data, size_t end, size_t *cursor, int
             !read_string(data, end, cursor, &value, &value_length)) {
             return false;
         }
-        if (frame_value != NULL && key_length == 2u && key[0] == '_' && key[1] == 'f' && value_length < 16u) {
+        if (frame_value != NULL && key_length == 2u && memcmp(key, "_f", 2u) == 0 && value_length < 16u) {
             char text[16];
 
             memcpy(text, value, value_length);
             text[value_length] = '\0';
             *frame_value = (int32_t)strtol(text, NULL, 10);
         }
+        if (name != NULL && key_length == 5u && memcmp(key, "_name", 5u) == 0) {
+            size_t copied = value_length < name_size - 1u ? value_length : name_size - 1u;
+
+            memcpy(name, value, copied);
+            name[copied] = '\0';
+        }
     }
     return true;
 }
 
-/* Record keyframe indices from a shape node so animated files can be checked. */
-static bool read_shape_node(const uint8_t *data, size_t end, WolfVoxDocument *document)
+/* A transform node's name and the node it points to. */
+typedef struct TransformNode {
+    uint32_t node_id;
+    uint32_t child_id;
+    char name[64];
+} TransformNode;
+
+static bool read_transform_node(const uint8_t *data, size_t end, TransformNode *node)
 {
-    size_t cursor = 0u;
+    size_t cursor = 4u;
+
+    if (end < 4u) {
+        return false;
+    }
+    node->node_id = wolf_read_u32_le(data);
+    node->name[0] = '\0';
+    if (!read_dictionary(data, end, &cursor, NULL, node->name, sizeof(node->name)) || cursor + 4u > end) {
+        return false;
+    }
+    node->child_id = wolf_read_u32_le(data + cursor);
+    return true;
+}
+
+/* Record a shape node's models and keyframes as one document object. */
+static bool read_shape_node(const uint8_t *data, size_t end, WolfVoxDocumentObject *object, uint32_t *node_id)
+{
+    size_t cursor = 4u;
     uint32_t model_count;
 
-    cursor += 4u;
-    if (!read_dictionary(data, end, &cursor, NULL) || cursor + 4u > end) {
+    if (end < 4u) {
+        return false;
+    }
+    *node_id = wolf_read_u32_le(data);
+    if (!read_dictionary(data, end, &cursor, NULL, NULL, 0u) || cursor + 4u > end) {
         return false;
     }
     model_count = wolf_read_u32_le(data + cursor);
     cursor += 4u;
+    object->frame_count = 0u;
     for (uint32_t model = 0u; model < model_count; ++model) {
-        uint32_t model_id;
         int32_t frame_value = -1;
+        uint32_t model_id;
 
         if (cursor + 4u > end) {
             return false;
         }
         model_id = wolf_read_u32_le(data + cursor);
         cursor += 4u;
-        if (!read_dictionary(data, end, &cursor, &frame_value)) {
+        if (!read_dictionary(data, end, &cursor, &frame_value, NULL, 0u)) {
             return false;
         }
-        if (model_id < document->model_count) {
-            document->frame_indices[model_id] = frame_value;
+        if (object->frame_count < WOLF_VOX_MAX_OBJECT_FRAMES) {
+            object->model_ids[object->frame_count] = model_id;
+            object->frame_indices[object->frame_count] = frame_value;
+            ++object->frame_count;
         }
     }
     return true;
@@ -298,10 +355,9 @@ bool wolf_vox_decode(
     size_t model_capacity = 0u;
     uint32_t pending_size[3] = {0u, 0u, 0u};
     bool have_size = false;
-    /* Shape nodes may precede nothing useful until models are known, so remember them. */
-    const uint8_t *shape_nodes[64];
-    size_t shape_node_sizes[64];
-    size_t shape_node_count = 0u;
+    TransformNode transforms[MAX_SCENE_NODES];
+    size_t transform_count = 0u;
+    uint32_t shape_ids[WOLF_VOX_MAX_OBJECTS];
 
     memset(document, 0, sizeof(*document));
     if (data == NULL || size < 20u || memcmp(data, "VOX ", 4u) != 0 ||
@@ -347,19 +403,13 @@ bool wolf_vox_decode(
             if (document->model_count == model_capacity) {
                 size_t new_capacity = model_capacity == 0u ? 8u : model_capacity * 2u;
                 WolfVoxelModel **models = realloc(document->models, new_capacity * sizeof(*models));
-                int32_t *frames = realloc(document->frame_indices, new_capacity * sizeof(*frames));
 
-                if (models != NULL) {
-                    document->models = models;
-                }
-                if (frames != NULL) {
-                    document->frame_indices = frames;
-                }
-                if (models == NULL || frames == NULL) {
+                if (models == NULL) {
                     wolf_vox_document_destroy(document);
                     wolf_set_error(error_message, error_message_size, "Out of memory reading models.");
                     return false;
                 }
+                document->models = models;
                 model_capacity = new_capacity;
             }
             model = wolf_voxel_model_create();
@@ -378,25 +428,44 @@ bool wolf_vox_decode(
                 model->occupied[wolf_voxel_index(voxel[0], voxel[1], voxel[2])] = 1u;
                 model->palette_index[wolf_voxel_index(voxel[0], voxel[1], voxel[2])] = (uint8_t)(voxel[3] - 1u);
             }
-            document->frame_indices[document->model_count] = -1;
             document->models[document->model_count++] = model;
             have_size = false;
         } else if (memcmp(identifier, "RGBA", 4u) == 0 && content_size >= 1024u) {
             /* Store chunk entry n at palette slot n so slot = colour index - 1. */
             memcpy(document->palette_rgba, content, 1024u);
-        } else if (memcmp(identifier, "nSHP", 4u) == 0 && shape_node_count < 64u) {
-            shape_nodes[shape_node_count] = content;
-            shape_node_sizes[shape_node_count] = content_size;
-            ++shape_node_count;
+        } else if (memcmp(identifier, "nTRN", 4u) == 0 && transform_count < MAX_SCENE_NODES) {
+            if (!read_transform_node(content, content_size, &transforms[transform_count])) {
+                wolf_vox_document_destroy(document);
+                wolf_set_error(error_message, error_message_size, "Transform node is malformed.");
+                return false;
+            }
+            ++transform_count;
+        } else if (memcmp(identifier, "nSHP", 4u) == 0 && document->object_count < WOLF_VOX_MAX_OBJECTS) {
+            if (!read_shape_node(content, content_size, &document->objects[document->object_count],
+                    &shape_ids[document->object_count])) {
+                wolf_vox_document_destroy(document);
+                wolf_set_error(error_message, error_message_size, "Shape node is malformed.");
+                return false;
+            }
+            ++document->object_count;
         }
         cursor += VOX_CHUNK_HEADER_SIZE + content_size + children_size;
     }
 
-    for (size_t node = 0u; node < shape_node_count; ++node) {
-        if (!read_shape_node(shape_nodes[node], shape_node_sizes[node], document)) {
-            wolf_vox_document_destroy(document);
-            wolf_set_error(error_message, error_message_size, "Shape node is malformed.");
-            return false;
+    /* Each object is named by the transform node that points at its shape. */
+    for (size_t object = 0u; object < document->object_count; ++object) {
+        for (size_t transform = 0u; transform < transform_count; ++transform) {
+            if (transforms[transform].child_id == shape_ids[object]) {
+                (void)snprintf(document->objects[object].name, sizeof(document->objects[object].name),
+                    "%s", transforms[transform].name);
+            }
+        }
+        for (size_t frame = 0u; frame < document->objects[object].frame_count; ++frame) {
+            if (document->objects[object].model_ids[frame] >= document->model_count) {
+                wolf_vox_document_destroy(document);
+                wolf_set_error(error_message, error_message_size, "A shape refers to a missing model.");
+                return false;
+            }
         }
     }
     if (document->model_count == 0u) {
@@ -433,6 +502,5 @@ void wolf_vox_document_destroy(WolfVoxDocument *document)
         wolf_voxel_model_destroy(document->models[model]);
     }
     free(document->models);
-    free(document->frame_indices);
     memset(document, 0, sizeof(*document));
 }

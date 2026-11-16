@@ -1,6 +1,7 @@
 #ifndef WOLF_SPRITE_VOXELIZER_ASSET_CATALOG_H
 #define WOLF_SPRITE_VOXELIZER_ASSET_CATALOG_H
 
+#include "hand_built_models.h"
 #include "reconstruction.h"
 #include "wl6_tables.h"
 
@@ -10,45 +11,84 @@
 #define WOLF_ASSET_NAME_LENGTH 48
 #define WOLF_ROTATION_COUNT 8
 
-typedef enum WolfAssetKind {
+/* How one pose model is produced. */
+typedef enum WolfAssetMethod {
     /* Eight frames drawn from eight directions, rebuilt into one solid. */
     WOLF_ASSET_ROTATION_SET,
-    /* A frame the original engine always draws facing the camera. */
-    WOLF_ASSET_SINGLE_VIEW
-} WolfAssetKind;
+    /* A camera-facing frame given depth by a profile (inflate, lathe, extrude, first person). */
+    WOLF_ASSET_SINGLE_VIEW,
+    /* A camera-facing actor frame built on the body of the actor's rotation-set model. */
+    WOLF_ASSET_POSE_TRANSFER,
+    /* Furniture modelled directly, using the sprite only as a reference. */
+    WOLF_ASSET_HAND_BUILT
+} WolfAssetMethod;
 
-/* One output model and how it is reconstructed. */
+/* One pose model: a rotation set or a single frame. */
 typedef struct WolfVoxelAsset {
     char name[WOLF_ASSET_NAME_LENGTH];
-    WolfAssetKind kind;
+    WolfAssetMethod method;
     /* Frame-1 sprite of a rotation set, or the only sprite of a single view. */
     int first_sprite;
     int sprite_count;
-    /* Leading token of the sprite name (e.g. "GRD"), shared by one actor's frames. */
-    char subject[WOLF_ASSET_NAME_LENGTH];
+    /* Index into the catalogue's subjects, and the animation within that subject. */
+    int subject;
+    int animation;
     const char *description;
     WolfSingleViewOptions single_view;
     /*
      * When true, single_view.depth_scale is replaced by the depth ratio of the
-     * same subject's rotation-set model, so camera-facing frames of an actor
-     * share the body thickness recovered from its rotation frames.
+     * subject's rotation-set model so all of an actor's frames share its build.
      */
     bool depth_from_subject;
+    /* Remove the floor shadow painted beneath the sprite before reconstruction. */
+    bool strip_shadow;
+    WolfHandBuiltModel hand_built;
 } WolfVoxelAsset;
+
+#define WOLF_SUBJECT_MAX_ANIMATIONS 12
+#define WOLF_ANIMATION_MAX_POSES 16
+
+/* A named animation inside a subject's file: its poses in playback order. */
+typedef struct WolfSubjectAnimation {
+    char name[WOLF_ASSET_NAME_LENGTH];
+    int assets[WOLF_ANIMATION_MAX_POSES];
+    size_t pose_count;
+} WolfSubjectAnimation;
+
+/*
+ * One output file: an actor, a static object, a projectile or a weapon,
+ * holding every one of its animations.
+ */
+typedef struct WolfSubject {
+    char name[WOLF_ASSET_NAME_LENGTH];
+    WolfSubjectAnimation animations[WOLF_SUBJECT_MAX_ANIMATIONS];
+    size_t animation_count;
+    /* Rotation-set asset whose body depth this subject's single frames use, or -1. */
+    int reference_asset;
+} WolfSubject;
+
+#define WOLF_SUBJECT_CAPACITY 128
 
 typedef struct WolfAssetCatalog {
     WolfVoxelAsset assets[WOLF_WL6_SPRITE_COUNT];
     size_t asset_count;
+    WolfSubject subjects[WOLF_SUBJECT_CAPACITY];
+    size_t subject_count;
     /* Asset that contains each sprite, and the sprite's rotation within it (0 for single views). */
     int asset_for_sprite[WOLF_WL6_SPRITE_COUNT];
     int rotation_for_sprite[WOLF_WL6_SPRITE_COUNT];
 } WolfAssetCatalog;
 
-/* Build the WL6 asset list from the original sprite and state tables. */
+/*
+ * Build the WL6 catalogue from the original sprite and state tables. Sprite
+ * names give the grouping: SPR_GRD_W1_1 belongs to subject "grd",
+ * animation "w"; SPR_GRD_DIE_2 to animation "die". Poses of an animation
+ * are in sprite order, which is the original drawing order.
+ */
 void wolf_asset_catalog_build(WolfAssetCatalog *catalog);
 
-/* Index of the first rotation-set asset for a subject, or -1 if it has none. */
-int wolf_asset_catalog_reference_for_subject(const WolfAssetCatalog *catalog, const char *subject);
+/* Index of a subject by name, or -1. */
+int wolf_asset_catalog_find_subject(const WolfAssetCatalog *catalog, const char *name);
 
 /* Rotation angle in degrees for frame k of an eight-way set. */
 double wolf_rotation_degrees(int rotation);
@@ -65,14 +105,14 @@ typedef struct WolfAnimationFrame {
     int rotate;
 } WolfAnimationFrame;
 
-/* A sequence of frames reconstructed from the original state graph. */
+/* A timed sequence reconstructed from the original state graph. */
 typedef struct WolfAnimation {
     char name[WOLF_ASSET_NAME_LENGTH];
     WolfAnimationFrame frames[WOLF_ANIMATION_MAX_FRAMES];
     size_t frame_count;
     /* Frame index the sequence returns to, or -1 when it does not loop. */
     int loop_frame;
-    /* Animation that follows a non-looping sequence, or empty if it simply ends. */
+    /* Sequence that follows a non-looping sequence, or empty if it simply ends. */
     char next_animation[WOLF_ASSET_NAME_LENGTH];
     /* Original state entered after the last frame, or -1. */
     int next_state_index;
@@ -82,11 +122,12 @@ typedef struct WolfAnimation {
 #define WOLF_ANIMATION_CAPACITY 160
 
 /*
- * Group the original states into animations. States whose names differ
+ * Group the original states into timed sequences. States whose names differ
  * only by trailing digits and an "s" suffix (s_grdchase1, s_grdchase1s,
  * s_grdchase2 ...) form one sequence, ordered by following each state's
- * next pointer. The player's weapon animations come from attackinfo in
- * WL_AGENT.C because the player has no sprite states.
+ * next pointer. The player's weapon sequences come from attackinfo in
+ * WL_AGENT.C because the player has no sprite states. These sequences give
+ * the original timing for playing a subject's animations in the engine.
  */
 size_t wolf_animation_catalog_build(WolfAnimation *animations, size_t capacity);
 

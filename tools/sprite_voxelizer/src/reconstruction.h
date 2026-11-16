@@ -8,44 +8,47 @@
 #include <stddef.h>
 
 /*
- * The hand-drawn rotation frames are not perfectly consistent projections of
- * one solid. These options control how strictly each frame's silhouette is
- * allowed to remove material from the shared model.
+ * Rotation frames fall into two groups. The four face-on frames (front,
+ * sides, back) are drawn consistently with one another, while the four
+ * diagonal frames were drawn independently and often show a different
+ * stride or arm swing. The face-on frames therefore define the solid, and
+ * the diagonal frames are only used to resolve what four orthogonal
+ * silhouettes cannot (which leg is forward, which arm is raised).
  */
 typedef struct WolfMultiViewOptions {
-    /* Number of views that may disagree before a voxel is carved away. */
-    int allowed_silhouette_misses;
-    /* Extra columns either side of a diagonal-view projection still counted as inside. */
-    int diagonal_tolerance_columns;
+    /*
+     * Largest sideways shift, in canvas columns, tried when registering a
+     * frame to the shared vertical axis. The artists did not centre every
+     * rotation on the same column; 0 disables registration.
+     */
+    int maximum_registration_shift;
     /* Connected fragments smaller than this many voxels are discarded as carving noise. */
     size_t minimum_fragment_voxels;
     /*
-     * Largest sideways shift, in canvas columns, tried when registering each
-     * frame to the shared vertical axis. The artists did not centre every
-     * rotation on exactly the same column; 0 disables registration.
+     * Remove material the diagonal frames reject, provided every drawn pixel
+     * of the face-on frames stays covered. This removes the phantom limbs a
+     * four-view hull invents (a walking figure otherwise grows four legs).
      */
-    int maximum_registration_shift;
-    /*
-     * After tolerant carving, remove voxels that cover transparent pixels as
-     * long as every drawn pixel stays covered, cutting back the excess
-     * outline that frames rejecting the material would otherwise show.
-     */
-    bool prune_excess_voxels;
+    bool prune_with_diagonal_views;
 } WolfMultiViewOptions;
 
 WolfMultiViewOptions wolf_multi_view_default_options(void);
 
+/* Face-on views (multiples of 90 degrees) define the solid; others refine it. */
+bool wolf_rotation_is_face_on(double rotation_degrees);
+
 /*
- * Rebuild one solid from several rotation frames. Each frame is first
- * registered (shifted sideways by whole columns) so that the silhouettes
- * agree as well as possible; the solid is then space-carved from the
- * registered silhouettes (the visual hull). Every visible surface voxel
- * takes the colour that most of the pixels showing it have in the original
- * frames, ties going to the frame that faces the surface. Voxels no frame
- * can see inherit the colour of the nearest seen voxel.
+ * Rebuild one solid from several rotation frames:
+ *  1. register the face-on frames to a common axis and carve their visual hull;
+ *  2. register each diagonal frame against that hull;
+ *  3. prune hull material the diagonal frames reject without uncovering any
+ *     face-on drawn pixel;
+ *  4. colour each surface voxel from the frame that looks most squarely at
+ *     it, so every face keeps the crisp texture of the frame drawn for it.
+ * Voxels no frame can see inherit the colour of the nearest seen voxel.
  *
  * registration_shifts (optional, view_count entries) receives the column
- * offset of each frame; the first frame is the fixed reference.
+ * offset of each frame; the first face-on frame is the fixed reference.
  */
 bool wolf_reconstruct_multi_view(
     const WolfSpriteImage *const *views,
@@ -55,14 +58,23 @@ bool wolf_reconstruct_multi_view(
     WolfVoxelModel *model,
     int *registration_shifts);
 
-/* How depth is invented for a sprite that was only ever drawn from the front. */
+/* How depth is invented for a sprite that was only ever drawn from one direction. */
 typedef enum WolfDepthProfile {
     /* Round every limb and blob by its own width, like inflating the outline. */
     WOLF_DEPTH_PROFILE_INFLATE,
     /* Turn each horizontal run into a disc, suiting barrels, lamps and pillars. */
     WOLF_DEPTH_PROFILE_LATHE,
     /* A constant thickness, suiting signs, flat treasure and floor clutter. */
-    WOLF_DEPTH_PROFILE_EXTRUDE
+    WOLF_DEPTH_PROFILE_EXTRUDE,
+    /*
+     * A first-person weapon seen from behind the player's eye. Perspective
+     * draws the far end of the gun higher on the screen, so each row is
+     * placed further from the viewer than the row below: the hand stays
+     * near the eye and the barrel reaches forward into the screen. The
+     * front view is unchanged because every pixel's voxels stay on its own
+     * line of sight.
+     */
+    WOLF_DEPTH_PROFILE_FIRST_PERSON
 } WolfDepthProfile;
 
 typedef struct WolfSingleViewOptions {
@@ -86,8 +98,26 @@ void wolf_reconstruct_single_view(
     WolfVoxelModel *model);
 
 /*
+ * Build a camera-facing actor frame (pain, attack) on the body of the same
+ * actor's rotation-set model. Where the frame overlaps the reference body
+ * seen from the front, the voxels span the reference body's real depth: the
+ * front face shows the frame and the sides and back keep the reference
+ * body's own colours, so the actor is a person rather than a cut-out.
+ * Pixels the reference does not cover (a raised arm, a levelled gun) fall
+ * back to the given profile around the body's centre line. The front view
+ * still reproduces the frame exactly.
+ */
+void wolf_reconstruct_pose_transfer(
+    const WolfSpriteImage *image,
+    const WolfVoxelModel *reference,
+    const WolfSingleViewOptions *fallback,
+    WolfVoxelModel *model);
+
+/*
  * Compute each pixel's half-depth for a single-view profile. Exposed for
- * testing; transparent pixels receive zero.
+ * testing; transparent pixels receive zero. The first-person profile uses
+ * the inflate half-depth here; its forward placement is applied when the
+ * model is built.
  */
 void wolf_single_view_half_depths(
     const WolfSpriteImage *image,
@@ -100,5 +130,8 @@ void wolf_single_view_half_depths(
  * same body depth as that actor's multi-view reconstruction.
  */
 double wolf_voxel_model_depth_ratio(const WolfVoxelModel *model);
+
+/* Front-to-back extent of the occupied voxels, in voxels (0 for an empty model). */
+int wolf_voxel_model_depth_extent(const WolfVoxelModel *model);
 
 #endif

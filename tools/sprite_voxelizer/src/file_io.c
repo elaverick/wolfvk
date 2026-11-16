@@ -176,6 +176,33 @@ void wolf_buffer_append_u32_be(WolfByteBuffer *buffer, uint32_t value)
     wolf_buffer_append(buffer, bytes, sizeof(bytes));
 }
 
+void wolf_buffer_append_base64(WolfByteBuffer *buffer, const uint8_t *data, size_t size)
+{
+    static const char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    for (size_t position = 0u; position < size; position += 3u) {
+        uint32_t group = (uint32_t)data[position] << 16;
+        char encoded[4];
+
+        if (position + 1u < size) {
+            group |= (uint32_t)data[position + 1u] << 8;
+        }
+        if (position + 2u < size) {
+            group |= data[position + 2u];
+        }
+        encoded[0] = alphabet[(group >> 18) & 63u];
+        encoded[1] = alphabet[(group >> 12) & 63u];
+        encoded[2] = position + 1u < size ? alphabet[(group >> 6) & 63u] : '=';
+        encoded[3] = position + 2u < size ? alphabet[group & 63u] : '=';
+        wolf_buffer_append(buffer, encoded, sizeof(encoded));
+    }
+}
+
+void wolf_buffer_append_text(WolfByteBuffer *buffer, const char *text)
+{
+    wolf_buffer_append(buffer, text, strlen(text));
+}
+
 void wolf_buffer_patch_u32_le(WolfByteBuffer *buffer, size_t offset, uint32_t value)
 {
     if (!buffer->failed && offset + 4u <= buffer->size) {

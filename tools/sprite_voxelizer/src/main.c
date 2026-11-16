@@ -9,19 +9,19 @@ static void print_usage(const char *program)
     printf(
         "Usage: %s --vswap <VSWAP.WL6> [--output <directory>] [options]\n"
         "\n"
-        "Extracts every WL6 sprite, rebuilds it as a 64x64x64 MagicaVoxel model,\n"
-        "writes one animated VOX per original animation and validates each model\n"
-        "against the original frames.\n"
+        "Extracts every WL6 sprite, removes painted floor shadows, rebuilds each\n"
+        "pose as a 64x64x64 MagicaVoxel model and writes one VOX file per actor or\n"
+        "object holding all of its animations. Every model is validated against\n"
+        "the original frames.\n"
         "\n"
         "Options:\n"
         "  --output <dir>             Output directory (default: sprite_voxels)\n"
-        "  --only <model>             Rebuild one model, e.g. grd_s or stat_1\n"
-        "  --carve-misses <n>         Views allowed to disagree before carving (default 1)\n"
-        "  --no-prune                 Keep excess material that a minority of views reject\n"
-        "  --diagonal-tolerance <n>   Extra columns accepted in diagonal views (default 0)\n"
-        "  --min-fragment <n>         Drop carved fragments smaller than n voxels (default 8)\n"
+        "  --only <subject>           Rebuild one subject, e.g. grd, dog or stat_1\n"
         "  --max-shift <n>            Largest frame registration shift in columns (default 3)\n"
+        "  --min-fragment <n>         Drop carved fragments smaller than n voxels (default 8)\n"
+        "  --no-diagonal-prune        Keep material only the diagonal frames reject\n"
         "  --no-sheets                Skip PNG comparison sheets and the HTML report\n"
+        "  --no-viewer-data           Skip viewer_data.js for the HTML viewer\n"
         "  --help                     Show this message\n",
         program);
 }
@@ -47,7 +47,8 @@ int main(int argc, char **argv)
     options.output_directory = "sprite_voxels";
     options.multi_view = wolf_multi_view_default_options();
     options.write_comparison_sheets = true;
-    options.only_asset = NULL;
+    options.write_viewer_data = true;
+    options.only_subject = NULL;
 
     for (int argument = 1; argument < argc; ++argument) {
         const char *name = argv[argument];
@@ -58,12 +59,16 @@ int main(int argc, char **argv)
             print_usage(argv[0]);
             return 0;
         }
-        if (strcmp(name, "--no-prune") == 0) {
-            options.multi_view.prune_excess_voxels = false;
+        if (strcmp(name, "--no-diagonal-prune") == 0) {
+            options.multi_view.prune_with_diagonal_views = false;
             continue;
         }
         if (strcmp(name, "--no-sheets") == 0) {
             options.write_comparison_sheets = false;
+            continue;
+        }
+        if (strcmp(name, "--no-viewer-data") == 0) {
+            options.write_viewer_data = false;
             continue;
         }
         if (value == NULL) {
@@ -76,11 +81,7 @@ int main(int argc, char **argv)
         } else if (strcmp(name, "--output") == 0) {
             options.output_directory = value;
         } else if (strcmp(name, "--only") == 0) {
-            options.only_asset = value;
-        } else if (strcmp(name, "--carve-misses") == 0 && parse_count(value, 7, &count)) {
-            options.multi_view.allowed_silhouette_misses = count;
-        } else if (strcmp(name, "--diagonal-tolerance") == 0 && parse_count(value, 4, &count)) {
-            options.multi_view.diagonal_tolerance_columns = count;
+            options.only_subject = value;
         } else if (strcmp(name, "--max-shift") == 0 && parse_count(value, 8, &count)) {
             options.multi_view.maximum_registration_shift = count;
         } else if (strcmp(name, "--min-fragment") == 0 && parse_count(value, 100000, &count)) {

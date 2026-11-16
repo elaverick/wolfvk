@@ -62,6 +62,10 @@ void wolf_buffer_append(WolfByteBuffer *buffer, const void *data, size_t size);
 void wolf_buffer_append_u8(WolfByteBuffer *buffer, uint8_t value);
 void wolf_buffer_append_u32_le(WolfByteBuffer *buffer, uint32_t value);
 void wolf_buffer_append_u32_be(WolfByteBuffer *buffer, uint32_t value);
+/* Append bytes as base64 text, used to embed binary files in the viewer's data script. */
+void wolf_buffer_append_base64(WolfByteBuffer *buffer, const uint8_t *data, size_t size);
+/* Append a NUL-terminated string without its terminator. */
+void wolf_buffer_append_text(WolfByteBuffer *buffer, const char *text);
 /* Overwrite four bytes already in the buffer, used to back-fill chunk sizes. */
 void wolf_buffer_patch_u32_le(WolfByteBuffer *buffer, size_t offset, uint32_t value);
 void wolf_buffer_free(WolfByteBuffer *buffer);

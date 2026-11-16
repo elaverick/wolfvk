@@ -76,13 +76,17 @@ typedef struct WolfComparisonSheet {
 
 /*
  * Lay out a visual comparison: one column per original view with the
- * original frame on top, the voxel model rendered from that rotation in
- * the middle and a difference map below (grey = match, yellow = different
- * colour, red = missing from the model, blue = extra in the model). Two
- * shaded three-quarter previews of the model follow on the right.
+ * original frame (as drawn) on top, the voxel model rendered from that
+ * rotation in the middle and a difference map below, measured against the
+ * shadow-free frame: grey = match, yellow = different colour, red = missing
+ * from the model, blue = extra in the model, purple = floor shadow removed
+ * before voxelising. Two shaded three-quarter previews follow on the right.
+ * targets and shadow_masks may be NULL when nothing was removed.
  */
 bool wolf_comparison_sheet_build(
     const WolfSpriteImage *const *originals,
+    const WolfSpriteImage *const *targets,
+    const uint8_t *const *shadow_masks,
     const WolfSpriteImage *rendered,
     size_t view_count,
     const WolfVoxelModel *model,
