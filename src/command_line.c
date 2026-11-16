@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* The original new-game menu lists four difficulties; users pick them by their position, 1 to 4. */
+#define WOLF_DIFFICULTY_OPTION_COUNT 4u
+
 /* Keep parser failures available to callers without requiring a non-null diagnostic buffer. */
 static void write_error(char *error_message, size_t error_message_size, const char *message)
 {
@@ -15,7 +18,26 @@ static void write_error(char *error_message, size_t error_message_size, const ch
     }
 }
 
-/* Validate the one-based user option, then convert it once to the loader's zero-based map index. */
+/* Accept only a whole decimal number from 1 to maximum, with nothing after it. */
+static bool parse_one_based_number(const char *text, unsigned long maximum, unsigned long *value)
+{
+    char *end_pointer = NULL;
+    unsigned long parsed;
+
+    if (text == NULL || text[0] == '-' || text[0] == '+') {
+        return false;
+    }
+    errno = 0;
+    parsed = strtoul(text, &end_pointer, 10);
+    if (errno == ERANGE || end_pointer == text || *end_pointer != '\0' ||
+        parsed == 0u || parsed > maximum) {
+        return false;
+    }
+    *value = parsed;
+    return true;
+}
+
+/* Validate the one-based user options, then convert them once to the values the game uses. */
 bool wolf_parse_command_line(
     int argc,
     char *argv[],
@@ -24,6 +46,7 @@ bool wolf_parse_command_line(
     size_t error_message_size)
 {
     bool level_was_set = false;
+    bool difficulty_was_set = false;
 
     if (error_message != NULL && error_message_size > 0u) {
         error_message[0] = '\0';
@@ -35,10 +58,13 @@ bool wolf_parse_command_line(
     }
 
     options->level_index = 0u;
+    options->difficulty = WOLF_DIFFICULTY_MEDIUM;
     options->show_help = false;
 
     for (int argument_index = 1; argument_index < argc; ++argument_index) {
         const char *argument = argv[argument_index];
+        bool is_level;
+        unsigned long value;
 
         if (argument == NULL) {
             write_error(error_message, error_message_size, "A command line argument is null.");
@@ -50,38 +76,45 @@ bool wolf_parse_command_line(
             return true;
         }
 
-        if (strcmp(argument, "--level") != 0) {
+        is_level = strcmp(argument, "--level") == 0;
+        if (!is_level && strcmp(argument, "--difficulty") != 0) {
             write_error(error_message, error_message_size, "Unknown command line option.");
             return false;
         }
 
-        if (level_was_set) {
-            write_error(error_message, error_message_size, "--level may only be specified once.");
+        if (is_level ? level_was_set : difficulty_was_set) {
+            write_error(error_message, error_message_size, is_level
+                ? "--level may only be specified once."
+                : "--difficulty may only be specified once.");
             return false;
         }
 
         if (argument_index + 1 >= argc || argv[argument_index + 1] == NULL) {
-            write_error(error_message, error_message_size, "--level requires a level number.");
+            write_error(error_message, error_message_size, is_level
+                ? "--level requires a level number."
+                : "--difficulty requires a number from 1 to 4.");
             return false;
         }
+        ++argument_index;
 
-        {
-            char *end_pointer = NULL;
-            unsigned long requested_level;
-
-            errno = 0;
-            requested_level = strtoul(argv[++argument_index], &end_pointer, 10);
-            if (errno == ERANGE || end_pointer == argv[argument_index] ||
-                *end_pointer != '\0' || requested_level == 0u ||
-                requested_level > WOLF_LEVEL_MAX_MAPS) {
+        if (is_level) {
+            if (!parse_one_based_number(argv[argument_index], WOLF_LEVEL_MAX_MAPS, &value)) {
                 write_error(
                     error_message, error_message_size,
                     "The level number must be between 1 and 60.");
                 return false;
             }
-
-            options->level_index = (uint32_t)(requested_level - 1u);
+            options->level_index = (uint32_t)(value - 1u);
             level_was_set = true;
+        } else {
+            if (!parse_one_based_number(argv[argument_index], WOLF_DIFFICULTY_OPTION_COUNT, &value)) {
+                write_error(
+                    error_message, error_message_size,
+                    "The difficulty must be between 1 and 4.");
+                return false;
+            }
+            options->difficulty = (WolfDifficulty)(value - 1u);
+            difficulty_was_set = true;
         }
     }
 
