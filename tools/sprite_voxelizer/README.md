@@ -1,6 +1,6 @@
 # Wolfenstein 3D sprite voxelizer
 
-An offline C17 tool that extracts every sprite from an original WL6 `VSWAP.WL6`, removes the painted floor shadows, rebuilds each pose as a 64×64×64 [MagicaVoxel](https://ephtracy.github.io/) model, and writes **one `.vox` file per actor or object** containing all of its animations. Every model is checked against the original frames, and a small HTML viewer is included for inspecting the results in 3D.
+An offline C17 tool that extracts every sprite from an original WL6 `VSWAP.WL6`, removes the painted floor shadows, rebuilds each pose as a 64×64×64 [MagicaVoxel](https://ephtracy.github.io/) model, and writes **one `.vox` file per actor, object or first-person weapon** containing all of its animations. Every model is checked against the original frames, and a small HTML viewer is included for inspecting the results in 3D.
 
 The tool is a separate CMake project: the game neither builds nor links it. The only game code it reuses is the VGA palette table (`src/game_palette.c`).
 
@@ -37,7 +37,7 @@ The viewer is plain WebGL2 with no dependencies. `viewer_data.js` embeds the man
 
 | Path | Contents |
 |---|---|
-| `vox/<subject>.vox` | 77 files: one per actor (`grd`, `dog`, `ss`, `mut`, `ofc`), boss, projectile, effect, weapon (`knife`, `pistol`, `machinegun`, `chain`) and static object (`stat_0` … `stat_47`) |
+| `vox/<subject>.vox` | 77 files: one per actor (`grd`, `dog`, `ss`, `mut`, `ofc`), boss, projectile, effect, first-person weapon (`knife`, `pistol`, `machinegun`, `chain`) and static object (`stat_0` … `stat_47`) |
 | `manifest.json` | Engine-facing index of subjects, animations, poses, source sprites, reconstruction method, validation scores, and the original timed state sequences mapped onto those poses |
 | `sprites/NNN_name.png` | All 436 original frames, extracted losslessly with transparency |
 | `validation/<model>.png`, `report.html`, `metrics.csv` | Visual comparison sheets and per-pose metrics |
@@ -95,6 +95,10 @@ The original `rotate` flags identify the 25 sets; 24 are carved as below and the
    - Among face-on frames, the front always wins over the back, and the back over the sides. A detail that a side or back frame draws near the face (an eye in profile, hair behind an ear) is never painted onto the front.
    - Diagonal frames only colour what no face-on frame shows, and never a surface turned away from them.
    - Outline pixels lose to a frame that sees the voxel inside its silhouette, so drawn outlines don't become dark blotches. The front frame is the exception: what it draws at the edge of the face stays.
+
+### First-person weapons
+
+The four weapon subjects are `knife`, `pistol`, `machinegun` and `chain`. Each contains the named `player_*_ready` animation (one pose) and `player_*_attack` animation (four poses) generated directly from the original weapon sprites. The ready sprite is held until fire is pressed; attack poses are each six original 70 Hz tics. The first-person reconstruction profile pushes each scanline further into the screen as it moves higher in the sprite, so the muzzle projects into the world instead of being a flat billboard.
 
 ### The rocket
 
