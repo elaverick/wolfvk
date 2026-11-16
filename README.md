@@ -75,5 +75,5 @@ Use `--level N` to select a one-based level number; omit it to load the first le
 
 ## Tools
 
-`tools/sprite_voxelizer` is a standalone offline tool, not part of the game build. It extracts all 436 WL6 sprites from `VSWAP.WL6`, rebuilds them as 64×64×64 MagicaVoxel models (eight-way rotation sets are space-carved into one solid; camera-facing frames get invented depth), writes the original animations as animated `.vox` files, and validates every written model against the original frames. See [its README](tools/sprite_voxelizer/README.md). Its output is derived from your own game data and is not committed.
+`tools/sprite_voxelizer` is a standalone offline tool, not part of the game build. It extracts all 436 WL6 sprites from `VSWAP.WL6`, removes painted floor shadows, and rebuilds every pose as a 64×64×64 MagicaVoxel model. Eight-way rotation sets are carved into one solid; camera-facing frames get depth from the actor's own body or a fitted profile. Each actor or object is written as a single `.vox` file holding all of its animations, and every model is validated against the original frames. A dependency-free HTML viewer (`tools/sprite_voxelizer/viewer`) shows the results in 3D. See [its README](tools/sprite_voxelizer/README.md). The output is derived from your own game data and is not committed.
 

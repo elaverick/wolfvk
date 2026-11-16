@@ -413,7 +413,34 @@ class Viewer {
     this.bindControls();
     this.renderSubjectList();
     this.selectSubject(Math.max(0, this.subjects.findIndex((subject) => subject.name === 'grd')));
+    this.applyLocationHash();
     requestAnimationFrame((time) => this.frame(time));
+  }
+
+  /*
+   * Deep links such as #subject=dog&animation=1&pose=2&yaw=90 open a pose
+   * directly; rotation=k snaps to original rotation k (0-7).
+   */
+  applyLocationHash() {
+    const parameters = new URLSearchParams(window.location.hash.slice(1));
+    const subjectIndex = this.subjects.findIndex((subject) => subject.name === parameters.get('subject'));
+    if (subjectIndex >= 0) {
+      this.selectSubject(subjectIndex);
+    }
+    const animation = Number(parameters.get('animation'));
+    if (Number.isInteger(animation) && animation > 0 && animation < this.subject.animations.length) {
+      this.selectAnimation(animation);
+    }
+    const pose = Number(parameters.get('pose'));
+    if (Number.isInteger(pose) && pose > 0 && pose < this.animation.poses.length) {
+      this.poseIndex = pose;
+    }
+    if (parameters.has('rotation')) {
+      this.snapToRotation(Number(parameters.get('rotation')));
+    } else if (parameters.has('yaw')) {
+      this.camera.yaw = (Number(parameters.get('yaw')) * Math.PI) / 180;
+    }
+    this.updatePanels();
   }
 
   /* Parsed VOX file for a subject, decoded on first use. */
