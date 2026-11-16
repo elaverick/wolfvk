@@ -1,0 +1,106 @@
+#include "unity.h"
+
+void test_sprite_page_round_trips_original_post_layout(void);
+void test_sprite_page_decodes_hand_built_compshape(void);
+void test_sprite_page_rejects_malformed_pages(void);
+void test_sprite_archive_reads_only_the_sprite_range(void);
+void test_sprite_archive_rejects_invalid_boundaries_and_ranges(void);
+
+void test_view_basis_matches_original_rotation_convention(void);
+void test_front_render_maps_voxels_one_to_one(void);
+void test_side_and_back_renders_follow_view_direction(void);
+void test_render_keeps_the_nearest_voxel(void);
+void test_diagonal_render_has_no_gaps_and_wider_footprint(void);
+void test_surface_detection_and_counting(void);
+void test_preview_render_draws_shaded_model(void);
+
+void test_extrude_profile_reproduces_front_view_with_constant_depth(void);
+void test_lathe_profile_turns_each_run_into_a_disc(void);
+void test_inflate_profile_rounds_by_local_thickness(void);
+void test_single_view_never_drops_a_pixel(void);
+void test_multi_view_rebuilds_a_consistent_solid(void);
+void test_multi_view_registers_an_off_centre_frame(void);
+void test_tolerant_carving_survives_one_inconsistent_frame(void);
+void test_multi_view_rejects_invalid_arguments(void);
+
+void test_vox_single_model_round_trips_with_original_palette(void);
+void test_vox_animation_records_keyframes(void);
+void test_vox_colour_mapping_handles_the_last_palette_entry(void);
+void test_vox_decoder_rejects_malformed_files(void);
+
+void test_png_checksums_match_reference_values(void);
+void test_zlib_stream_round_trips(void);
+void test_png_encoder_writes_valid_rgba_image(void);
+
+void test_wl6_tables_match_original_enumeration(void);
+void test_catalog_groups_rotation_sets_from_state_flags(void);
+void test_catalog_assigns_depth_profiles_to_camera_facing_sprites(void);
+void test_animation_catalog_rebuilds_original_sequences(void);
+
+void test_compare_views_scores_identical_and_disjoint_images(void);
+void test_compare_views_separates_exact_and_nearby_colour(void);
+void test_rotation_ceiling_reflects_opposite_view_agreement(void);
+void test_comparison_sheet_lays_out_views_and_previews(void);
+
+void test_pipeline_writes_and_validates_every_output(void);
+void test_pipeline_refuses_non_wl6_sprite_counts(void);
+
+void setUp(void)
+{
+}
+
+void tearDown(void)
+{
+}
+
+int main(void)
+{
+    UNITY_BEGIN();
+
+    RUN_TEST(test_sprite_page_round_trips_original_post_layout);
+    RUN_TEST(test_sprite_page_decodes_hand_built_compshape);
+    RUN_TEST(test_sprite_page_rejects_malformed_pages);
+    RUN_TEST(test_sprite_archive_reads_only_the_sprite_range);
+    RUN_TEST(test_sprite_archive_rejects_invalid_boundaries_and_ranges);
+
+    RUN_TEST(test_view_basis_matches_original_rotation_convention);
+    RUN_TEST(test_front_render_maps_voxels_one_to_one);
+    RUN_TEST(test_side_and_back_renders_follow_view_direction);
+    RUN_TEST(test_render_keeps_the_nearest_voxel);
+    RUN_TEST(test_diagonal_render_has_no_gaps_and_wider_footprint);
+    RUN_TEST(test_surface_detection_and_counting);
+    RUN_TEST(test_preview_render_draws_shaded_model);
+
+    RUN_TEST(test_extrude_profile_reproduces_front_view_with_constant_depth);
+    RUN_TEST(test_lathe_profile_turns_each_run_into_a_disc);
+    RUN_TEST(test_inflate_profile_rounds_by_local_thickness);
+    RUN_TEST(test_single_view_never_drops_a_pixel);
+    RUN_TEST(test_multi_view_rebuilds_a_consistent_solid);
+    RUN_TEST(test_multi_view_registers_an_off_centre_frame);
+    RUN_TEST(test_tolerant_carving_survives_one_inconsistent_frame);
+    RUN_TEST(test_multi_view_rejects_invalid_arguments);
+
+    RUN_TEST(test_vox_single_model_round_trips_with_original_palette);
+    RUN_TEST(test_vox_animation_records_keyframes);
+    RUN_TEST(test_vox_colour_mapping_handles_the_last_palette_entry);
+    RUN_TEST(test_vox_decoder_rejects_malformed_files);
+
+    RUN_TEST(test_png_checksums_match_reference_values);
+    RUN_TEST(test_zlib_stream_round_trips);
+    RUN_TEST(test_png_encoder_writes_valid_rgba_image);
+
+    RUN_TEST(test_wl6_tables_match_original_enumeration);
+    RUN_TEST(test_catalog_groups_rotation_sets_from_state_flags);
+    RUN_TEST(test_catalog_assigns_depth_profiles_to_camera_facing_sprites);
+    RUN_TEST(test_animation_catalog_rebuilds_original_sequences);
+
+    RUN_TEST(test_compare_views_scores_identical_and_disjoint_images);
+    RUN_TEST(test_compare_views_separates_exact_and_nearby_colour);
+    RUN_TEST(test_rotation_ceiling_reflects_opposite_view_agreement);
+    RUN_TEST(test_comparison_sheet_lays_out_views_and_previews);
+
+    RUN_TEST(test_pipeline_writes_and_validates_every_output);
+    RUN_TEST(test_pipeline_refuses_non_wl6_sprite_counts);
+
+    return UNITY_END();
+}

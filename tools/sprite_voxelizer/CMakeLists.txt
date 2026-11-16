@@ -55,6 +55,8 @@ if(BUILD_TESTING)
     endif()
     add_library(unity STATIC ${unity_SOURCE_DIR}/src/unity.c)
     target_include_directories(unity PUBLIC ${unity_SOURCE_DIR}/src)
+    # Geometry and metric checks compare doubles, which Unity omits by default.
+    target_compile_definitions(unity PUBLIC UNITY_INCLUDE_DOUBLE)
 
     add_executable(sprite_voxelizer_tests
         tests/test_main.c
