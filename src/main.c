@@ -4,7 +4,9 @@
 #include "wolfvk/level.h"
 #include "wolfvk/game_world.h"
 #include "wolfvk/level_geometry.h"
+#include "wolfvk/level_objects.h"
 #include "wolfvk/player_controller.h"
+#include "wolfvk/voxel_scene.h"
 #include "wolfvk/vulkan_renderer.h"
 #include "wolfvk/world.h"
 #include "wolfvk/wall_textures.h"
@@ -39,9 +41,113 @@ static bool update_camera_projection(
 /* Tell users how level selection works and where the original retail assets must be placed. */
 static void print_usage(const char *program_name)
 {
-    printf("Usage: %s [--level NUMBER] [--help]\n", program_name);
+    printf("Usage: %s [--level NUMBER] [--difficulty 1-4] [--help]\n", program_name);
     printf("Level numbers are one-based; if omitted, the first level is loaded.\n");
+    printf("Difficulty follows the original menu: 1 Can I play, Daddy?, 2 Don't hurt me.,\n");
+    printf("3 Bring 'em on! (the default), 4 I am Death incarnate!\n");
     printf("Place MAPHEAD.WL6, GAMEMAPS.WL6 and VSWAP.WL6 in the working directory.\n");
+    printf("Voxel sprites are read from %s beside them, or beside the executable.\n",
+        WOLF_VOXEL_ASSET_DIRECTORY);
+}
+
+static bool is_directory(const char *path)
+{
+    SDL_PathInfo path_info;
+
+    return SDL_GetPathInfo(path, &path_info) && path_info.type == SDL_PATHTYPE_DIRECTORY;
+}
+
+/*
+ * Voxel assets are derived from the user's own game data, so they belong
+ * with the WL6 files in the working directory. A copy beside the executable
+ * is also accepted, which is where the shaders are found.
+ */
+static bool find_voxel_asset_directory(char *directory, size_t directory_size)
+{
+    const char *base_path;
+
+    if (is_directory(WOLF_VOXEL_ASSET_DIRECTORY)) {
+        (void)snprintf(directory, directory_size, "%s", WOLF_VOXEL_ASSET_DIRECTORY);
+        return true;
+    }
+
+    base_path = SDL_GetBasePath();
+    if (base_path != NULL) {
+        (void)snprintf(directory, directory_size, "%s%s", base_path, WOLF_VOXEL_ASSET_DIRECTORY);
+        if (is_directory(directory)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * Mesh every actor and object pose the level places. Missing assets are
+ * reported but not fatal: the level is still playable without its sprites.
+ */
+static bool load_voxel_scene(
+    const WolfWorldState *world,
+    WolfDifficulty difficulty,
+    WolfVoxelScene *scene)
+{
+    char asset_directory[512];
+    WolfLevelObject *objects = NULL;
+    uint32_t object_count = 0u;
+    bool loaded;
+
+    memset(scene, 0, sizeof(*scene));
+    if (!find_voxel_asset_directory(asset_directory, sizeof(asset_directory))) {
+        fprintf(stderr,
+            "No %s directory was found, so actors and objects will not be drawn.\n"
+            "Create it with: wolf_sprite_voxelizer --vswap VSWAP.WL6 --assets %s\n",
+            WOLF_VOXEL_ASSET_DIRECTORY, WOLF_VOXEL_ASSET_DIRECTORY);
+        return true;
+    }
+
+    if (!wolf_level_find_objects(&world->level, difficulty, &objects, &object_count)) {
+        fprintf(stderr, "Could not read the level's actors and objects.\n");
+        return false;
+    }
+
+    loaded = wolf_voxel_scene_load(scene, objects, object_count, asset_directory);
+    free(objects);
+    if (!loaded) {
+        fprintf(stderr, "Could not load the voxel sprites from %s.\n", asset_directory);
+        return false;
+    }
+
+    printf("Loaded %u voxel poses (%u quads) for %u actors and objects from %s.\n",
+        (unsigned int)(scene->pose_count - scene->unavailable_pose_count),
+        (unsigned int)scene->quad_count, (unsigned int)object_count, asset_directory);
+    if (scene->unavailable_pose_count > 0u) {
+        fprintf(stderr, "%u voxel poses are unavailable and will not be drawn (first: %s).\n",
+            (unsigned int)scene->unavailable_pose_count, scene->first_problem);
+    }
+    return true;
+}
+
+/* Place the models from the current info plane, so items the player has collected disappear. */
+static bool update_model_instances(
+    VulkanRenderer *renderer,
+    const WolfWorldState *world,
+    WolfDifficulty difficulty,
+    const WolfVoxelScene *scene)
+{
+    WolfLevelObject *objects = NULL;
+    uint32_t object_count = 0u;
+    VulkanModelInstance *instances = NULL;
+    uint32_t instance_count = 0u;
+    bool updated;
+
+    if (!wolf_level_find_objects(&world->level, difficulty, &objects, &object_count)) {
+        return false;
+    }
+    updated = wolf_voxel_scene_build_instances(
+            scene, &world->level, objects, object_count, &instances, &instance_count) &&
+        vulkan_renderer_set_model_instances(renderer, instances, instance_count);
+    free(objects);
+    free(instances);
+    return updated;
 }
 
 /* Combine the map's exposed wall faces with the large floor and roof, and resolve its spawn. */
@@ -188,6 +294,7 @@ int main(int argc, char *argv[])
     uint32_t dynamic_quad_count = 0u;
     uint32_t geometry_revision = 0u;
     WolfPlayerStart player_start = {0};
+    WolfVoxelScene voxel_scene = {0};
     char error_message[256];
     char window_title[128];
     Uint64 performance_frequency;
@@ -307,9 +414,22 @@ int main(int argc, char *argv[])
     }
     geometry_revision = wolf_world_state_geometry_revision(&world);
 
+    if (!load_voxel_scene(&world, options.difficulty, &voxel_scene) ||
+        !vulkan_renderer_set_model_meshes(renderer, voxel_scene.quads, voxel_scene.quad_count) ||
+        !update_model_instances(renderer, &world, options.difficulty, &voxel_scene)) {
+        fprintf(stderr, "Could not place the level's voxel actors and objects.\n");
+        wolf_voxel_scene_destroy(&voxel_scene);
+        free(scene_quads);
+        vulkan_renderer_destroy(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
     input = wolf_input_create();
     if (input == NULL) {
         fprintf(stderr, "Input initialisation failed: %s\n", SDL_GetError());
+        wolf_voxel_scene_destroy(&voxel_scene);
         vulkan_renderer_destroy(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
@@ -367,8 +487,12 @@ int main(int argc, char *argv[])
                 running = 0;
             }
 
-            (void)wolf_world_state_collect_key(
-                &world, camera.position[0], camera.position[2]);
+            if (wolf_world_state_collect_key(
+                    &world, camera.position[0], camera.position[2]) &&
+                !update_model_instances(renderer, &world, options.difficulty, &voxel_scene)) {
+                fprintf(stderr, "Could not remove the collected key's model.\n");
+                running = 0;
+            }
 
             use_down = wolf_input_key_down(input, SDL_SCANCODE_E) ||
                 wolf_input_key_down(input, SDL_SCANCODE_SPACE) ||
@@ -423,6 +547,8 @@ int main(int argc, char *argv[])
 
     (void)SDL_SetWindowRelativeMouseMode(window, false);
     wolf_input_destroy(input);
+    wolf_voxel_scene_destroy(&voxel_scene);
+    free(scene_quads);
     vulkan_renderer_destroy(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
