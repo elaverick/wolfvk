@@ -55,6 +55,8 @@ add_executable(wolfvk
     src/voxel_mesh.c
     src/level_objects.c
     src/voxel_scene.c
+    src/weapon.c
+    src/vulkan_renderer_weapon.c
 )
 target_include_directories(wolfvk PRIVATE include)
 target_link_libraries(wolfvk PRIVATE SDL3::SDL3 Vulkan::Vulkan)
@@ -138,6 +140,7 @@ if(BUILD_TESTING)
         tests/test_voxel_mesh.c
         tests/test_level_objects.c
         tests/test_voxel_scene.c
+        tests/test_weapon.c
         src/camera.c
         src/player_controller.c
         src/game_world.c
@@ -156,6 +159,8 @@ if(BUILD_TESTING)
         src/voxel_mesh.c
         src/level_objects.c
         src/voxel_scene.c
+        src/weapon.c
+        src/vulkan_renderer_weapon.c
     )
     add_dependencies(wolfvk_tests wolfvk_shaders)
     target_include_directories(wolfvk_tests PRIVATE include src)
