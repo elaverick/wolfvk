@@ -98,7 +98,9 @@ The original `rotate` flags identify the 25 sets; 24 are carved as below and the
 
 ### First-person weapons
 
-The four weapon subjects are `knife`, `pistol`, `machinegun` and `chain`. Each contains the named `player_*_ready` animation (one pose) and `player_*_attack` animation (four poses) generated directly from the original weapon sprites. The ready sprite is held until fire is pressed; attack poses are each six original 70 Hz tics. The first-person reconstruction profile pushes each scanline further into the screen as it moves higher in the sprite, so the muzzle projects into the world instead of being a flat billboard.
+The four weapon subject files are `knife.vox`, `pistol.vox`, `machinegun.vox` and `chain.vox`. Their MagicaVoxel scene objects are named `<subject>_ready` (one pose) and `<subject>_atk` (four poses), for example `knife_ready` and `knife_atk`. These are the names an engine uses to find objects and keyframes in the VOX file.
+
+The manifest's separate original-game timing sequences are named `player_knife_ready` / `player_knife_attack`, `player_pistol_ready` / `player_pistol_attack`, `player_machinegun_ready` / `player_machinegun_attack`, and `player_chaingun_ready` / `player_chaingun_attack`. They describe the game's state machine, not the names of objects inside the VOX files. The ready sprite is held until fire is pressed; the four attack poses are each six original 70 Hz tics. The first-person reconstruction profile pushes each scanline further into the screen as it moves higher in the sprite, so the muzzle projects into the world instead of being a flat billboard.
 
 ### The rocket
 

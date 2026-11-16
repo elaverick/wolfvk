@@ -13,10 +13,6 @@ static const char *const weapon_subjects[WOLF_WEAPON_COUNT] = {
     "knife", "pistol", "machinegun", "chain"
 };
 
-static const char *const weapon_animations[WOLF_WEAPON_COUNT] = {
-    "player_knife", "player_pistol", "player_machinegun", "player_chaingun"
-};
-
 /* Keep the first missing asset visible in the startup diagnostic without failing the level. */
 static void record_problem(WolfWeaponScene *scene, const char *subject, const char *reason)
 {
@@ -65,8 +61,6 @@ static bool load_weapon_subject(
     WolfVoxFile file;
     const uint8_t *palette;
     const char *subject = weapon_subjects[weapon];
-    const char *animation = weapon_animations[weapon];
-
     {
         int path_length = snprintf(path, sizeof(path), "%s/%s.vox", asset_directory, subject);
         if (path_length < 0 || (size_t)path_length >= sizeof(path)) {
@@ -83,7 +77,8 @@ static bool load_weapon_subject(
 
     palette = file.has_palette ? file.palette_rgba : wolf_game_palette_rgba;
     for (uint32_t frame = 0u; frame < 5u; ++frame) {
-        const char *animation_name = frame == 0u ? "ready" : "attack";
+        /* These are VOX scene-object names, not the separate player_* state-sequence names. */
+        const char *animation_name = frame == 0u ? "ready" : "atk";
         char named_animation[WOLF_VOX_OBJECT_NAME_LENGTH];
         const WolfVoxModel *model = NULL;
         VulkanQuad *quads = NULL;
@@ -92,7 +87,7 @@ static bool load_weapon_subject(
             ? &scene->ready[weapon]
             : &scene->attack[weapon][frame - 1u];
 
-        (void)snprintf(named_animation, sizeof(named_animation), "%s_%s", animation, animation_name);
+        (void)snprintf(named_animation, sizeof(named_animation), "%s_%s", subject, animation_name);
         if (!wolf_vox_file_find_pose(&file, named_animation, frame == 0u ? 0u : frame - 1u, &model)) {
             char reason[128];
 

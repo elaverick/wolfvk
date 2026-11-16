@@ -2,6 +2,7 @@
 
 #include "asset_catalog.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -113,12 +114,29 @@ void test_catalog_groups_poses_into_subject_animations(void)
     TEST_ASSERT_EQUAL_STRING("mut_die", mutant->animations[3].name);
     TEST_ASSERT_EQUAL_size_t(4u, mutant->animations[3].pose_count);
 
-    /* Weapons: ready plus a four-frame attack; the enum's unprefixed MACHINEGUNATK3 still groups. */
-    pistol = &catalog->subjects[wolf_asset_catalog_find_subject(catalog, "pistol")];
-    TEST_ASSERT_EQUAL_STRING("pistol_ready", pistol->animations[0].name);
-    TEST_ASSERT_EQUAL_size_t(4u, pistol->animations[1].pose_count);
-    TEST_ASSERT_EQUAL_size_t(4u,
-        catalog->subjects[wolf_asset_catalog_find_subject(catalog, "machinegun")].animations[1].pose_count);
+    /* All four VOX subjects use <subject>_ready and <subject>_atk scene-object names. */
+    {
+        static const char *const weapon_subjects[] = {"knife", "pistol", "machinegun", "chain"};
+        for (size_t weapon = 0u; weapon < 4u; ++weapon) {
+            int weapon_index = wolf_asset_catalog_find_subject(catalog, weapon_subjects[weapon]);
+            const WolfSubject *weapon_subject;
+
+            TEST_ASSERT_TRUE(weapon_index >= 0);
+            weapon_subject = &catalog->subjects[weapon_index];
+            TEST_ASSERT_EQUAL_size_t(2u, weapon_subject->animation_count);
+            {
+                char expected_ready[64];
+                char expected_attack[64];
+
+                (void)snprintf(expected_ready, sizeof(expected_ready), "%s_ready", weapon_subjects[weapon]);
+                (void)snprintf(expected_attack, sizeof(expected_attack), "%s_atk", weapon_subjects[weapon]);
+                TEST_ASSERT_EQUAL_STRING(expected_ready, weapon_subject->animations[0].name);
+                TEST_ASSERT_EQUAL_STRING(expected_attack, weapon_subject->animations[1].name);
+            }
+            TEST_ASSERT_EQUAL_size_t(1u, weapon_subject->animations[0].pose_count);
+            TEST_ASSERT_EQUAL_size_t(4u, weapon_subject->animations[1].pose_count);
+        }
+    }
 
     /* Each static object is its own subject, and projectiles keep a single animation. */
     TEST_ASSERT_EQUAL_STRING("stat_7",

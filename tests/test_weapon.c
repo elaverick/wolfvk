@@ -20,10 +20,6 @@ static bool write_test_weapon_assets(void)
     };
     static const uint32_t attack_counts[] = {1u, 1u, 1u, 1u};
     static const char *const subjects[] = {"knife", "pistol", "machinegun", "chain"};
-    static const char *const animations[] = {
-        "player_knife", "player_pistol", "player_machinegun", "player_chaingun"
-    };
-
     (void)SDL_CreateDirectory("./wolfvk_test");
     for (size_t weapon = 0u; weapon < 4u; ++weapon) {
         TestVoxAnimation sequences[] = {
@@ -34,8 +30,9 @@ static bool write_test_weapon_assets(void)
         char attack_name[WOLF_VOX_OBJECT_NAME_LENGTH];
         char path[128];
 
-        (void)snprintf(ready_name, sizeof(ready_name), "%s_ready", animations[weapon]);
-        (void)snprintf(attack_name, sizeof(attack_name), "%s_attack", animations[weapon]);
+        /* Match the exact scene-object names emitted into each subject VOX file. */
+        (void)snprintf(ready_name, sizeof(ready_name), "%s_ready", subjects[weapon]);
+        (void)snprintf(attack_name, sizeof(attack_name), "%s_atk", subjects[weapon]);
         (void)snprintf(path, sizeof(path), "./wolfvk_test/%s.vox", subjects[weapon]);
         sequences[0].name = ready_name;
         sequences[1].name = attack_name;
@@ -223,7 +220,7 @@ void test_weapon_transform_tracks_camera_and_validates_projection(void)
 }
 
 
-void test_weapon_scene_loads_all_twenty_original_named_poses(void)
+void test_weapon_scene_loads_all_twenty_voxelizer_named_poses(void)
 {
     WolfWeaponScene scene;
 
