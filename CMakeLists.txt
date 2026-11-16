@@ -133,6 +133,11 @@ if(BUILD_TESTING)
         tests/test_wall_textures.c
         tests/test_input.c
         tests/test_vulkan_renderer.c
+        tests/test_vox_builder.c
+        tests/test_vox_file.c
+        tests/test_voxel_mesh.c
+        tests/test_level_objects.c
+        tests/test_voxel_scene.c
         src/camera.c
         src/player_controller.c
         src/game_world.c

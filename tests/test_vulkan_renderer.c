@@ -229,6 +229,127 @@ void test_renderer_creates_swapchain_and_presents_quads(void)
     TEST_ASSERT_TRUE_MESSAGE(frame_rendered, "Vulkan quad rendering or presentation failed");
 }
 
+/* Apply a column-major matrix to a point. */
+static void transform_point(const float matrix[16], const float point[3], float result[3])
+{
+    for (int row = 0; row < 3; ++row) {
+        result[row] = matrix[row] * point[0] + matrix[4 + row] * point[1] +
+            matrix[8 + row] * point[2] + matrix[12 + row];
+    }
+}
+
+void test_model_matrix_turns_north_facing_models_to_their_yaw(void)
+{
+    const float model_front[3] = {0.0f, 1.0f, -1.0f};
+    const float model_right[3] = {1.0f, 0.0f, 0.0f};
+    VulkanModelInstance instance = {0u, 1u, {10.0f, 0.5f, -4.0f}, 0.0f};
+    float matrix[16];
+    float point[3];
+
+    /* Yaw zero leaves the model facing north and only moves it. */
+    vulkan_renderer_model_matrix(&instance, matrix);
+    transform_point(matrix, model_front, point);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 10.0f, point[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 1.5f, point[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, -5.0f, point[2]);
+
+    /* A quarter turn faces east, matching the camera's yaw: the front moves to +x, the right to +z (south). */
+    instance.yaw_radians = 1.57079632679f;
+    vulkan_renderer_model_matrix(&instance, matrix);
+    transform_point(matrix, model_front, point);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 11.0f, point[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, -4.0f, point[2]);
+    transform_point(matrix, model_right, point);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 10.0f, point[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, -3.0f, point[2]);
+}
+
+void test_renderer_draws_placed_model_instances(void)
+{
+    const VulkanQuad environment[] = {
+        {{
+            {{-0.8f, -0.7f, 0.7f}, {0.4f, 0.4f, 0.4f}},
+            {{0.8f, -0.7f, 0.7f}, {0.4f, 0.4f, 0.4f}},
+            {{0.8f, 0.7f, 0.7f}, {0.4f, 0.4f, 0.4f}},
+            {{-0.8f, 0.7f, 0.7f}, {0.4f, 0.4f, 0.4f}}
+        }}
+    };
+    const VulkanQuad model_quads[] = {
+        {{
+            {{-0.1f, 0.0f, 0.0f}, {0.9f, 0.1f, 0.1f}},
+            {{0.1f, 0.0f, 0.0f}, {0.9f, 0.1f, 0.1f}},
+            {{0.1f, 0.2f, 0.0f}, {0.9f, 0.1f, 0.1f}},
+            {{-0.1f, 0.2f, 0.0f}, {0.9f, 0.1f, 0.1f}}
+        }},
+        {{
+            {{0.0f, 0.0f, -0.1f}, {0.1f, 0.9f, 0.1f}},
+            {{0.0f, 0.0f, 0.1f}, {0.1f, 0.9f, 0.1f}},
+            {{0.0f, 0.2f, 0.1f}, {0.1f, 0.9f, 0.1f}},
+            {{0.0f, 0.2f, -0.1f}, {0.1f, 0.9f, 0.1f}}
+        }}
+    };
+    const VulkanModelInstance instances[] = {
+        {0u, 2u, {-0.3f, -0.1f, 0.3f}, 0.0f},
+        {1u, 1u, {0.3f, -0.1f, 0.3f}, 0.8f}
+    };
+    const VulkanModelInstance out_of_range = {1u, 2u, {0.0f, 0.0f, 0.0f}, 0.0f};
+    const float identity[16] = {
+        1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f
+    };
+    SDL_Window *window = SDL_CreateWindow(
+        "WolfVK Vulkan model integration test", 320, 240,
+        SDL_WINDOW_HIDDEN | SDL_WINDOW_VULKAN);
+    uint8_t white_wall_page[WOLF_WALL_TEXTURE_RGBA_SIZE];
+    VulkanRenderer *renderer = NULL;
+    bool renderer_created;
+    bool scene_ready = false;
+    bool models_uploaded = false;
+    bool out_of_range_rejected = false;
+    bool instances_placed = false;
+    bool frame_rendered = false;
+    bool meshes_replaced = false;
+    bool instances_cleared = false;
+
+    TEST_ASSERT_NOT_NULL_MESSAGE(window, SDL_GetError());
+    memset(white_wall_page, 255, sizeof(white_wall_page));
+
+    renderer_created = vulkan_renderer_create(window, &renderer);
+    if (renderer_created) {
+        scene_ready = vulkan_renderer_set_wall_textures(renderer, white_wall_page, 1u) &&
+            vulkan_renderer_set_quads(renderer, environment, 1u) &&
+            vulkan_renderer_set_view_projection(renderer, identity);
+    }
+    if (scene_ready) {
+        models_uploaded = vulkan_renderer_set_model_meshes(renderer, model_quads, 2u);
+    }
+    if (models_uploaded) {
+        out_of_range_rejected = !vulkan_renderer_set_model_instances(renderer, &out_of_range, 1u);
+        instances_placed = vulkan_renderer_set_model_instances(renderer, instances, 2u);
+    }
+    if (instances_placed) {
+        frame_rendered = vulkan_renderer_draw_frame(renderer) && vulkan_renderer_draw_frame(renderer);
+    }
+    if (frame_rendered) {
+        /* Replacing the meshes invalidates every instance range drawn from the old mesh. */
+        meshes_replaced = vulkan_renderer_set_model_meshes(renderer, model_quads, 1u);
+        instances_cleared = renderer->model_instance_count == 0u &&
+            vulkan_renderer_draw_frame(renderer);
+    }
+
+    vulkan_renderer_destroy(renderer);
+    SDL_DestroyWindow(window);
+
+    TEST_ASSERT_TRUE_MESSAGE(renderer_created, "Vulkan renderer initialisation failed");
+    TEST_ASSERT_TRUE_MESSAGE(scene_ready, "Vulkan level scene setup failed");
+    TEST_ASSERT_TRUE_MESSAGE(models_uploaded, "Vulkan model mesh upload failed");
+    TEST_ASSERT_TRUE_MESSAGE(out_of_range_rejected, "An instance outside the model mesh was accepted");
+    TEST_ASSERT_TRUE_MESSAGE(instances_placed, "Vulkan model instances were rejected");
+    TEST_ASSERT_TRUE_MESSAGE(frame_rendered, "Vulkan model rendering or presentation failed");
+    TEST_ASSERT_TRUE_MESSAGE(meshes_replaced, "Vulkan model mesh replacement failed");
+    TEST_ASSERT_TRUE_MESSAGE(instances_cleared, "Old model instances survived a mesh replacement");
+}
+
 void test_device_scoring_prefers_discrete_gpus(void)
 {
     TEST_ASSERT_TRUE(
