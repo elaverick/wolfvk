@@ -319,6 +319,7 @@ void vulkan_renderer_destroy(VulkanRenderer *renderer)
         vkDeviceWaitIdle(renderer->device);
         vulkan_renderer_frame_resources_destroy(renderer);
         vulkan_renderer_geometry_destroy(renderer);
+        vulkan_renderer_weapon_destroy(renderer);
         vulkan_renderer_models_destroy(renderer);
         vulkan_renderer_texture_destroy(renderer);
         vkDestroyDevice(renderer->device, NULL);
@@ -366,6 +367,26 @@ bool vulkan_renderer_set_model_instances(
     uint32_t instance_count)
 {
     return vulkan_renderer_models_set_instances(renderer, instances, instance_count);
+}
+
+
+/* Replace weapon frame geometry without changing the actor model buffers. */
+bool vulkan_renderer_set_weapon_meshes(
+    VulkanRenderer *renderer,
+    const VulkanQuad *quads,
+    uint32_t quad_count)
+{
+    return vulkan_renderer_weapon_set_meshes(renderer, quads, quad_count);
+}
+
+/* Select a view-model pose and the camera-relative matrix used by the overlay pass. */
+bool vulkan_renderer_set_weapon_pose(
+    VulkanRenderer *renderer,
+    uint32_t first_quad,
+    uint32_t quad_count,
+    const float view_projection[16])
+{
+    return vulkan_renderer_weapon_set_pose(renderer, first_quad, quad_count, view_projection);
 }
 
 /* Upload the original indexed wall pages before any frame references textured geometry. */
