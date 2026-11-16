@@ -8,6 +8,7 @@ struct WolfInput {
     bool keys[SDL_SCANCODE_COUNT];
     float mouse_delta_x;
     float mouse_delta_y;
+    bool mouse_buttons[SDL_BUTTON_COUNT];
     SDL_Gamepad *gamepad;
     SDL_JoystickID gamepad_id;
     float gamepad_axes[SDL_GAMEPAD_AXIS_COUNT];
@@ -181,6 +182,13 @@ void wolf_input_handle_event(WolfInput *input, const SDL_Event *event)
         input->mouse_delta_y += event->motion.yrel;
         break;
 
+    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+    case SDL_EVENT_MOUSE_BUTTON_UP:
+        if (event->button.button > 0u && event->button.button < SDL_BUTTON_COUNT) {
+            input->mouse_buttons[event->button.button] = event->type == SDL_EVENT_MOUSE_BUTTON_DOWN;
+        }
+        break;
+
     case SDL_EVENT_GAMEPAD_ADDED:
         open_first_available_gamepad(input);
         break;
@@ -244,4 +252,13 @@ bool wolf_input_gamepad_button_down(const WolfInput *input, SDL_GamepadButton bu
     }
 
     return input->gamepad_buttons[button];
+}
+
+/* Mouse input remains event-driven so relative mouse capture does not lose held fire state. */
+bool wolf_input_mouse_button_down(const WolfInput *input, uint8_t button)
+{
+    if (input == NULL || button == 0u || button >= SDL_BUTTON_COUNT) {
+        return false;
+    }
+    return input->mouse_buttons[button];
 }
