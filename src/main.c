@@ -10,6 +10,7 @@
 #include "wolfvk/vulkan_renderer.h"
 #include "wolfvk/world.h"
 #include "wolfvk/wall_textures.h"
+#include "wolfvk/weapon.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -295,12 +296,15 @@ int main(int argc, char *argv[])
     uint32_t geometry_revision = 0u;
     WolfPlayerStart player_start = {0};
     WolfVoxelScene voxel_scene = {0};
+    WolfWeaponScene weapon_scene = {0};
+    WolfWeaponState weapon_state;
     char error_message[256];
     char window_title[128];
     Uint64 performance_frequency;
     Uint64 previous_counter;
     int running = 1;
     bool use_was_down = false;
+    float drawable_aspect_ratio = 16.0f / 9.0f;
 
     if (!wolf_parse_command_line(
             argc, argv, &options, error_message, sizeof(error_message))) {
@@ -426,9 +430,34 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if (find_voxel_asset_directory(error_message, sizeof(error_message))) {
+        if (!wolf_weapon_scene_load(&weapon_scene, error_message)) {
+            fprintf(stderr, "Could not load first-person weapon meshes from %s.\\n", error_message);
+        } else if (weapon_scene.unavailable_pose_count == 0u && weapon_scene.quad_count > 0u) {
+            if (!vulkan_renderer_set_weapon_meshes(renderer, weapon_scene.quads, weapon_scene.quad_count)) {
+                fprintf(stderr, "Could not upload the first-person weapon meshes.\\n");
+                wolf_weapon_scene_destroy(&weapon_scene);
+                wolf_voxel_scene_destroy(&voxel_scene);
+                free(scene_quads);
+                vulkan_renderer_destroy(renderer);
+                SDL_DestroyWindow(window);
+                SDL_Quit();
+                return 1;
+            }
+            printf("Loaded all four voxel weapons (%u quads).\\n", (unsigned int)weapon_scene.quad_count);
+        } else {
+            fprintf(stderr, "First-person weapons are incomplete and will be hidden (%s).\\n",
+                weapon_scene.first_problem);
+        }
+    } else {
+        fprintf(stderr, "No voxel asset directory was found; first-person weapons will not be drawn.\\n");
+    }
+    wolf_weapon_state_initialize(&weapon_state);
+
     input = wolf_input_create();
     if (input == NULL) {
         fprintf(stderr, "Input initialisation failed: %s\n", SDL_GetError());
+        wolf_weapon_scene_destroy(&weapon_scene);
         wolf_voxel_scene_destroy(&voxel_scene);
         vulkan_renderer_destroy(renderer);
         SDL_DestroyWindow(window);
@@ -477,6 +506,7 @@ int main(int argc, char *argv[])
         {
             bool dynamic_geometry_changed = false;
             bool use_down;
+            bool fire_down;
             bool geometry_changed = false;
 
             if (!wolf_world_state_update(
@@ -492,6 +522,44 @@ int main(int argc, char *argv[])
                 !update_model_instances(renderer, &world, options.difficulty, &voxel_scene)) {
                 fprintf(stderr, "Could not remove the collected key's model.\n");
                 running = 0;
+            }
+
+            fire_down = wolf_input_mouse_button_down(input, SDL_BUTTON_LEFT) ||
+                wolf_input_key_down(input, SDL_SCANCODE_LCTRL) ||
+                wolf_input_gamepad_button_down(input, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER) ||
+                wolf_input_gamepad_axis(input, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) > 0.35f;
+            if (wolf_input_key_down(input, SDL_SCANCODE_1)) {
+                (void)wolf_weapon_state_select(&weapon_state, WOLF_WEAPON_KNIFE);
+            } else if (wolf_input_key_down(input, SDL_SCANCODE_2)) {
+                (void)wolf_weapon_state_select(&weapon_state, WOLF_WEAPON_PISTOL);
+            } else if (wolf_input_key_down(input, SDL_SCANCODE_3)) {
+                (void)wolf_weapon_state_select(&weapon_state, WOLF_WEAPON_MACHINEGUN);
+            } else if (wolf_input_key_down(input, SDL_SCANCODE_4)) {
+                (void)wolf_weapon_state_select(&weapon_state, WOLF_WEAPON_CHAINGUN);
+            }
+            if (!wolf_weapon_state_update(&weapon_state, fire_down, delta_seconds)) {
+                fprintf(stderr, "Weapon animation state update failed.\\n");
+                running = 0;
+            }
+            {
+                const WolfWeaponPose *pose =
+                    wolf_weapon_scene_current_pose(&weapon_scene, &weapon_state);
+                int drawable_width = 0;
+                int drawable_height = 0;
+                float weapon_matrix[16];
+                float attack_offset = weapon_state.firing ? 0.12f : 0.0f;
+                SDL_GetWindowSizeInPixels(window, &drawable_width, &drawable_height);
+                if (drawable_width > 0 && drawable_height > 0) {
+                    drawable_aspect_ratio = (float)drawable_width / (float)drawable_height;
+                }
+                if (pose != NULL && wolf_weapon_build_view_projection(
+                        &camera, drawable_aspect_ratio, attack_offset, weapon_matrix)) {
+                    if (!vulkan_renderer_set_weapon_pose(
+                            renderer, pose->first_quad, pose->quad_count, weapon_matrix)) {
+                        fprintf(stderr, "Could not select the active first-person weapon pose.\\n");
+                        running = 0;
+                    }
+                }
             }
 
             use_down = wolf_input_key_down(input, SDL_SCANCODE_E) ||
@@ -547,6 +615,7 @@ int main(int argc, char *argv[])
 
     (void)SDL_SetWindowRelativeMouseMode(window, false);
     wolf_input_destroy(input);
+    wolf_weapon_scene_destroy(&weapon_scene);
     wolf_voxel_scene_destroy(&voxel_scene);
     free(scene_quads);
     vulkan_renderer_destroy(renderer);
