@@ -80,6 +80,19 @@ bool vulkan_renderer_set_model_instances(
     const VulkanModelInstance *instances,
     uint32_t instance_count);
 
+/* Upload the first-person weapon poses into a dedicated overlay mesh. */
+bool vulkan_renderer_set_weapon_meshes(
+    VulkanRenderer *renderer,
+    const VulkanQuad *quads,
+    uint32_t quad_count);
+
+/* Select the weapon pose and camera-relative transform drawn at the end of each frame. */
+bool vulkan_renderer_set_weapon_pose(
+    VulkanRenderer *renderer,
+    uint32_t first_quad,
+    uint32_t quad_count,
+    const float view_projection[16]);
+
 /* Build the column-major model transform for an instance: turn by its yaw, then move to its position. */
 void vulkan_renderer_model_matrix(const VulkanModelInstance *instance, float matrix[16]);
 
