@@ -92,7 +92,6 @@ void test_catalog_groups_poses_into_subject_animations(void)
     static const size_t guard_poses[6] = {1u, 4u, 2u, 3u, 1u, 3u};
     const WolfSubject *guard;
     const WolfSubject *mutant;
-    const WolfSubject *pistol;
     int subject;
 
     wolf_asset_catalog_build(catalog);
