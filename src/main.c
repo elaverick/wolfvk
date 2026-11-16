@@ -433,10 +433,10 @@ int main(int argc, char *argv[])
 
     if (find_voxel_asset_directory(error_message, sizeof(error_message))) {
         if (!wolf_weapon_scene_load(&weapon_scene, error_message)) {
-            fprintf(stderr, "Could not load first-person weapon meshes from %s.\\n", error_message);
+            fprintf(stderr, "Could not load first-person weapon meshes from %s.\n", error_message);
         } else if (weapon_scene.unavailable_pose_count == 0u && weapon_scene.quad_count > 0u) {
             if (!vulkan_renderer_set_weapon_meshes(renderer, weapon_scene.quads, weapon_scene.quad_count)) {
-                fprintf(stderr, "Could not upload the first-person weapon meshes.\\n");
+                fprintf(stderr, "Could not upload the first-person weapon meshes.\n");
                 wolf_weapon_scene_destroy(&weapon_scene);
                 wolf_voxel_scene_destroy(&voxel_scene);
                 free(scene_quads);
@@ -446,7 +446,7 @@ int main(int argc, char *argv[])
                 return 1;
             }
             weapon_assets_uploaded = true;
-            printf("Loaded all four voxel weapons (%u quads).\\n", (unsigned int)weapon_scene.quad_count);
+            printf("Loaded all four voxel weapons (%u quads).\n", (unsigned int)weapon_scene.quad_count);
         } else {
             fprintf(stderr, "First-person weapons are incomplete and will be hidden (%s).\\n",
                 weapon_scene.first_problem);
@@ -540,7 +540,7 @@ int main(int argc, char *argv[])
                 (void)wolf_weapon_state_select(&weapon_state, WOLF_WEAPON_CHAINGUN);
             }
             if (!wolf_weapon_state_update(&weapon_state, fire_down, delta_seconds)) {
-                fprintf(stderr, "Weapon animation state update failed.\\n");
+                fprintf(stderr, "Weapon animation state update failed.\n");
                 running = 0;
             }
             {
@@ -559,7 +559,7 @@ int main(int argc, char *argv[])
                         &camera, drawable_aspect_ratio, attack_offset, weapon_matrix)) {
                     if (!vulkan_renderer_set_weapon_pose(
                             renderer, pose->first_quad, pose->quad_count, weapon_matrix)) {
-                        fprintf(stderr, "Could not select the active first-person weapon pose.\\n");
+                        fprintf(stderr, "Could not select the active first-person weapon pose.\n");
                         running = 0;
                     }
                 }
