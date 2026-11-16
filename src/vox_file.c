@@ -408,7 +408,14 @@ bool wolf_vox_file_load(
         return false;
     }
 
+    /* Use the secure CRT on Windows, as the other loaders do. */
+#if defined(_MSC_VER)
+    if (fopen_s(&stream, path, "rb") != 0) {
+        stream = NULL;
+    }
+#else
     stream = fopen(path, "rb");
+#endif
     if (stream == NULL) {
         write_error(error_message, error_message_size, "The VOX file could not be opened.");
         return false;

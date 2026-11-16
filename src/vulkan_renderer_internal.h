@@ -49,6 +49,15 @@ struct VulkanRenderer {
     VkDeviceSize vertex_buffer_size;
     float view_projection[16];
 
+    /* Voxel models live in their own buffers so animating doors never re-copies them. */
+    VkBuffer model_vertex_buffer;
+    VkDeviceMemory model_vertex_buffer_memory;
+    VkBuffer model_index_buffer;
+    VkDeviceMemory model_index_buffer_memory;
+    uint32_t model_quad_count;
+    VulkanModelInstance *model_instances;
+    uint32_t model_instance_count;
+
     VkCommandPool command_pool;
     VkCommandBuffer *command_buffers;
 
@@ -77,6 +86,32 @@ bool vulkan_renderer_geometry_update_quads(
     const VulkanQuad *quads,
     uint32_t quad_count);
 void vulkan_renderer_geometry_destroy(VulkanRenderer *renderer);
+
+/* Create host-visible vertex and index buffers holding indexed quads (two triangles each). */
+bool vulkan_renderer_geometry_create_quad_buffers(
+    VulkanRenderer *renderer,
+    const VulkanQuad *quads,
+    uint32_t quad_count,
+    VkBuffer *vertex_buffer,
+    VkDeviceMemory *vertex_memory,
+    VkBuffer *index_buffer,
+    VkDeviceMemory *index_memory);
+void vulkan_renderer_geometry_destroy_buffer(
+    VulkanRenderer *renderer,
+    VkBuffer *buffer,
+    VkDeviceMemory *memory);
+
+bool vulkan_renderer_models_set_meshes(
+    VulkanRenderer *renderer,
+    const VulkanQuad *quads,
+    uint32_t quad_count);
+bool vulkan_renderer_models_set_instances(
+    VulkanRenderer *renderer,
+    const VulkanModelInstance *instances,
+    uint32_t instance_count);
+/* Record one indexed draw per instance, each with its own model-view-projection push constant. */
+void vulkan_renderer_models_record(VulkanRenderer *renderer, VkCommandBuffer command_buffer);
+void vulkan_renderer_models_destroy(VulkanRenderer *renderer);
 
 bool vulkan_renderer_texture_layout_create(VulkanRenderer *renderer);
 bool vulkan_renderer_texture_set(

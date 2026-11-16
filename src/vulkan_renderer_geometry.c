@@ -112,34 +112,34 @@ static bool create_host_buffer(
     return true;
 }
 
-/* Upload a complete replacement mesh before retiring the previous buffers, preserving valid geometry on failure. */
-bool vulkan_renderer_geometry_set_quads(
+void vulkan_renderer_geometry_destroy_buffer(
+    VulkanRenderer *renderer,
+    VkBuffer *buffer,
+    VkDeviceMemory *memory)
+{
+    destroy_buffer(renderer, buffer, memory);
+}
+
+/* Shared by the level mesh and the model mesh: both are lists of indexed quads. */
+bool vulkan_renderer_geometry_create_quad_buffers(
     VulkanRenderer *renderer,
     const VulkanQuad *quads,
-    uint32_t quad_count)
+    uint32_t quad_count,
+    VkBuffer *vertex_buffer,
+    VkDeviceMemory *vertex_memory,
+    VkBuffer *index_buffer,
+    VkDeviceMemory *index_memory)
 {
-    VkBuffer new_vertex_buffer = VK_NULL_HANDLE;
-    VkDeviceMemory new_vertex_memory = VK_NULL_HANDLE;
-    VkBuffer new_index_buffer = VK_NULL_HANDLE;
-    VkDeviceMemory new_index_memory = VK_NULL_HANDLE;
     uint32_t *indices = NULL;
     uint32_t index_count;
     size_t vertex_data_size;
     size_t index_data_size;
 
     if (renderer == NULL || renderer->device == VK_NULL_HANDLE ||
-        (quad_count > 0u && quads == NULL) ||
+        quads == NULL || quad_count == 0u ||
         quad_count > UINT32_MAX / 6u ||
         (size_t)quad_count > SIZE_MAX / (4u * sizeof(VulkanVertex))) {
         return false;
-    }
-
-    if (quad_count == 0u) {
-        if (vkDeviceWaitIdle(renderer->device) != VK_SUCCESS) {
-            return false;
-        }
-        vulkan_renderer_geometry_destroy(renderer);
-        return true;
     }
 
     index_count = quad_count * 6u;
@@ -166,18 +166,53 @@ bool vulkan_renderer_geometry_set_quads(
     if (!create_host_buffer(
             renderer, &quads[0].vertices[0], (VkDeviceSize)vertex_data_size,
             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            &new_vertex_buffer, &new_vertex_memory) ||
+            vertex_buffer, vertex_memory) ||
         !create_host_buffer(
             renderer, indices, (VkDeviceSize)index_data_size,
             VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            &new_index_buffer, &new_index_memory)) {
+            index_buffer, index_memory)) {
         free(indices);
-        destroy_buffer(renderer, &new_vertex_buffer, &new_vertex_memory);
-        destroy_buffer(renderer, &new_index_buffer, &new_index_memory);
+        destroy_buffer(renderer, vertex_buffer, vertex_memory);
+        destroy_buffer(renderer, index_buffer, index_memory);
         return false;
     }
 
     free(indices);
+    return true;
+}
+
+/* Upload a complete replacement mesh before retiring the previous buffers, preserving valid geometry on failure. */
+bool vulkan_renderer_geometry_set_quads(
+    VulkanRenderer *renderer,
+    const VulkanQuad *quads,
+    uint32_t quad_count)
+{
+    VkBuffer new_vertex_buffer = VK_NULL_HANDLE;
+    VkDeviceMemory new_vertex_memory = VK_NULL_HANDLE;
+    VkBuffer new_index_buffer = VK_NULL_HANDLE;
+    VkDeviceMemory new_index_memory = VK_NULL_HANDLE;
+
+    if (renderer == NULL || renderer->device == VK_NULL_HANDLE ||
+        (quad_count > 0u && quads == NULL) ||
+        quad_count > UINT32_MAX / 6u ||
+        (size_t)quad_count > SIZE_MAX / (4u * sizeof(VulkanVertex))) {
+        return false;
+    }
+
+    if (quad_count == 0u) {
+        if (vkDeviceWaitIdle(renderer->device) != VK_SUCCESS) {
+            return false;
+        }
+        vulkan_renderer_geometry_destroy(renderer);
+        return true;
+    }
+
+    if (!vulkan_renderer_geometry_create_quad_buffers(
+            renderer, quads, quad_count,
+            &new_vertex_buffer, &new_vertex_memory,
+            &new_index_buffer, &new_index_memory)) {
+        return false;
+    }
 
     if (vkDeviceWaitIdle(renderer->device) != VK_SUCCESS) {
         destroy_buffer(renderer, &new_vertex_buffer, &new_vertex_memory);
@@ -190,9 +225,10 @@ bool vulkan_renderer_geometry_set_quads(
     renderer->vertex_buffer_memory = new_vertex_memory;
     renderer->index_buffer = new_index_buffer;
     renderer->index_buffer_memory = new_index_memory;
-    renderer->index_count = index_count;
+    renderer->index_count = quad_count * 6u;
     renderer->quad_count = quad_count;
-    renderer->vertex_buffer_size = (VkDeviceSize)vertex_data_size;
+    renderer->vertex_buffer_size =
+        (VkDeviceSize)((size_t)quad_count * 4u * sizeof(VulkanVertex));
     return true;
 }
 

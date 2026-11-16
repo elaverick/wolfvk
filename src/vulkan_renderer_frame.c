@@ -1095,6 +1095,7 @@ static bool record_command_buffer(
             command_buffer, renderer->index_buffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexed(command_buffer, renderer->index_count, 1, 0, 0, 0);
     }
+    vulkan_renderer_models_record(renderer, command_buffer);
     vkCmdEndRenderPass(command_buffer);
 
     result = vkEndCommandBuffer(command_buffer);

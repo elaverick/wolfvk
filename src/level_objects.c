@@ -219,7 +219,7 @@ bool wolf_level_find_objects(
     }
     if (level == NULL || objects == NULL || object_count == NULL ||
         level->width > WOLF_LEVEL_PLANE_WIDTH || level->height > WOLF_LEVEL_PLANE_HEIGHT ||
-        difficulty < WOLF_DIFFICULTY_BABY || difficulty > WOLF_DIFFICULTY_HARD) {
+        (int)difficulty < (int)WOLF_DIFFICULTY_BABY || (int)difficulty > (int)WOLF_DIFFICULTY_HARD) {
         return false;
     }
     if (level->width == 0u || level->height == 0u) {

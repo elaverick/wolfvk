@@ -22,6 +22,20 @@ typedef struct VulkanQuad {
     VulkanVertex vertices[4];
 } VulkanQuad;
 
+/*
+ * One placed copy of a model. Models are uploaded once in their own model
+ * space; an instance draws a range of that mesh turned by a yaw (0 faces
+ * north, as the camera does) and moved to a world position. Many instances
+ * can share one range, and changing an instance's range later is enough to
+ * change its pose.
+ */
+typedef struct VulkanModelInstance {
+    uint32_t first_quad;
+    uint32_t quad_count;
+    float position[3];
+    float yaw_radians;
+} VulkanModelInstance;
+
 typedef struct VulkanQueueFamilyIndices {
     uint32_t graphics_family;
     uint32_t present_family;
@@ -50,6 +64,24 @@ bool vulkan_renderer_update_quads(
     VulkanRenderer *renderer,
     const VulkanQuad *quads,
     uint32_t quad_count);
+
+/*
+ * Replace every model mesh with one model-space quad list. Existing
+ * instances refer to the old mesh, so they are cleared and must be set again.
+ */
+bool vulkan_renderer_set_model_meshes(
+    VulkanRenderer *renderer,
+    const VulkanQuad *quads,
+    uint32_t quad_count);
+
+/* Replace the placed model instances drawn each frame; every range must lie inside the model mesh. */
+bool vulkan_renderer_set_model_instances(
+    VulkanRenderer *renderer,
+    const VulkanModelInstance *instances,
+    uint32_t instance_count);
+
+/* Build the column-major model transform for an instance: turn by its yaw, then move to its position. */
+void vulkan_renderer_model_matrix(const VulkanModelInstance *instance, float matrix[16]);
 
 /* Upload 64x64 RGBA wall pages as layers in the renderer's nearest-sampled texture array. */
 bool vulkan_renderer_set_wall_textures(
