@@ -39,6 +39,14 @@ jobs:
           $env:VK_ICD_FILENAMES = "C:\swiftshader\vk_swiftshader_icd.json"
           ctest --test-dir build -C Release --output-on-failure
 
+      # The game draws actors and objects from voxel models that users build
+      # from their own VSWAP.WL6, so the demo ships the voxelizer as well.
+      # Its tests run in the sprite-voxelizer job below.
+      - name: Build sprite voxelizer for the demo
+        run: |
+          cmake -S tools/sprite_voxelizer -B build-tools -A x64 -DBUILD_TESTING=OFF
+          cmake --build build-tools --config Release --parallel
+
       - name: Package textured Windows demo
         if: success()
         shell: pwsh
@@ -46,6 +54,7 @@ jobs:
           $packageDir = Join-Path $env:GITHUB_WORKSPACE "demo-package"
           New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
           Copy-Item -Path "build\Release\wolfvk.exe" -Destination $packageDir
+          Copy-Item -Path "build-tools\Release\wolf_sprite_voxelizer.exe" -Destination $packageDir
           Copy-Item -Path "build\Release\shaders" -Destination $packageDir -Recurse
           Copy-Item -Path "THIRD_PARTY_NOTICES.txt" -Destination $packageDir
 
@@ -62,7 +71,11 @@ jobs:
           1. Copy MAPHEAD.WL6, GAMEMAPS.WL6 and VSWAP.WL6 from your own WL6
              installation into this folder, beside wolfvk.exe.
           2. Keep the shaders folder beside wolfvk.exe.
-          3. Run wolfvk.exe. Use --level N to select a one-based level number.
+          3. Build the voxel actors and objects from your VSWAP.WL6 (about 25 s):
+               wolf_sprite_voxelizer.exe --vswap VSWAP.WL6 --output voxelizer-output --assets assets\voxels
+             Without assets\voxels the game still runs, but with no actors or objects.
+          4. Run wolfvk.exe. Use --level N to select a one-based level number and
+             --difficulty 1-4 to choose which enemies appear (default 3).
 
           Controls
           - W / A / S / D: move
@@ -72,8 +85,9 @@ jobs:
           The mouse is captured while the window is focused. Wall textures and animated
           door panels are loaded from VSWAP.WL6. Press E or Space to operate doors
           and marked secret pushwalls; locked doors require their matching key.
-          Sprites, enemies and pickups are not yet implemented. Integer scaling
-          remains a follow-on step.
+          Actors and objects are voxel models standing in their spawn pose; animation,
+          enemy AI and pickups other than keys are not yet implemented. Integer
+          scaling remains a follow-on step.
           '@
           Set-Content -LiteralPath (Join-Path $packageDir "README.txt") -Value $instructions -Encoding utf8
           Compress-Archive -Path (Join-Path $packageDir "*") -DestinationPath "build\WolfVK-textured-demo-windows-x64.zip" -Force

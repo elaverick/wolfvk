@@ -10,7 +10,20 @@ Development follows the ordered steps in [roadmap.md](roadmap.md). The original 
 
 Wall textures are loaded from `VSWAP.WL6`. The loader reads the page offsets and lengths, decodes the uncompressed 64×64 wall pages stored before the sprite-page boundary, converts their column-major palette indices to RGBA using the 256-colour Wolfenstein VGA palette, and makes them available as layers in a Vulkan texture array. The original wall-tile mapping is retained: wall type `n` selects page `(n - 1) × 2` for horizontal faces and the following page for vertical faces. Map values with the `0x40` flag are reduced to their base wall type before page selection. Original `AMBUSHTILE` value 106 is removed from the wall map after info-plane processing, while area markers 107 and above are floor. Door IDs `90–101` remain special cells, not wall textures. The mesh UV direction follows the original raycaster's hit direction. The GPU sampler uses nearest-neighbour filtering; integer scaling is the next roadmap item and is not implemented yet.
 
-The floor and ceiling remain flat-coloured planes, now using neutral greys measured from the supplied original-game reference capture (floor RGB 113,113,113; ceiling RGB 56,56,56). Their vertex colours are specified in linear space so the sRGB swapchain reproduces those display values. Sprites, enemies and pickups are not implemented yet. Original wall-plane door IDs 90–101 are instantiated as sliding doors using the original door page pairs from VSWAP. Normal, keyed and elevator door variants use the retail tile ID mapping; keys are collected from their original info-plane markers and the four locked-door key bits are enforced. Doors open at the original `tics << 10` rate, remain open for 300 game tics, reverse when obstructed and become traversable only once fully open. Door panels slide along their original orientation axis, use one two-sided plane to avoid coplanar depth fighting, and are removed from the draw list at full open. Secret pushwalls are identified by info-plane marker 98, can be activated while Use is held as in the original game, move at one tile per 128 game tics, reserve the next cell, stop when blocked and render using the source wall's original horizontal/vertical texture pages. Original ambush marker value 106 is cleared from the wall map, preventing phantom blocks from obstructing the player or pushwall path. The supplied Level 1 map has five secret markers on wall types 1, 4 and 10; their original page pairs (0/1, 6/7 and 18/19) are covered by a dedicated regression test. Ordinary wall cells remain solid and collidable.
+The floor and ceiling remain flat-coloured planes, now using neutral greys measured from the supplied original-game reference capture (floor RGB 113,113,113; ceiling RGB 56,56,56). Their vertex colours are specified in linear space so the sRGB swapchain reproduces those display values. Actors and objects are drawn as voxel models (see [Voxel sprites](#voxel-sprites)); they stand still in their spawn pose for now, with no animation or AI. Original wall-plane door IDs 90–101 are instantiated as sliding doors using the original door page pairs from VSWAP. Normal, keyed and elevator door variants use the retail tile ID mapping; keys are collected from their original info-plane markers and the four locked-door key bits are enforced. Doors open at the original `tics << 10` rate, remain open for 300 game tics, reverse when obstructed and become traversable only once fully open. Door panels slide along their original orientation axis, use one two-sided plane to avoid coplanar depth fighting, and are removed from the draw list at full open. Secret pushwalls are identified by info-plane marker 98, can be activated while Use is held as in the original game, move at one tile per 128 game tics, reserve the next cell, stop when blocked and render using the source wall's original horizontal/vertical texture pages. Original ambush marker value 106 is cleared from the wall map, preventing phantom blocks from obstructing the player or pushwall path. The supplied Level 1 map has five secret markers on wall types 1, 4 and 10; their original page pairs (0/1, 6/7 and 18/19) are covered by a dedicated regression test. Ordinary wall cells remain solid and collidable.
+
+### Voxel sprites
+
+Every actor and static object that the original `ScanInfoPlane` would spawn is drawn as a solid voxel model built from its sprite by `tools/sprite_voxelizer`. The engine reads one MagicaVoxel file per subject (`grd.vox`, `stat_12.vox` ...) from an `assets/voxels` directory beside the WL6 files, or beside the executable. These files are derived from your own game data, so they are not in the repository; create them with the voxelizer's `--assets` option (see [Run](#run)). If the directory is missing, the game reports it and runs without actors and objects.
+
+- **What is placed:** info-plane markers 23–71 become static objects `stat_0` … `stat_47` (71 is the second ammunition clip, which reuses `SPR_STAT_26`). Guards, officers, SS, dogs and mutants use their standing pose (`grd_s`) or, when patrolling, the first stride of their walk (`grd_w` pose 0), as the original `s_*stand` and `s_*path1` states do. Bosses and ghosts stand in the first frame of their walk; marker 178 places Hitler in his mech suit, and marker 124 is the dead guard.
+- **Difficulty:** as in the original, the second and third tiers of enemy markers spawn only at "Bring 'em on!" and "I am Death incarnate!". `--difficulty 1-4` picks the level in menu order; the default is 3, the original menu's default.
+- **Facing:** eight-way actors keep the compass direction the map gives them. Everything else was a sprite that always faced the player. A solid model needs a fixed facing, so these face along their longest straight run of open floor, which turns them away from nearby walls.
+- **Scale and placement:** one voxel is one sprite pixel, so 64 voxels span a tile and a full-height model reaches the ceiling. Models stand at the centre of their tile on the floor.
+- **Rendering:** each distinct pose a level uses is meshed once. Only faces between a voxel and empty space are kept, and same-coloured neighbours are merged into larger rectangles. Faces on the floor or against the ceiling can never be seen, so they are dropped. Colours come straight from the original palette, converted to linear space for the sRGB swapchain, with a fixed brightness per face direction so shapes read clearly without lighting. The meshes live in their own vertex buffer. Each placed model is one indexed draw with its own model-view-projection push constant, so the shaders are unchanged and door animation never re-copies model vertices. Later animation only has to point an instance at a different pose. Level 1 places 142 objects at the default difficulty, using 31 poses and about 42,000 quads.
+- **Collected keys** disappear because the placed models are rebuilt from the info plane when a key is picked up. Other pickups cannot be collected yet, and static objects and actors do not block movement yet.
+
+All 60 retail WL6 levels were loaded at the hardest difficulty, which places every enemy tier, and every pose they need was available.
 
 The player can move with **WASD** and look with the mouse. Movement is relative to camera yaw, diagonal movement is normalised, and the player is kept out of wall tiles with sliding collision resolution. Relative mouse capture is released when the window loses focus and restored when it regains focus. Press **Escape** to quit.
 
@@ -20,18 +33,22 @@ The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the wor
 
 ## Automated tests
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It currently registers 99 Unity test cases (including the SwiftShader-backed renderer integration test):
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It currently registers 128 Unity test cases (including the SwiftShader-backed renderer integration tests):
 
 - 3 SDL3 window and event tests
 - 4 camera projection tests
 - 11 player movement, mouse-look and collision tests, including door traversal and secret-wall pushing
-- 8 command-line parser tests
+- 11 command-line parser tests, including `--difficulty`
+- 7 MagicaVoxel reader tests: named animations and keyframed poses, the stored palette, oversized models, truncated or foreign data and dangling model references, against synthetic files laid out as the voxelizer writes them
+- 6 voxel mesher tests: hidden floor and ceiling faces, face merging by colour, model-space orientation and linear, shaded colour
+- 7 actor and object placement tests: static markers, standing and patrolling facings, difficulty tiers, bosses, ghosts, the dead guard and open-floor facing
+- 4 voxel scene tests: one mesh per shared pose, missing files and poses, and tile placement
 - 11 Carmack/RLEW decoder and level-loader tests
 - 18 wall-geometry and player-start tests, including original wall-page selection, door-side textures and all four face UV directions
 - 7 VSWAP page decoder, palette expansion and wall-page mapping tests
 - 4 keyboard, mouse and gamepad input tests
 - 18 world-state tests for doors, keys, secret pushwalls and their original timing/material behaviour
-- 15 Vulkan selection and renderer tests, including the SwiftShader-backed frame submission test
+- 17 Vulkan selection and renderer tests, including the SwiftShader-backed frame submission test, the model transform, and a frame that draws placed model instances
 
 CTest runs the suite in Windows CI. The world-state tests cover original door orientation and locks, opening/closing speeds, the 300-tic timeout, obstruction handling, key collection, door-page selection, horizontal and vertical panel movement, fully-open panel removal, and secret pushwall movement/collision, valid texture-page selection, held-use activation, the Level 1 secret-wall page pairs and ambush-marker removal.
 
@@ -46,6 +63,7 @@ CTest runs the suite in Windows CI. The world-state tests cover original door or
 | Original wall textures on exposed faces | Implemented; horizontal/vertical page pairing and directional UV mapping tested |
 | WASD movement and mouse-look | Implemented; movement uses swept boundary resolution and wall sliding |
 | Sliding doors, keys and secret pushwalls | Implemented; original WL6 tile/marker mappings and timings have regression coverage |
+| Voxel actors and static objects | Implemented: placed by the original info-plane and difficulty rules, standing in their spawn pose. Verified locally on all 60 retail levels; awaits Windows CI. Animation, AI, pickups and object collision come later |
 | Textured Windows demo | Earlier textured-wall artifact packaged by [Actions run 43740769232](https://github.com/elaverick/WolfVK/actions/runs/43740769232); refreshed artifact awaits current CI |
 | Integer texture scaling | Next milestone; not implemented |
 
@@ -63,17 +81,34 @@ ctest --test-dir build -C Release --output-on-failure
 
 ## Run
 
-Keep `shaders/` beside `wolfvk.exe`. Place `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` from your own Wolfenstein 3D WL6 installation in the working directory, then launch:
+Keep `shaders/` beside `wolfvk.exe`. Place `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` from your own Wolfenstein 3D WL6 installation in the working directory. To see actors and objects, build the [sprite voxelizer](tools/sprite_voxelizer/README.md) once and install its models beside the game data:
+
+```powershell
+build-tools\Release\wolf_sprite_voxelizer.exe --vswap VSWAP.WL6 --output tools\sprite_voxelizer\output --assets <game directory>\assets\voxels
+```
+
+The game directory then looks like this:
+
+```
+wolfvk.exe
+shaders\            triangle.vert.spv, triangle.frag.spv
+MAPHEAD.WL6
+GAMEMAPS.WL6
+VSWAP.WL6
+assets\voxels\      grd.vox, dog.vox, ss.vox, stat_0.vox ... (77 files)
+```
+
+Then launch:
 
 ```powershell
 .\wolfvk.exe
 ```
 
-Use `--level N` to select a one-based level number; omit it to load the first level.
+Use `--level N` to select a one-based level number; omit it to load the first level. Use `--difficulty N` (1–4, in the original menu's order) to choose which enemies spawn; omit it for "Bring 'em on!".
 
 **Controls:** W/A/S/D to move, mouse to look, **E** or **Space** to operate a door or push marked secret wall, Escape to quit. Locked doors require their corresponding key. The mouse is captured while the window is focused.
 
 ## Tools
 
-`tools/sprite_voxelizer` is a standalone offline tool, not part of the game build. It extracts all 436 WL6 sprites from `VSWAP.WL6`, removes painted floor shadows, and rebuilds every pose as a 64×64×64 MagicaVoxel model. Eight-way rotation sets are carved into one solid; camera-facing frames get depth from the actor's own body or a fitted profile. Each actor or object is written as a single `.vox` file holding all of its animations, and every model is validated against the original frames. A dependency-free HTML viewer (`tools/sprite_voxelizer/viewer`) shows the results in 3D. See [its README](tools/sprite_voxelizer/README.md). The output is derived from your own game data and is not committed.
+`tools/sprite_voxelizer` is a standalone offline tool, not part of the game build. It extracts all 436 WL6 sprites from `VSWAP.WL6`, removes painted floor shadows, and rebuilds every pose as a 64×64×64 MagicaVoxel model. Eight-way rotation sets are carved into one solid; camera-facing frames get depth from the actor's own body or a fitted profile. Each actor or object is written as a single `.vox` file holding all of its animations, and every model is validated against the original frames. A dependency-free HTML viewer (`tools/sprite_voxelizer/viewer`) shows the results in 3D. `--assets <dir>` installs the subject files where the game loads them. See [its README](tools/sprite_voxelizer/README.md). The output is derived from your own game data and is not committed.
 

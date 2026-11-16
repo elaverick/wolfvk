@@ -16,6 +16,8 @@ build-tools\Release\wolf_sprite_voxelizer.exe --vswap "C:\path\to\VSWAP.WL6" --o
 
 A full run takes about 25 seconds. The exit code is non-zero if any file fails to write or any pose fails validation. Use `--only grd` to rebuild a single subject; `--help` lists the remaining options.
 
+`--assets <dir>` also copies every written and verified subject file into `<dir>` for the game, which loads `<game directory>/assets/voxels/<subject>.vox`. For example, add `--assets C:\Games\WolfVK\assets\voxels` to the command above. The game picks each actor's or object's spawn pose by the animation names below.
+
 Only retail WL6 data is supported (436 sprite pages), because the sprite names, rotation sets and animations come from the WL6 build of the original source.
 
 **Do not commit the output.** It is derived from your own copyrighted game data, and `output/` is git-ignored.
