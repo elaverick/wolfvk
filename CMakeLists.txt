@@ -54,6 +54,7 @@ add_executable(wolfvk
     src/vox_file.c
     src/voxel_mesh.c
     src/level_objects.c
+    src/voxel_scene.c
 )
 target_include_directories(wolfvk PRIVATE include)
 target_link_libraries(wolfvk PRIVATE SDL3::SDL3 Vulkan::Vulkan)
@@ -149,6 +150,7 @@ if(BUILD_TESTING)
         src/vox_file.c
         src/voxel_mesh.c
         src/level_objects.c
+        src/voxel_scene.c
     )
     add_dependencies(wolfvk_tests wolfvk_shaders)
     target_include_directories(wolfvk_tests PRIVATE include src)
