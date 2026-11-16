@@ -51,6 +51,26 @@ void test_mouse_motion_accumulates_until_next_frame(void)
     wolf_input_destroy(input);
 }
 
+
+void test_mouse_button_events_update_held_state(void)
+{
+    WolfInput *input = wolf_input_create();
+    SDL_Event event = {0};
+
+    TEST_ASSERT_NOT_NULL(input);
+    event.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
+    event.button.button = SDL_BUTTON_LEFT;
+    wolf_input_handle_event(input, &event);
+    TEST_ASSERT_TRUE(wolf_input_mouse_button_down(input, SDL_BUTTON_LEFT));
+
+    event.type = SDL_EVENT_MOUSE_BUTTON_UP;
+    wolf_input_handle_event(input, &event);
+    TEST_ASSERT_FALSE(wolf_input_mouse_button_down(input, SDL_BUTTON_LEFT));
+    TEST_ASSERT_FALSE(wolf_input_mouse_button_down(input, 0u));
+    TEST_ASSERT_FALSE(wolf_input_mouse_button_down(NULL, SDL_BUTTON_LEFT));
+    wolf_input_destroy(input);
+}
+
 void test_gamepad_axis_normalization_applies_deadzone(void)
 {
     TEST_ASSERT_EQUAL_FLOAT(0.0f, wolf_input_normalize_axis(0, 0.15f));
