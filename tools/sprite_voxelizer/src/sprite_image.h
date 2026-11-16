@@ -36,7 +36,4 @@ void wolf_sprite_image_clear(WolfSpriteImage *image);
 /* Count drawn pixels; an empty sprite has nothing to reconstruct. */
 size_t wolf_sprite_image_opaque_count(const WolfSpriteImage *image);
 
-/* Mirror an image horizontally, used to compare views that differ only by handedness. */
-void wolf_sprite_image_mirror(const WolfSpriteImage *source, WolfSpriteImage *mirrored);
-
 #endif
