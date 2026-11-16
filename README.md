@@ -29,7 +29,7 @@ The player can move with **WASD** and look with the mouse. Movement is relative 
 
 The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the working directory. Those original game files are not included in this repository or demo package; copy them from your own WL6 installation. The user-supplied retail map files were inspected: all 60 playable maps decode as 64×64 maps, each with exactly one valid player-start marker on a floor cell. Level 1 starts at tile (29, 57), facing east.
 
-**Textured demo:** the preceding code snapshot passed the Windows x64 build, all 99 then-registered Unity test cases (including the SwiftShader-backed Vulkan renderer test), packaging and artifact upload in [Actions run 43756633501](https://github.com/elaverick/WolfVK/actions/runs/43756633501) on 15 November 2026. The current branch adds two Level 1 secret-wall page regressions and the reference floor/ceiling colour adjustment; those changes are being validated by Windows CI. The `WolfVK-textured-demo-windows-x64` artifact contains `wolfvk.exe`, the compiled shader files, third-party notices and setup instructions. Copy the three original WL6 files above beside the executable before launching it.
+**Demo:** commit `960ccad`, which added the voxel actors and objects, passed CI in [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985) on 16 November 2026. That covers the Windows x64 build, all 128 Unity test cases (including the SwiftShader-backed Vulkan tests that draw level geometry and voxel model instances), the sprite voxelizer's tests on Windows and Linux, and packaging and artifact upload. The `WolfVK-textured-demo-windows-x64` artifact contains `wolfvk.exe`, `wolf_sprite_voxelizer.exe`, the compiled shader files, third-party notices and setup instructions. Copy the three original WL6 files above beside the executable, run the voxelizer with `--assets assets\voxels` as the instructions describe, and then launch the game.
 
 ## Automated tests
 
@@ -54,7 +54,7 @@ CTest runs the suite in Windows CI. The world-state tests cover original door or
 
 | Feature | Status |
 |---|---|
-| Windows x64 build | Passed in [Actions run 43756633501](https://github.com/elaverick/WolfVK/actions/runs/43756633501); 95 Unity tests, packaging and artifact upload succeeded on the preceding code snapshot; the current branch adds regression coverage for static and moving Level 1 secret-wall materials |
+| Windows x64 build | Passed in [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985): all 128 Unity tests, packaging and artifact upload |
 | SDL3 window and input | Implemented and tested |
 | Vulkan renderer and swapchain | Implemented and tested in Windows CI |
 | Indexed quad rendering and depth testing | Implemented and tested |
@@ -63,8 +63,9 @@ CTest runs the suite in Windows CI. The world-state tests cover original door or
 | Original wall textures on exposed faces | Implemented; horizontal/vertical page pairing and directional UV mapping tested |
 | WASD movement and mouse-look | Implemented; movement uses swept boundary resolution and wall sliding |
 | Sliding doors, keys and secret pushwalls | Implemented; original WL6 tile/marker mappings and timings have regression coverage |
-| Voxel actors and static objects | Implemented: placed by the original info-plane and difficulty rules, standing in their spawn pose. Verified locally on all 60 retail levels; awaits Windows CI. Animation, AI, pickups and object collision come later |
-| Textured Windows demo | Earlier textured-wall artifact packaged by [Actions run 43740769232](https://github.com/elaverick/WolfVK/actions/runs/43740769232); refreshed artifact awaits current CI |
+| Voxel actors and static objects | Implemented: placed by the original info-plane and difficulty rules, standing in their spawn pose. Verified locally on all 60 retail levels and passed in [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985). Animation, AI, pickups and object collision come later |
+| Sprite voxelizer | Builds and passes its tests on Windows and Linux in [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985) |
+| Windows demo | Packaged with the game, the voxelizer and the shaders by [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985) |
 | Integer texture scaling | Next milestone; not implemented |
 
 [![Windows build and tests](https://github.com/elaverick/WolfVK/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/elaverick/WolfVK/actions/workflows/build.yml)
