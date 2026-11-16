@@ -16,6 +16,8 @@ static void print_usage(const char *program)
         "\n"
         "Options:\n"
         "  --output <dir>             Output directory (default: sprite_voxels)\n"
+        "  --assets <dir>             Also copy the subject files here for the game,\n"
+        "                             normally <game directory>/assets/voxels\n"
         "  --only <subject>           Rebuild one subject, e.g. grd, dog or stat_1\n"
         "  --max-shift <n>            Largest frame registration shift in columns (default 3)\n"
         "  --min-fragment <n>         Drop carved fragments smaller than n voxels (default 20)\n"
@@ -50,6 +52,7 @@ int main(int argc, char **argv)
     options.write_comparison_sheets = true;
     options.write_viewer_data = true;
     options.only_subject = NULL;
+    options.assets_directory = NULL;
 
     for (int argument = 1; argument < argc; ++argument) {
         const char *name = argv[argument];
@@ -81,6 +84,8 @@ int main(int argc, char **argv)
             options.vswap_path = value;
         } else if (strcmp(name, "--output") == 0) {
             options.output_directory = value;
+        } else if (strcmp(name, "--assets") == 0) {
+            options.assets_directory = value;
         } else if (strcmp(name, "--only") == 0) {
             options.only_subject = value;
         } else if (strcmp(name, "--max-shift") == 0 && parse_count(value, 8, &count)) {

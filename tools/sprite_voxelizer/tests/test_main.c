@@ -65,6 +65,7 @@ void test_comparison_sheet_lays_out_views_and_previews(void);
 
 void test_pipeline_writes_and_validates_every_output(void);
 void test_pipeline_builds_a_single_subject(void);
+void test_pipeline_installs_subject_files_for_the_game(void);
 void test_pipeline_refuses_non_wl6_sprite_counts(void);
 
 void setUp(void)
@@ -144,6 +145,7 @@ int main(void)
 
     RUN_TEST(test_pipeline_writes_and_validates_every_output);
     RUN_TEST(test_pipeline_builds_a_single_subject);
+    RUN_TEST(test_pipeline_installs_subject_files_for_the_game);
     RUN_TEST(test_pipeline_refuses_non_wl6_sprite_counts);
 
     return UNITY_END();

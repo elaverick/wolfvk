@@ -560,6 +560,47 @@ static void write_pose_json(FILE *file, const PipelineState *state, int asset_in
     fprintf(file, "]}}");
 }
 
+/*
+ * Copy each written and verified subject file into the game's asset
+ * directory. The game looks up a subject as <assets>/<name>.vox, so the
+ * copies sit side by side without the vox/ subdirectory.
+ */
+static bool install_engine_assets(const PipelineState *state, const char *vox_directory,
+    const char *assets_directory, size_t *installed)
+{
+    *installed = 0u;
+    if (!wolf_make_directories(assets_directory)) {
+        fprintf(stderr, "error: could not create %s\n", assets_directory);
+        return false;
+    }
+
+    for (size_t subject = 0u; subject < state->catalog.subject_count; ++subject) {
+        const SubjectResult *result = &state->subjects[subject];
+        char leaf[WOLF_ASSET_NAME_LENGTH + 8];
+        char source[PATH_LENGTH];
+        char destination[PATH_LENGTH];
+        uint8_t *data = NULL;
+        size_t size = 0u;
+        bool copied;
+
+        if (!result->selected || !result->written || !result->readback_matches) {
+            continue;
+        }
+        (void)snprintf(leaf, sizeof(leaf), "%s.vox", state->catalog.subjects[subject].name);
+        join_path(source, vox_directory, leaf);
+        join_path(destination, assets_directory, leaf);
+        copied = wolf_read_entire_file(source, &data, &size) &&
+            wolf_write_entire_file(destination, data, size);
+        free(data);
+        if (!copied) {
+            fprintf(stderr, "error: could not copy %s to %s\n", source, destination);
+            return false;
+        }
+        ++*installed;
+    }
+    return true;
+}
+
 /* The manifest is the engine-facing index of files, animations, poses and original timing. */
 static bool write_manifest(const PipelineState *state, const char *path)
 {
@@ -901,6 +942,15 @@ int wolf_pipeline_run(const WolfPipelineOptions *options)
     }
     if (subjects_written != subjects_selected) {
         exit_code = 1;
+    }
+    if (options->assets_directory != NULL) {
+        size_t installed = 0u;
+
+        if (!install_engine_assets(state, vox_directory, options->assets_directory, &installed)) {
+            exit_code = 1;
+        }
+        printf("Installed %u subject files for the game in %s\n",
+            (unsigned)installed, options->assets_directory);
     }
 
     if (!write_manifest(state, manifest_path)) {

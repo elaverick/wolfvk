@@ -50,6 +50,11 @@ typedef struct WolfPipelineOptions {
     bool write_viewer_data;
     /* Restrict output to one subject (e.g. "grd"); NULL processes everything. */
     const char *only_subject;
+    /*
+     * Also copy every verified subject file here, flat, for the game to load
+     * (normally <game directory>/assets/voxels); NULL skips the copy.
+     */
+    const char *assets_directory;
 } WolfPipelineOptions;
 
 /*

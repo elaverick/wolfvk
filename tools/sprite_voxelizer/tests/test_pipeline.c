@@ -121,6 +121,7 @@ static WolfPipelineOptions test_options(const char *vswap, const char *output)
     options.write_comparison_sheets = true;
     options.write_viewer_data = true;
     options.only_subject = NULL;
+    options.assets_directory = NULL;
     return options;
 }
 
@@ -170,6 +171,30 @@ void test_pipeline_builds_a_single_subject(void)
 
     options.only_subject = "no_such_subject";
     TEST_ASSERT_NOT_EQUAL(0, wolf_pipeline_run(&options));
+}
+
+/* --assets copies the verified subject files, flat, where the game looks for <name>.vox. */
+void test_pipeline_installs_subject_files_for_the_game(void)
+{
+    WolfPipelineOptions options = test_options(PIPELINE_TEST_DIRECTORY "/VSWAP.WL6", PIPELINE_TEST_DIRECTORY "/installed");
+    WolfVoxDocument document;
+    char error[128];
+
+    options.only_subject = "stat_9";
+    options.write_viewer_data = false;
+    options.write_comparison_sheets = false;
+    options.assets_directory = PIPELINE_TEST_DIRECTORY "/game/assets/voxels";
+    TEST_ASSERT_TRUE(wolf_make_directories(PIPELINE_TEST_DIRECTORY));
+    TEST_ASSERT_TRUE(file_exists(PIPELINE_TEST_DIRECTORY "/VSWAP.WL6") ||
+        build_synthetic_wl6_vswap(PIPELINE_TEST_DIRECTORY "/VSWAP.WL6"));
+    TEST_ASSERT_EQUAL_INT(0, wolf_pipeline_run(&options));
+
+    TEST_ASSERT_TRUE(wolf_vox_read_file(
+        PIPELINE_TEST_DIRECTORY "/game/assets/voxels/stat_9.vox", &document, error, sizeof(error)));
+    TEST_ASSERT_EQUAL_size_t(1u, document.object_count);
+    TEST_ASSERT_EQUAL_STRING("stat_9", document.objects[0].name);
+    wolf_vox_document_destroy(&document);
+    TEST_ASSERT_FALSE(file_exists(PIPELINE_TEST_DIRECTORY "/game/assets/voxels/grd.vox"));
 }
 
 /* Data from another game variant has a different sprite layout and must be refused. */
