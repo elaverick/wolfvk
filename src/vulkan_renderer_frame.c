@@ -121,6 +121,7 @@ static bool create_swapchain(VulkanRenderer *renderer)
     uint32_t queue_family_indices[2];
     VkSwapchainCreateInfoKHR create_info = {0};
     VkResult result;
+    VkPipelineDepthStencilStateCreateInfo overlay_depth_stencil = {0};
 
     result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
         renderer->physical_device, renderer->surface, &capabilities);
@@ -564,7 +565,7 @@ static bool load_shader_module(
 }
 
 /* Bind the quad vertex layout, depth testing and shaders into the pipeline reused by every level frame. */
-static bool create_graphics_pipeline(VulkanRenderer *renderer)
+static bool create_graphics_pipelines(VulkanRenderer *renderer)
 {
     VkShaderModule vertex_shader = VK_NULL_HANDLE;
     VkShaderModule fragment_shader = VK_NULL_HANDLE;
@@ -728,18 +729,30 @@ static bool create_graphics_pipeline(VulkanRenderer *renderer)
     result = vkCreateGraphicsPipelines(
         renderer->device, VK_NULL_HANDLE, 1, &pipeline_info, NULL,
         &renderer->graphics_pipeline);
-
-    vkDestroyShaderModule(renderer->device, fragment_shader, NULL);
-    vkDestroyShaderModule(renderer->device, vertex_shader, NULL);
-
     if (result != VK_SUCCESS) {
         fprintf(stderr, "Vulkan graphics pipeline creation failed (%d).\n", result);
+        vkDestroyShaderModule(renderer->device, fragment_shader, NULL);
+        vkDestroyShaderModule(renderer->device, vertex_shader, NULL);
         return false;
     }
 
+    /* Weapon geometry is a first-person overlay and must not inherit map depth. */
+    overlay_depth_stencil = depth_stencil;
+    overlay_depth_stencil.depthTestEnable = VK_FALSE;
+    overlay_depth_stencil.depthWriteEnable = VK_FALSE;
+    pipeline_info.pDepthStencilState = &overlay_depth_stencil;
+    result = vkCreateGraphicsPipelines(
+        renderer->device, VK_NULL_HANDLE, 1, &pipeline_info, NULL,
+        &renderer->weapon_pipeline);
+
+    vkDestroyShaderModule(renderer->device, fragment_shader, NULL);
+    vkDestroyShaderModule(renderer->device, vertex_shader, NULL);
+    if (result != VK_SUCCESS) {
+        fprintf(stderr, "Vulkan weapon overlay pipeline creation failed (%d).\n", result);
+        return false;
+    }
     return true;
 }
-
 /* Pair each presentation image with the depth attachment used while that image is rendered. */
 static bool create_framebuffers(VulkanRenderer *renderer)
 {
@@ -926,6 +939,10 @@ static void destroy_swapchain_resources(VulkanRenderer *renderer)
         renderer->depth_image_memory = VK_NULL_HANDLE;
     }
 
+    if (renderer->weapon_pipeline != VK_NULL_HANDLE) {
+        vkDestroyPipeline(renderer->device, renderer->weapon_pipeline, NULL);
+        renderer->weapon_pipeline = VK_NULL_HANDLE;
+    }
     if (renderer->graphics_pipeline != VK_NULL_HANDLE) {
         vkDestroyPipeline(renderer->device, renderer->graphics_pipeline, NULL);
         renderer->graphics_pipeline = VK_NULL_HANDLE;
@@ -966,7 +983,7 @@ bool vulkan_renderer_frame_resources_create(VulkanRenderer *renderer)
         !create_image_views(renderer) ||
         !create_depth_resources(renderer) ||
         !create_render_pass(renderer) ||
-        !create_graphics_pipeline(renderer) ||
+        !create_graphics_pipelines(renderer) ||
         !create_framebuffers(renderer) ||
         !create_command_pool(renderer) ||
         !allocate_command_buffers(renderer) ||
@@ -1096,6 +1113,7 @@ static bool record_command_buffer(
         vkCmdDrawIndexed(command_buffer, renderer->index_count, 1, 0, 0, 0);
     }
     vulkan_renderer_models_record(renderer, command_buffer);
+    vulkan_renderer_weapon_record(renderer, command_buffer);
     vkCmdEndRenderPass(command_buffer);
 
     result = vkEndCommandBuffer(command_buffer);
