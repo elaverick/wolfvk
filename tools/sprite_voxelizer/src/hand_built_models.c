@@ -466,7 +466,7 @@ static void build_gibs(const WolfSpriteImage *reference, WolfVoxelModel *model)
     /* The skull keeps its drawn, rounded shape, resting on the puddle at its base row's depth. */
     if (best_component > 0) {
         WolfVoxelModel *rounded = wolf_voxel_model_create();
-        WolfSingleViewOptions inflate = {WOLF_DEPTH_PROFILE_INFLATE, 1.0, 6.0, 0.0, NULL, false};
+        WolfSingleViewOptions inflate = {WOLF_DEPTH_PROFILE_INFLATE, 1.0, 6.0, 0.0, NULL, false, false, 0, 0, false};
         int drop = wolf_voxel_row_for_layer(skull_bottom) - 1;
         int shift = floor_depth_for_row(skull_bottom, bottom_row, depth_per_row, nearest_depth) - WOLF_VOXEL_DIM / 2;
 
