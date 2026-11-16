@@ -44,7 +44,7 @@ static int column_thickness(const WolfVoxelModel *model, int column, int row)
 void test_extrude_profile_reproduces_front_view_with_constant_depth(void)
 {
     WolfSpriteImage image;
-    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 3.0, NULL, false};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 3.0, NULL, false, false, 0, 0, false};
     WolfVoxelModel *model = wolf_voxel_model_create();
 
     test_make_patterned_sprite(&image, 5u);
@@ -59,7 +59,7 @@ void test_extrude_profile_reproduces_front_view_with_constant_depth(void)
 void test_lathe_profile_turns_each_run_into_a_disc(void)
 {
     WolfSpriteImage image;
-    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false, false, 0, 0, false};
     WolfVoxelModel *model = wolf_voxel_model_create();
 
     wolf_sprite_image_clear(&image);
@@ -77,7 +77,7 @@ void test_lathe_profile_turns_each_run_into_a_disc(void)
 void test_inflate_profile_rounds_by_local_thickness(void)
 {
     WolfSpriteImage image;
-    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0, NULL, false};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0, NULL, false, false, 0, 0, false};
     WolfVoxelModel *model = wolf_voxel_model_create();
     double half_depth[WOLF_SPRITE_PIXELS];
 
@@ -106,7 +106,7 @@ void test_inflate_profile_rounds_by_local_thickness(void)
 void test_single_view_never_drops_a_pixel(void)
 {
     WolfSpriteImage image;
-    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 0.0, NULL, false};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 0.0, NULL, false, false, 0, 0, false};
     WolfVoxelModel *model = wolf_voxel_model_create();
 
     wolf_sprite_image_clear(&image);
@@ -263,7 +263,7 @@ void test_pose_transfer_builds_on_the_reference_body(void)
     WolfVoxelModel *reference = wolf_voxel_model_create();
     WolfVoxelModel *model = wolf_voxel_model_create();
     WolfSpriteImage frame;
-    WolfSingleViewOptions fallback = {WOLF_DEPTH_PROFILE_INFLATE, 0.6, 32.0, 0.0, NULL, false};
+    WolfSingleViewOptions fallback = {WOLF_DEPTH_PROFILE_INFLATE, 0.6, 32.0, 0.0, NULL, false, false, 0, 0, false};
 
     test_make_box_model(reference, 6, 4, 40);
     wolf_voxel_render_view(reference, 0.0, 0, &frame, NULL);
@@ -292,7 +292,7 @@ void test_pose_transfer_builds_on_the_reference_body(void)
 void test_first_person_profile_recedes_into_the_screen(void)
 {
     WolfSpriteImage weapon;
-    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_FIRST_PERSON, 1.0, 6.0, 0.0, NULL, false};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_FIRST_PERSON, 1.0, 6.0, 0.0, NULL, false, false, 0, 0, false};
     WolfVoxelModel *model = wolf_voxel_model_create();
     int nearest_bottom = WOLF_VOXEL_DIM;
     int nearest_top = WOLF_VOXEL_DIM;
@@ -321,7 +321,7 @@ void test_cage_profile_puts_bars_around_the_contents(void)
     WolfSpriteImage cage;
     WolfVoxelModel *model = wolf_voxel_model_create();
     uint8_t bar_colours[256] = {0};
-    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_CAGE, 1.0, 32.0, 0.0, bar_colours, false};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_CAGE, 1.0, 32.0, 0.0, bar_colours, false, false, 0, 0, false};
     int depth_of_bar[2] = {-1, -1};
 
     bar_colours[60] = 1u;
@@ -357,7 +357,7 @@ void test_cage_prisoner_continues_behind_bars(void)
     WolfSpriteImage cage;
     WolfVoxelModel *model = wolf_voxel_model_create();
     uint8_t bar_colours[256] = {0};
-    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_CAGE, 1.0, 32.0, 0.0, bar_colours, false};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_CAGE, 1.0, 32.0, 0.0, bar_colours, false, false, 0, 0, false};
 
     bar_colours[60] = 1u;
     wolf_sprite_image_clear(&cage);
@@ -499,7 +499,7 @@ void test_plain_back_gives_a_single_face(void)
 {
     WolfSpriteImage figure;
     WolfVoxelModel *model = wolf_voxel_model_create();
-    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0, NULL, true};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0, NULL, true, false, 0, 0, false};
     int back_y = -1;
 
     wolf_sprite_image_clear(&figure);
@@ -564,7 +564,7 @@ void test_axial_revolve_makes_a_round_body(void)
 void test_lathe_wraps_the_texture_round_the_disc(void)
 {
     WolfSpriteImage image;
-    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false, false, 0, 0, false};
     WolfVoxelModel *model = wolf_voxel_model_create();
     int z = 63 - 40;
     int back_y = -1;
@@ -618,7 +618,7 @@ void test_lathe_hollow_top_opens_the_object(void)
 void test_lathe_rough_surface_breaks_up_the_outline(void)
 {
     WolfSpriteImage image;
-    WolfSingleViewOptions smooth = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false};
+    WolfSingleViewOptions smooth = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false, false, 0, 0, false};
     WolfSingleViewOptions rough = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false, false, 0, 0, true};
     WolfVoxelModel *model = wolf_voxel_model_create();
     int differing = 0;
