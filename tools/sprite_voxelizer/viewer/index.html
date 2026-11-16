@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wolf3D Voxel Viewer</title>
+<style>
+  :root {
+    --background: #16181f;
+    --panel: #1f222c;
+    --panel-raised: #282c38;
+    --border: #353a48;
+    --text: #e6e8ef;
+    --muted: #9aa0b2;
+    --accent: #e0a040;
+    --pass: #7ddc7d;
+    --fail: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--background);
+    color: var(--text);
+    font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: grid;
+    grid-template-columns: 260px 1fr 300px;
+    grid-template-rows: 100%;
+  }
+  aside {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 12px;
+  }
+  aside.right { border-right: none; border-left: 1px solid var(--border); }
+  h1 { font-size: 15px; margin: 0 0 10px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 16px 0 6px; }
+  input[type=search] {
+    width: 100%; padding: 6px 8px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--panel-raised); color: var(--text);
+  }
+  ul.list { list-style: none; margin: 8px 0 0; padding: 0; }
+  ul.list li {
+    padding: 4px 8px; border-radius: 5px; cursor: pointer; display: flex; justify-content: space-between;
+  }
+  ul.list li:hover { background: var(--panel-raised); }
+  ul.list li.selected { background: var(--accent); color: #111; }
+  ul.list li .count { color: var(--muted); }
+  ul.list li.selected .count { color: #333; }
+  main { position: relative; overflow: hidden; }
+  canvas#view { width: 100%; height: 100%; display: block; cursor: grab; }
+  canvas#view:active { cursor: grabbing; }
+  .overlay {
+    position: absolute; left: 12px; bottom: 12px; right: 12px;
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    background: rgba(22, 24, 31, 0.85); border: 1px solid var(--border); border-radius: 8px; padding: 8px;
+  }
+  button, select {
+    background: var(--panel-raised); color: var(--text); border: 1px solid var(--border);
+    border-radius: 5px; padding: 4px 9px; font: inherit; cursor: pointer;
+  }
+  button.active { background: var(--accent); color: #111; border-color: var(--accent); }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .overlay .label { color: var(--muted); margin-left: 6px; }
+  #frameLabel { min-width: 90px; text-align: center; }
+  #help { position: absolute; top: 10px; left: 12px; color: var(--muted); font-size: 12px; }
+  .compare { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .compare figure { margin: 0; text-align: center; }
+  .compare img {
+    width: 128px; height: 128px; image-rendering: pixelated;
+    background: #2c3040; border: 1px solid var(--border); border-radius: 4px;
+  }
+  .compare figcaption { color: var(--muted); font-size: 11px; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; word-break: break-word; }
+  .pass { color: var(--pass); } .fail { color: var(--fail); }
+  #rotations { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  #loader {
+    position: fixed; inset: 0; display: none; place-items: center; background: var(--background); z-index: 10;
+  }
+  #loader .card {
+    max-width: 520px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 24px;
+  }
+  #loader code { background: var(--panel-raised); padding: 1px 5px; border-radius: 4px; }
+  @media (max-width: 900px) {
+    body { grid-template-columns: 1fr; grid-template-rows: 200px 60vh auto; }
+    aside { border: none; }
+  }
+</style>
+</head>
+<body>
+<aside>
+  <h1>Wolf3D voxel viewer</h1>
+  <input type="search" id="filter" placeholder="Filter subjects (grd, dog, stat_1...)">
+  <ul class="list" id="subjects"></ul>
+</aside>
+
+<main>
+  <canvas id="view"></canvas>
+  <div id="help">Drag to orbit &middot; right-drag to pan &middot; wheel to zoom &middot; double-click to reset</div>
+  <div class="overlay">
+    <select id="animation" title="Animation"></select>
+    <button id="previous" title="Previous pose">&#9664;</button>
+    <span id="frameLabel">pose 1 / 1</span>
+    <button id="next" title="Next pose">&#9654;</button>
+    <button id="play">Play</button>
+    <select id="timing" title="Playback timing"></select>
+    <span class="label">Projection</span>
+    <button id="perspective" class="active">Perspective</button>
+    <button id="orthographic">Orthographic</button>
+    <button id="floorToggle" class="active">Floor</button>
+  </div>
+</main>
+
+<aside class="right">
+  <h2>Original views</h2>
+  <p style="color:var(--muted);margin:0 0 6px">Snap the camera to an original rotation (orthographic, eye level) to compare with the sprite.</p>
+  <div id="rotations"></div>
+  <h2>Original frame</h2>
+  <div class="compare" id="compare"></div>
+  <h2>Pose</h2>
+  <dl id="details"></dl>
+</aside>
+
+<div id="loader">
+  <div class="card">
+    <h1>Load voxel data</h1>
+    <p>The viewer reads <code>viewer_data.js</code>, which <code>wolf_sprite_voxelizer</code> writes beside
+      <code>manifest.json</code>. It looks for <code>../output/viewer_data.js</code> automatically; if your output
+      is elsewhere, choose the file here.</p>
+    <input type="file" id="dataFile" accept=".js">
+    <p id="loadError" class="fail"></p>
+  </div>
+</div>
+
+<script src="../output/viewer_data.js"></script>
+<script src="viewer.js"></script>
+</body>
+</html>

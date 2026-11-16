@@ -78,6 +78,9 @@ void test_rotation_ceiling_reflects_opposite_view_agreement(void)
     ceiling = wolf_rotation_set_silhouette_ceiling(view_pointers, 6);
     TEST_ASSERT_TRUE(ceiling < 1.0);
     TEST_ASSERT_TRUE(ceiling > 0.75);
+    /* Only the damaged pair is limited; the others still allow a perfect solid. */
+    TEST_ASSERT_TRUE(wolf_opposite_pair_ceiling(view_pointers[0], view_pointers[4], 6) < 0.9);
+    TEST_ASSERT_DOUBLE_WITHIN(1e-9, 1.0, wolf_opposite_pair_ceiling(view_pointers[2], view_pointers[6], 0));
     wolf_voxel_model_destroy(model);
 }
 
@@ -95,7 +98,8 @@ void test_comparison_sheet_lays_out_views_and_previews(void)
         wolf_voxel_render_view(model, 90.0 * view, 0, &originals[view], NULL);
         wolf_voxel_render_view(model, 90.0 * view, 0, &rendered[view], NULL);
     }
-    TEST_ASSERT_TRUE(wolf_comparison_sheet_build(original_pointers, rendered, 2u, model, wolf_game_palette_rgba, &sheet));
+    TEST_ASSERT_TRUE(wolf_comparison_sheet_build(original_pointers, NULL, NULL, rendered, 2u, model,
+        wolf_game_palette_rgba, &sheet));
     TEST_ASSERT_EQUAL_UINT32(WOLF_SHEET_MARGIN + 3u * (WOLF_SHEET_CELL_SIZE + WOLF_SHEET_MARGIN), sheet.height);
     TEST_ASSERT_TRUE(sheet.width > 2u * WOLF_SHEET_CELL_SIZE);
     /* The difference cell of a perfect render is grey where the box is drawn. */

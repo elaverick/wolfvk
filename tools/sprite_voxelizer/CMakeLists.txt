@@ -64,6 +64,8 @@ if(BUILD_TESTING)
         tests/test_main.c
         tests/test_support.c
         tests/test_vswap_sprites.c
+        tests/test_sprite_shadow.c
+        tests/test_hand_built_models.c
         tests/test_voxel_model.c
         tests/test_reconstruction.c
         tests/test_vox_file.c
@@ -78,6 +80,19 @@ if(BUILD_TESTING)
 
     add_test(NAME sprite_voxelizer_unit_tests COMMAND sprite_voxelizer_tests)
     set_tests_properties(sprite_voxelizer_unit_tests PROPERTIES TIMEOUT 120)
+
+    # The HTML viewer's parser and mesher are checked against the viewer data
+    # the pipeline test writes, when Node.js is available.
+    find_program(NODE_EXECUTABLE node)
+    if(NODE_EXECUTABLE)
+        add_test(NAME sprite_voxelizer_viewer_parses_output
+            COMMAND ${NODE_EXECUTABLE}
+                "${CMAKE_CURRENT_SOURCE_DIR}/viewer/test_viewer.js"
+                "${CMAKE_CURRENT_SOURCE_DIR}/viewer/viewer.js"
+                "${CMAKE_CURRENT_BINARY_DIR}/sprite_voxelizer_pipeline_test/output/viewer_data.js")
+        set_tests_properties(sprite_voxelizer_viewer_parses_output PROPERTIES
+            DEPENDS sprite_voxelizer_unit_tests TIMEOUT 120)
+    endif()
 endif()
 
 foreach(target IN LISTS SPRITE_VOXELIZER_TARGETS)

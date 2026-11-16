@@ -22,11 +22,21 @@ void test_multi_view_rebuilds_a_consistent_solid(void);
 void test_multi_view_registers_an_off_centre_frame(void);
 void test_tolerant_carving_survives_one_inconsistent_frame(void);
 void test_multi_view_rejects_invalid_arguments(void);
+void test_pose_transfer_builds_on_the_reference_body(void);
+void test_first_person_profile_recedes_into_the_screen(void);
 
-void test_vox_single_model_round_trips_with_original_palette(void);
-void test_vox_animation_records_keyframes(void);
+void test_shadow_removal_lifts_a_flat_floor_shadow(void);
+void test_shadow_removal_keeps_dark_parts_of_the_object(void);
+void test_shadow_removal_clears_detached_crumbs(void);
+void test_shadow_palette_matches_the_painted_shadow_colours(void);
+
+void test_table_and_chairs_model_is_furniture_shaped(void);
+void test_bed_model_is_long_and_raised(void);
+
+void test_vox_single_object_round_trips_with_original_palette(void);
+void test_vox_named_animations_record_keyframes(void);
 void test_vox_colour_mapping_handles_the_last_palette_entry(void);
-void test_vox_decoder_rejects_malformed_files(void);
+void test_vox_rejects_malformed_files_and_arguments(void);
 
 void test_png_checksums_match_reference_values(void);
 void test_zlib_stream_round_trips(void);
@@ -34,7 +44,8 @@ void test_png_encoder_writes_valid_rgba_image(void);
 
 void test_wl6_tables_match_original_enumeration(void);
 void test_catalog_groups_rotation_sets_from_state_flags(void);
-void test_catalog_assigns_depth_profiles_to_camera_facing_sprites(void);
+void test_catalog_groups_poses_into_subject_animations(void);
+void test_catalog_assigns_reconstruction_methods(void);
 void test_animation_catalog_rebuilds_original_sequences(void);
 
 void test_compare_views_scores_identical_and_disjoint_images(void);
@@ -43,6 +54,7 @@ void test_rotation_ceiling_reflects_opposite_view_agreement(void);
 void test_comparison_sheet_lays_out_views_and_previews(void);
 
 void test_pipeline_writes_and_validates_every_output(void);
+void test_pipeline_builds_a_single_subject(void);
 void test_pipeline_refuses_non_wl6_sprite_counts(void);
 
 void setUp(void)
@@ -79,11 +91,21 @@ int main(void)
     RUN_TEST(test_multi_view_registers_an_off_centre_frame);
     RUN_TEST(test_tolerant_carving_survives_one_inconsistent_frame);
     RUN_TEST(test_multi_view_rejects_invalid_arguments);
+    RUN_TEST(test_pose_transfer_builds_on_the_reference_body);
+    RUN_TEST(test_first_person_profile_recedes_into_the_screen);
 
-    RUN_TEST(test_vox_single_model_round_trips_with_original_palette);
-    RUN_TEST(test_vox_animation_records_keyframes);
+    RUN_TEST(test_shadow_removal_lifts_a_flat_floor_shadow);
+    RUN_TEST(test_shadow_removal_keeps_dark_parts_of_the_object);
+    RUN_TEST(test_shadow_removal_clears_detached_crumbs);
+    RUN_TEST(test_shadow_palette_matches_the_painted_shadow_colours);
+
+    RUN_TEST(test_table_and_chairs_model_is_furniture_shaped);
+    RUN_TEST(test_bed_model_is_long_and_raised);
+
+    RUN_TEST(test_vox_single_object_round_trips_with_original_palette);
+    RUN_TEST(test_vox_named_animations_record_keyframes);
     RUN_TEST(test_vox_colour_mapping_handles_the_last_palette_entry);
-    RUN_TEST(test_vox_decoder_rejects_malformed_files);
+    RUN_TEST(test_vox_rejects_malformed_files_and_arguments);
 
     RUN_TEST(test_png_checksums_match_reference_values);
     RUN_TEST(test_zlib_stream_round_trips);
@@ -91,7 +113,8 @@ int main(void)
 
     RUN_TEST(test_wl6_tables_match_original_enumeration);
     RUN_TEST(test_catalog_groups_rotation_sets_from_state_flags);
-    RUN_TEST(test_catalog_assigns_depth_profiles_to_camera_facing_sprites);
+    RUN_TEST(test_catalog_groups_poses_into_subject_animations);
+    RUN_TEST(test_catalog_assigns_reconstruction_methods);
     RUN_TEST(test_animation_catalog_rebuilds_original_sequences);
 
     RUN_TEST(test_compare_views_scores_identical_and_disjoint_images);
@@ -100,6 +123,7 @@ int main(void)
     RUN_TEST(test_comparison_sheet_lays_out_views_and_previews);
 
     RUN_TEST(test_pipeline_writes_and_validates_every_output);
+    RUN_TEST(test_pipeline_builds_a_single_subject);
     RUN_TEST(test_pipeline_refuses_non_wl6_sprite_counts);
 
     return UNITY_END();

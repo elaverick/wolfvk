@@ -203,7 +203,8 @@ static void place_asset(WolfAssetCatalog *catalog, int asset_index, const char *
         char lowered[WOLF_ASSET_NAME_LENGTH];
 
         copy_lowercase(animation_key, strlen(animation_key), lowered, sizeof(lowered));
-        (void)snprintf(animation_name, sizeof(animation_name), "%s_%s", subject_name, lowered);
+        /* Bounded so the joined name always fits; WL6 names are far shorter. */
+        (void)snprintf(animation_name, sizeof(animation_name), "%.24s_%.22s", subject_name, lowered);
     }
     for (size_t existing = 0u; existing < subject->animation_count; ++existing) {
         if (strcmp(subject->animations[existing].name, animation_name) == 0) {

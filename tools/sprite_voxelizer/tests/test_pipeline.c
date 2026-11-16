@@ -22,9 +22,27 @@ static bool file_exists(const char *path)
     return true;
 }
 
+static bool file_contains(const char *path, const char *text)
+{
+    uint8_t *data;
+    size_t size;
+    bool found = false;
+    size_t length = strlen(text);
+
+    if (!wolf_read_entire_file(path, &data, &size)) {
+        return false;
+    }
+    for (size_t offset = 0u; offset + length <= size && !found; ++offset) {
+        found = memcmp(data + offset, text, length) == 0;
+    }
+    free(data);
+    return found;
+}
+
 /*
  * Build a complete WL6-shaped VSWAP: each rotation set holds the eight true
- * views of a small solid, a few objects are drawn, and the rest are blank.
+ * views of a small solid, a few objects are drawn (with a floor shadow on
+ * every object), and the rest are blank.
  */
 static bool build_synthetic_wl6_vswap(const char *path)
 {
@@ -41,11 +59,22 @@ static bool build_synthetic_wl6_vswap(const char *path)
         for (int sprite = 0; sprite < WOLF_WL6_SPRITE_COUNT; ++sprite) {
             const WolfVoxelAsset *asset = &catalog->assets[catalog->asset_for_sprite[sprite]];
 
-            if (asset->kind == WOLF_ASSET_ROTATION_SET) {
+            if (asset->method == WOLF_ASSET_ROTATION_SET) {
                 wolf_voxel_render_view(solid, wolf_rotation_degrees(catalog->rotation_for_sprite[sprite]), 0,
                     &sprites[sprite], NULL);
-            } else if (sprite % 9 == 0) {
-                test_fill_rectangle(&sprites[sprite], 24, 30, 39, 63, (uint8_t)(sprite % 250));
+            } else if (asset->method == WOLF_ASSET_HAND_BUILT) {
+                /* The hand-built furniture's reference is its own front view here. */
+                WolfVoxelModel *furniture = wolf_voxel_model_create();
+
+                if (furniture != NULL && wolf_build_hand_model(asset->hand_built, furniture)) {
+                    wolf_voxel_render_view(furniture, 0.0, 0, &sprites[sprite], NULL);
+                }
+                wolf_voxel_model_destroy(furniture);
+            } else if (sprite % 9 == 0 || sprite >= WOLF_WL6_SPRITE_COUNT - 20) {
+                test_fill_rectangle(&sprites[sprite], 24, 30, 39, 61, (uint8_t)(64 + sprite % 100));
+                if (asset->strip_shadow) {
+                    test_fill_rectangle(&sprites[sprite], 40, 60, 50, 61, 29u);
+                }
             }
             pointers[sprite] = &sprites[sprite];
         }
@@ -62,41 +91,65 @@ static bool build_synthetic_wl6_vswap(const char *path)
     return built;
 }
 
+static WolfPipelineOptions test_options(const char *vswap, const char *output)
+{
+    WolfPipelineOptions options;
+
+    options.vswap_path = vswap;
+    options.output_directory = output;
+    options.multi_view = wolf_multi_view_default_options();
+    options.write_comparison_sheets = true;
+    options.write_viewer_data = true;
+    options.only_subject = NULL;
+    return options;
+}
+
 /* The whole tool, end to end, on original-format data: every output written and validated. */
 void test_pipeline_writes_and_validates_every_output(void)
 {
-    WolfPipelineOptions options;
+    WolfPipelineOptions options = test_options(PIPELINE_TEST_DIRECTORY "/VSWAP.WL6", PIPELINE_TEST_DIRECTORY "/output");
     WolfVoxDocument document;
     char error[128];
 
     TEST_ASSERT_TRUE(wolf_make_directories(PIPELINE_TEST_DIRECTORY));
     TEST_ASSERT_TRUE(build_synthetic_wl6_vswap(PIPELINE_TEST_DIRECTORY "/VSWAP.WL6"));
-
-    options.vswap_path = PIPELINE_TEST_DIRECTORY "/VSWAP.WL6";
-    options.output_directory = PIPELINE_TEST_DIRECTORY "/output";
-    options.multi_view = wolf_multi_view_default_options();
-    options.write_comparison_sheets = true;
-    options.only_asset = NULL;
     TEST_ASSERT_EQUAL_INT(0, wolf_pipeline_run(&options));
 
     TEST_ASSERT_TRUE(file_exists(PIPELINE_TEST_DIRECTORY "/output/manifest.json"));
     TEST_ASSERT_TRUE(file_exists(PIPELINE_TEST_DIRECTORY "/output/sprites/050_grd_s_1.png"));
     TEST_ASSERT_TRUE(file_exists(PIPELINE_TEST_DIRECTORY "/output/validation/report.html"));
     TEST_ASSERT_TRUE(file_exists(PIPELINE_TEST_DIRECTORY "/output/validation/metrics.csv"));
-    TEST_ASSERT_TRUE(file_exists(PIPELINE_TEST_DIRECTORY "/output/validation/grd_s.png"));
-    TEST_ASSERT_TRUE(file_exists(PIPELINE_TEST_DIRECTORY "/output/vox/models/stat_1.vox"));
+    TEST_ASSERT_TRUE(file_exists(PIPELINE_TEST_DIRECTORY "/output/validation/grd_w1.png"));
+    TEST_ASSERT_TRUE(file_exists(PIPELINE_TEST_DIRECTORY "/output/vox/stat_9.vox"));
+    TEST_ASSERT_TRUE(file_contains(PIPELINE_TEST_DIRECTORY "/output/viewer_data.js", "window.WOLF_VOXEL_DATA"));
+    TEST_ASSERT_TRUE(file_contains(PIPELINE_TEST_DIRECTORY "/output/manifest.json", "\"sequences\""));
 
-    TEST_ASSERT_TRUE(wolf_vox_read_file(PIPELINE_TEST_DIRECTORY "/output/vox/models/grd_s.vox",
-        &document, error, sizeof(error)));
-    TEST_ASSERT_EQUAL_size_t(1u, document.model_count);
-    TEST_ASSERT_TRUE(wolf_voxel_model_count(document.models[0]) > 1000u);
+    /* One file per actor, every animation a named object with its poses as keyframes. */
+    TEST_ASSERT_TRUE(wolf_vox_read_file(PIPELINE_TEST_DIRECTORY "/output/vox/grd.vox", &document, error, sizeof(error)));
+    TEST_ASSERT_EQUAL_size_t(6u, document.object_count);
+    TEST_ASSERT_EQUAL_STRING("grd_w", document.objects[1].name);
+    TEST_ASSERT_EQUAL_size_t(4u, document.objects[1].frame_count);
+    TEST_ASSERT_EQUAL_INT32(3, document.objects[1].frame_indices[3]);
+    TEST_ASSERT_TRUE(wolf_voxel_model_count(document.models[document.objects[0].model_ids[0]]) > 1000u);
     wolf_vox_document_destroy(&document);
+}
 
-    TEST_ASSERT_TRUE(wolf_vox_read_file(PIPELINE_TEST_DIRECTORY "/output/vox/animations/grdchase.vox",
-        &document, error, sizeof(error)));
-    TEST_ASSERT_EQUAL_size_t(6u, document.model_count);
-    TEST_ASSERT_EQUAL_INT32(5, document.frame_indices[5]);
-    wolf_vox_document_destroy(&document);
+/* --only limits the output to one subject's file. */
+void test_pipeline_builds_a_single_subject(void)
+{
+    WolfPipelineOptions options = test_options(PIPELINE_TEST_DIRECTORY "/VSWAP.WL6", PIPELINE_TEST_DIRECTORY "/only");
+
+    options.only_subject = "stat_9";
+    options.write_viewer_data = false;
+    TEST_ASSERT_TRUE(wolf_make_directories(PIPELINE_TEST_DIRECTORY));
+    TEST_ASSERT_TRUE(file_exists(PIPELINE_TEST_DIRECTORY "/VSWAP.WL6") ||
+        build_synthetic_wl6_vswap(PIPELINE_TEST_DIRECTORY "/VSWAP.WL6"));
+    TEST_ASSERT_EQUAL_INT(0, wolf_pipeline_run(&options));
+    TEST_ASSERT_TRUE(file_exists(PIPELINE_TEST_DIRECTORY "/only/vox/stat_9.vox"));
+    TEST_ASSERT_FALSE(file_exists(PIPELINE_TEST_DIRECTORY "/only/vox/grd.vox"));
+
+    options.only_subject = "no_such_subject";
+    TEST_ASSERT_NOT_EQUAL(0, wolf_pipeline_run(&options));
 }
 
 /* Data from another game variant has a different sprite layout and must be refused. */
@@ -105,7 +158,7 @@ void test_pipeline_refuses_non_wl6_sprite_counts(void)
     WolfSpriteImage sprite;
     const WolfSpriteImage *sprites[1] = {&sprite};
     WolfByteBuffer file = {0};
-    WolfPipelineOptions options;
+    WolfPipelineOptions options = test_options(PIPELINE_TEST_DIRECTORY "/SMALL.WL6", PIPELINE_TEST_DIRECTORY "/rejected");
 
     test_make_patterned_sprite(&sprite, 1u);
     TEST_ASSERT_TRUE(wolf_make_directories(PIPELINE_TEST_DIRECTORY));
@@ -113,13 +166,8 @@ void test_pipeline_refuses_non_wl6_sprite_counts(void)
     TEST_ASSERT_TRUE(wolf_write_entire_file(PIPELINE_TEST_DIRECTORY "/SMALL.WL6", file.data, file.size));
     wolf_buffer_free(&file);
 
-    options.vswap_path = PIPELINE_TEST_DIRECTORY "/SMALL.WL6";
-    options.output_directory = PIPELINE_TEST_DIRECTORY "/rejected";
-    options.multi_view = wolf_multi_view_default_options();
     options.write_comparison_sheets = false;
-    options.only_asset = NULL;
     TEST_ASSERT_NOT_EQUAL(0, wolf_pipeline_run(&options));
-
     options.vswap_path = PIPELINE_TEST_DIRECTORY "/missing.WL6";
     TEST_ASSERT_NOT_EQUAL(0, wolf_pipeline_run(&options));
 }

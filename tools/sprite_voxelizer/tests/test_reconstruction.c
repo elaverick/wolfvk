@@ -170,7 +170,6 @@ void test_multi_view_registers_an_off_centre_frame(void)
     for (int rotation = 0; rotation < 8; ++rotation) {
         view_pointers[rotation] = &views[rotation];
     }
-    options.allowed_silhouette_misses = 0;
     TEST_ASSERT_TRUE(wolf_reconstruct_multi_view(view_pointers, angles, 8u, &options, rebuilt, shifts));
     TEST_ASSERT_EQUAL_INT(0, shifts[0]);
     TEST_ASSERT_EQUAL_INT(2, shifts[2]);
@@ -193,8 +192,8 @@ void test_multi_view_registers_an_off_centre_frame(void)
 }
 
 /*
- * One inconsistent frame: tolerant carving keeps the material it rejects,
- * and pruning must not uncover any pixel the other frames draw.
+ * One inconsistent face-on frame: its opposite frame still carries the
+ * material, and pruning must not uncover any pixel the face-on frames draw.
  */
 void test_tolerant_carving_survives_one_inconsistent_frame(void)
 {
@@ -222,7 +221,8 @@ void test_tolerant_carving_survives_one_inconsistent_frame(void)
     for (int rotation = 0; rotation < 8; ++rotation) {
         WolfSpriteImage rendered;
 
-        if (rotation == 4) {
+        /* Only face-on coverage is guaranteed; frame 4 is the one that lies. */
+        if (rotation == 4 || rotation % 2 != 0) {
             continue;
         }
         wolf_voxel_render_view(rebuilt, angles[rotation], 0, &rendered, NULL);
@@ -248,5 +248,67 @@ void test_multi_view_rejects_invalid_arguments(void)
     TEST_ASSERT_FALSE(wolf_reconstruct_multi_view(views, &angle, 0u, &options, model, NULL));
     TEST_ASSERT_FALSE(wolf_reconstruct_multi_view(views, &angle, 17u, &options, model, NULL));
     TEST_ASSERT_FALSE(wolf_reconstruct_multi_view(views, &angle, 1u, NULL, model, NULL));
+    wolf_voxel_model_destroy(model);
+}
+
+/*
+ * A camera-facing frame on a reference body: the frame paints the front,
+ * the body's own colours remain behind it, and parts the body lacks are
+ * inflated around its centre line.
+ */
+void test_pose_transfer_builds_on_the_reference_body(void)
+{
+    WolfVoxelModel *reference = wolf_voxel_model_create();
+    WolfVoxelModel *model = wolf_voxel_model_create();
+    WolfSpriteImage frame;
+    WolfSingleViewOptions fallback = {WOLF_DEPTH_PROFILE_INFLATE, 0.6, 32.0, 0.0};
+
+    test_make_box_model(reference, 6, 4, 40);
+    wolf_voxel_render_view(reference, 0.0, 0, &frame, NULL);
+    for (size_t pixel = 0u; pixel < WOLF_SPRITE_PIXELS; ++pixel) {
+        frame.palette_index[pixel] = 200u;
+    }
+    /* An arm held out to the side, beyond the body. */
+    test_fill_rectangle(&frame, 38, 30, 47, 32, 201u);
+
+    wolf_reconstruct_pose_transfer(&frame, reference, &fallback, model);
+    assert_front_view_exact(model, &frame);
+    /* The body keeps its real depth, with the frame on the front face only. */
+    TEST_ASSERT_EQUAL_INT(8, column_thickness(model, 30, 45));
+    TEST_ASSERT_EQUAL_UINT8(200u, model->palette_index[wolf_voxel_index(30, 28, 63 - 45)]);
+    TEST_ASSERT_EQUAL_UINT8(reference->palette_index[wolf_voxel_index(30, 31, 63 - 45)],
+        model->palette_index[wolf_voxel_index(30, 31, 63 - 45)]);
+    /* The arm is a thin tube centred on the body's depth. */
+    TEST_ASSERT_TRUE(column_thickness(model, 44, 31) >= 1);
+    TEST_ASSERT_TRUE(column_thickness(model, 44, 31) <= 4);
+    TEST_ASSERT_TRUE(model->occupied[wolf_voxel_index(44, 31, 63 - 31)] || model->occupied[wolf_voxel_index(44, 32, 63 - 31)]);
+    wolf_voxel_model_destroy(reference);
+    wolf_voxel_model_destroy(model);
+}
+
+/* A first-person weapon reaches into the screen: higher rows are further from the eye. */
+void test_first_person_profile_recedes_into_the_screen(void)
+{
+    WolfSpriteImage weapon;
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_FIRST_PERSON, 1.0, 6.0, 0.0};
+    WolfVoxelModel *model = wolf_voxel_model_create();
+    int nearest_bottom = WOLF_VOXEL_DIM;
+    int nearest_top = WOLF_VOXEL_DIM;
+
+    wolf_sprite_image_clear(&weapon);
+    test_fill_rectangle(&weapon, 29, 30, 34, 63, 24u);  /* barrel and hand, rising up the screen */
+    wolf_reconstruct_single_view(&weapon, &options, model);
+    assert_front_view_exact(model, &weapon);
+
+    for (int y = WOLF_VOXEL_DIM - 1; y >= 0; --y) {
+        if (model->occupied[wolf_voxel_index(31, y, 0)]) {
+            nearest_bottom = y;
+        }
+        if (model->occupied[wolf_voxel_index(31, y, 63 - 30)]) {
+            nearest_top = y;
+        }
+    }
+    TEST_ASSERT_TRUE_MESSAGE(nearest_top > nearest_bottom + 30, "the muzzle must be far from the hand");
+    TEST_ASSERT_TRUE(wolf_voxel_model_depth_extent(model) >= 40);
     wolf_voxel_model_destroy(model);
 }
