@@ -28,7 +28,8 @@ typedef struct StaticObjectProfile {
 static const StaticObjectProfile static_object_profiles[STATIC_SPRITE_COUNT] = {
     {"puddle", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
     {"green barrel", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
-    {"table and chairs", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
+    /* Drawn as a long rectangular table; a lathe would merge seats and table into one disc. */
+    {"table and chairs", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 10.0},
     {"floor lamp", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
     {"chandelier", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0},
     {"hanged skeleton", WOLF_DEPTH_PROFILE_INFLATE, 0.6, 32.0, 0.0},
