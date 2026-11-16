@@ -23,9 +23,10 @@ typedef struct StaticObjectProfile {
 /*
  * Depth choices for the WL6 static objects, in SPR_STAT order. Descriptions
  * follow the comments of statinfo[] in WL_ACT1.C (with the retail WL6 art
- * where the comment is stale). Round objects use the lathe; flat treasure,
- * signs and racks are extruded; irregular shapes are inflated; furniture no
- * profile can represent is modelled by hand.
+ * where the comment is stale). Round objects use the lathe; cages put their
+ * bars around the outside; flat treasure, signs and racks are extruded;
+ * irregular shapes are inflated; objects no profile can represent are
+ * modelled by hand.
  */
 static const StaticObjectProfile static_object_profiles[STATIC_SPRITE_COUNT] = {
     {"puddle", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
@@ -45,15 +46,15 @@ static const StaticObjectProfile static_object_profiles[STATIC_SPRITE_COUNT] = {
     {"ceiling light", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"kitchen utensils", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.5, WOLF_HAND_BUILT_NONE},
     {"suit of armour", WOLF_DEPTH_PROFILE_INFLATE, 0.6, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
-    {"hanging cage", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
-    {"skeleton in cage", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"hanging cage", WOLF_DEPTH_PROFILE_CAGE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"skeleton in cage", WOLF_DEPTH_PROFILE_CAGE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"pile of bones", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 6.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"gold key", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.0, WOLF_HAND_BUILT_NONE},
     {"silver key", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.0, WOLF_HAND_BUILT_NONE},
     {"bed", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_BED},
     {"basket", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
-    {"food", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
-    {"first aid kit", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 6.0, WOLF_HAND_BUILT_NONE},
+    {"turkey leg on a plate", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_FOOD},
+    {"first aid kit", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 6.0, WOLF_HAND_BUILT_FIRST_AID},
     {"ammunition clip", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 2.0, WOLF_HAND_BUILT_NONE},
     {"machine gun", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 2.5, 0.0, WOLF_HAND_BUILT_NONE},
     {"chain gun", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0, WOLF_HAND_BUILT_NONE},
@@ -62,7 +63,7 @@ static const StaticObjectProfile static_object_profiles[STATIC_SPRITE_COUNT] = {
     {"treasure chest", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 5.0, WOLF_HAND_BUILT_NONE},
     {"crown", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"extra life", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
-    {"gibs", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 4.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"bones in a pool of blood", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 4.0, 0.0, WOLF_HAND_BUILT_GIBS},
     {"wooden barrel", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"well with water", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"empty well", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
@@ -251,8 +252,10 @@ static void configure_dynamic_single_view(WolfAssetCatalog *catalog, WolfVoxelAs
         strcmp(subject_key, "FIRE") == 0 || strcmp(subject_key, "BLINKY") == 0 ||
         strcmp(subject_key, "PINKY") == 0 || strcmp(subject_key, "CLYDE") == 0 ||
         strcmp(subject_key, "INKY") == 0) {
-        /* Puffs, fireballs and the ghost bonus enemies are round. */
+        /* Puffs, fireballs and the ghost bonus enemies are round; ghosts have one face. */
         asset->description = "round effect or ghost";
+        asset->single_view.plain_back = name_in_list(subject_key, shadowed_actor_subjects,
+            sizeof(shadowed_actor_subjects) / sizeof(shadowed_actor_subjects[0]));
     } else if (strcmp(subject_key, "HYPO") == 0) {
         asset->description = "thrown syringe";
         asset->single_view.depth_scale = 0.6;
@@ -269,6 +272,7 @@ static void configure_dynamic_single_view(WolfAssetCatalog *catalog, WolfVoxelAs
 
         asset->description = has_reference ? "camera-facing actor frame" : "camera-facing boss or character frame";
         asset->single_view.depth_scale = DEFAULT_HUMANOID_DEPTH_SCALE;
+        asset->single_view.plain_back = true;
         asset->depth_from_subject = has_reference;
         if (has_reference && name_in_list(animation_key, upright_animation_keys,
                 sizeof(upright_animation_keys) / sizeof(upright_animation_keys[0]))) {
@@ -325,6 +329,10 @@ void wolf_asset_catalog_build(WolfAssetCatalog *catalog)
                 asset->method = WOLF_ASSET_ROTATION_SET;
                 asset->sprite_count = WOLF_ROTATION_COUNT;
                 asset->description = "eight-way rotation set";
+                if (strcmp(subject_key, "ROCKET") == 0) {
+                    asset->method = WOLF_ASSET_AXIAL_REVOLVE;
+                    asset->description = "rocket revolved about its flight axis";
+                }
                 asset->strip_shadow = name_in_list(subject_key, shadowed_actor_subjects,
                     sizeof(shadowed_actor_subjects) / sizeof(shadowed_actor_subjects[0]));
                 /* Drop the "_1" frame suffix: SPR_GRD_W1_1 becomes grd_w1. */

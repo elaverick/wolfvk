@@ -24,6 +24,9 @@ void test_tolerant_carving_survives_one_inconsistent_frame(void);
 void test_multi_view_rejects_invalid_arguments(void);
 void test_pose_transfer_builds_on_the_reference_body(void);
 void test_first_person_profile_recedes_into_the_screen(void);
+void test_cage_profile_puts_bars_around_the_contents(void);
+void test_plain_back_gives_a_single_face(void);
+void test_axial_revolve_makes_a_round_body(void);
 
 void test_shadow_removal_lifts_a_flat_floor_shadow(void);
 void test_shadow_removal_keeps_dark_parts_of_the_object(void);
@@ -32,6 +35,9 @@ void test_shadow_palette_matches_the_painted_shadow_colours(void);
 
 void test_table_and_chairs_model_is_furniture_shaped(void);
 void test_bed_model_is_long_and_raised(void);
+void test_food_model_is_a_drumstick_on_a_plate(void);
+void test_first_aid_model_is_a_flat_box_with_a_red_cross(void);
+void test_gibs_model_lays_blood_flat_under_the_skull(void);
 
 void test_vox_single_object_round_trips_with_original_palette(void);
 void test_vox_named_animations_record_keyframes(void);
@@ -93,6 +99,9 @@ int main(void)
     RUN_TEST(test_multi_view_rejects_invalid_arguments);
     RUN_TEST(test_pose_transfer_builds_on_the_reference_body);
     RUN_TEST(test_first_person_profile_recedes_into_the_screen);
+    RUN_TEST(test_cage_profile_puts_bars_around_the_contents);
+    RUN_TEST(test_plain_back_gives_a_single_face);
+    RUN_TEST(test_axial_revolve_makes_a_round_body);
 
     RUN_TEST(test_shadow_removal_lifts_a_flat_floor_shadow);
     RUN_TEST(test_shadow_removal_keeps_dark_parts_of_the_object);
@@ -101,6 +110,9 @@ int main(void)
 
     RUN_TEST(test_table_and_chairs_model_is_furniture_shaped);
     RUN_TEST(test_bed_model_is_long_and_raised);
+    RUN_TEST(test_food_model_is_a_drumstick_on_a_plate);
+    RUN_TEST(test_first_aid_model_is_a_flat_box_with_a_red_cross);
+    RUN_TEST(test_gibs_model_lays_blood_flat_under_the_skull);
 
     RUN_TEST(test_vox_single_object_round_trips_with_original_palette);
     RUN_TEST(test_vox_named_animations_record_keyframes);

@@ -59,15 +59,30 @@ static bool build_synthetic_wl6_vswap(const char *path)
         for (int sprite = 0; sprite < WOLF_WL6_SPRITE_COUNT; ++sprite) {
             const WolfVoxelAsset *asset = &catalog->assets[catalog->asset_for_sprite[sprite]];
 
-            if (asset->method == WOLF_ASSET_ROTATION_SET) {
+            if (asset->method == WOLF_ASSET_ROTATION_SET || asset->method == WOLF_ASSET_AXIAL_REVOLVE) {
                 wolf_voxel_render_view(solid, wolf_rotation_degrees(catalog->rotation_for_sprite[sprite]), 0,
                     &sprites[sprite], NULL);
+            } else if (asset->method == WOLF_ASSET_HAND_BUILT && asset->hand_built == WOLF_HAND_BUILT_GIBS) {
+                /* Gibs are built from their sprite: a pool of blood with a skull in it. */
+                test_fill_rectangle(&sprites[sprite], 4, 58, 60, 63, 40u);
+                test_fill_rectangle(&sprites[sprite], 12, 50, 19, 57, 16u);
             } else if (asset->method == WOLF_ASSET_HAND_BUILT) {
-                /* The hand-built furniture's reference is its own front view here. */
+                /* The hand-built object's reference is its own front view here. */
                 WolfVoxelModel *furniture = wolf_voxel_model_create();
 
-                if (furniture != NULL && wolf_build_hand_model(asset->hand_built, furniture)) {
+                if (furniture != NULL && wolf_build_hand_model(asset->hand_built, NULL, furniture)) {
+                    uint8_t used[256] = {0};
+                    int column = 20;
+
                     wolf_voxel_render_view(furniture, 0.0, 0, &sprites[sprite], NULL);
+                    /* A real sprite shows every colour the model uses; add the hidden ones along the top. */
+                    for (size_t voxel = 0u; voxel < WOLF_VOXEL_COUNT; ++voxel) {
+                        if (furniture->occupied[voxel] && !used[furniture->palette_index[voxel]] && column < 44) {
+                            used[furniture->palette_index[voxel]] = 1u;
+                            test_fill_rectangle(&sprites[sprite], column, 0, column, 0, furniture->palette_index[voxel]);
+                            ++column;
+                        }
+                    }
                 }
                 wolf_voxel_model_destroy(furniture);
             } else if (sprite % 9 == 0 || sprite >= WOLF_WL6_SPRITE_COUNT - 20) {

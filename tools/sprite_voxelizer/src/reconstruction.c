@@ -1,6 +1,7 @@
 #include "reconstruction.h"
 
 #include <float.h>
+#include <limits.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -385,14 +386,30 @@ static void prune_excess_voxels(
     free(candidates);
 }
 
+/* Voxels of the body near one layer, collected once per repaired row. */
+typedef struct NearbyBody {
+    int x[WOLF_VOXEL_COUNT / 8];
+    int y[WOLF_VOXEL_COUNT / 8];
+    int z[WOLF_VOXEL_COUNT / 8];
+    int count;
+} NearbyBody;
+
+/* Layers either side of a repaired row searched for the body it must attach to. */
+#define REPAIR_LAYER_REACH 3
+/* Squared distance beyond which a restored part would float free, in voxels. */
+#define REPAIR_MAXIMUM_DISTANCE_SQUARED 25.0
+/* Cost, in squared voxels, of restoring a pixel where another face-on frame draws nothing. */
+#define REPAIR_OUTSIDE_OTHER_FRAME_PENALTY 30.0
+
 /*
  * Where the face-on frames disagree about a limb (the side frame's stride
  * foot sits at a height the front frame does not draw), intersecting their
  * silhouettes cuts the limb away. For every face-on drawn pixel left
  * uncovered, add voxels on that pixel's line of sight at the position
- * closest to the existing body in the same layer, so the frame's outline is
- * complete and the restored part attaches to the body. Restored parts are
- * three voxels deep so a foot becomes a block rather than a paper-thin plate.
+ * closest in 3D to the existing body, searching neighbouring layers too, so
+ * a foot is restored under its own leg and an ear on the head rather than
+ * on the actor's axis. Restored parts are three voxels deep so a foot
+ * becomes a block rather than a paper-thin plate.
  */
 static void repair_face_on_coverage(
     const WolfSpriteImage *const *views,
@@ -404,24 +421,33 @@ static void repair_face_on_coverage(
     WolfVoxelModel *model)
 {
     WolfSpriteImage rendered;
+    NearbyBody *nearby = malloc(sizeof(NearbyBody));
 
+    if (nearby == NULL) {
+        return;
+    }
     for (size_t entry = 0u; entry < list_count; ++entry) {
         size_t view = view_list[entry];
 
         wolf_voxel_render_view(model, rotation_degrees[view], shifts[view], &rendered, NULL);
         for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
             int z = wolf_voxel_row_for_layer(row);
-            int layer_x[WOLF_VOXEL_DIM * WOLF_VOXEL_DIM];
-            int layer_y[WOLF_VOXEL_DIM * WOLF_VOXEL_DIM];
-            int layer_count = 0;
 
-            /* The body's voxels in this layer, as they stand before this row is repaired. */
-            for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
-                for (int x = 0; x < WOLF_VOXEL_DIM; ++x) {
-                    if (model->occupied[wolf_voxel_index(x, y, z)]) {
-                        layer_x[layer_count] = x;
-                        layer_y[layer_count] = y;
-                        ++layer_count;
+            /* The body as it stands now, so parts restored in earlier rows count as body. */
+            nearby->count = 0;
+            for (int layer = z - REPAIR_LAYER_REACH; layer <= z + REPAIR_LAYER_REACH; ++layer) {
+                if (layer < 0 || layer >= WOLF_VOXEL_DIM) {
+                    continue;
+                }
+                for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
+                    for (int x = 0; x < WOLF_VOXEL_DIM; ++x) {
+                        if (model->occupied[wolf_voxel_index(x, y, layer)] &&
+                            nearby->count < (int)(sizeof(nearby->x) / sizeof(nearby->x[0]))) {
+                            nearby->x[nearby->count] = x;
+                            nearby->y[nearby->count] = y;
+                            nearby->z[nearby->count] = layer;
+                            ++nearby->count;
+                        }
                     }
                 }
             }
@@ -434,22 +460,39 @@ static void repair_face_on_coverage(
                 if (!views[view]->opaque[pixel] || rendered.opaque[pixel]) {
                     continue;
                 }
+                double best_score = DBL_MAX;
+
                 for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
                     for (int x = 0; x < WOLF_VOXEL_DIM; ++x) {
-                        double nearest = layer_count == 0 ?
-                            fabs(wolf_voxel_center_offset(x)) + fabs(wolf_voxel_center_offset(y)) : DBL_MAX;
+                        double nearest = DBL_MAX;
+                        double score;
 
                         if (centre_column(&bases[view], x, y, shifts[view]) != column) {
                             continue;
                         }
-                        for (int member = 0; member < layer_count; ++member) {
-                            double dx = (double)(x - layer_x[member]);
-                            double dy = (double)(y - layer_y[member]);
-                            double distance = dx * dx + dy * dy;
+                        for (int member = 0; member < nearby->count; ++member) {
+                            double dx = (double)(x - nearby->x[member]);
+                            double dy = (double)(y - nearby->y[member]);
+                            double dz = (double)(z - nearby->z[member]);
+                            double distance = dx * dx + dy * dy + dz * dz;
 
                             nearest = distance < nearest ? distance : nearest;
                         }
-                        if (nearest < best_distance) {
+                        /*
+                         * Prefer a position the other face-on frames also draw, so
+                         * restoring one frame's outline does not spoil another's.
+                         */
+                        score = nearest;
+                        for (size_t other = 0u; other < list_count; ++other) {
+                            size_t other_view = view_list[other];
+
+                            if (other_view != view && !view_draws(views[other_view],
+                                    centre_column(&bases[other_view], x, y, shifts[other_view]), row)) {
+                                score += REPAIR_OUTSIDE_OTHER_FRAME_PENALTY;
+                            }
+                        }
+                        if (score < best_score) {
+                            best_score = score;
                             best_distance = nearest;
                             best_x = x;
                             best_y = y;
@@ -461,7 +504,7 @@ static void repair_face_on_coverage(
                  * line of sight passes nowhere near it is a contradiction
                  * between frames, and filling it would leave a floating block.
                  */
-                if (best_x >= 0 && best_distance <= 25.0) {
+                if (best_x >= 0 && best_distance <= REPAIR_MAXIMUM_DISTANCE_SQUARED) {
                     int step_x = (int)lround(bases[view].toward_viewer_x);
                     int step_y = (int)lround(bases[view].toward_viewer_y);
 
@@ -477,6 +520,152 @@ static void repair_face_on_coverage(
             }
         }
     }
+    free(nearby);
+}
+
+/* Farthest a fragment may sit from the body and still be joined to it, in voxels. */
+#define BRIDGE_MAXIMUM_GAP 6
+
+/*
+ * Join every remaining fragment to the main body. Where frames disagree, a
+ * limb can be carved with a gap between it and the body (a foot below a
+ * shin, a hat brim above a head); a short line of voxels from the
+ * fragment's nearest voxel to the body's reattaches it. A fragment further
+ * away than BRIDGE_MAXIMUM_GAP depicts nothing consistent and is removed.
+ */
+static void bridge_fragments_to_body(WolfVoxelModel *model)
+{
+    int32_t *label = malloc(sizeof(int32_t) * WOLF_VOXEL_COUNT);
+    size_t *queue = malloc(sizeof(size_t) * WOLF_VOXEL_COUNT);
+    size_t *members = malloc(sizeof(size_t) * WOLF_VOXEL_COUNT);
+    int32_t component_count = 0;
+    int32_t largest = -1;
+    size_t largest_size = 0u;
+    static const int offsets[6][3] = {
+        {1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}
+    };
+
+    if (label == NULL || queue == NULL || members == NULL) {
+        free(label);
+        free(queue);
+        free(members);
+        return;
+    }
+    for (size_t voxel = 0u; voxel < WOLF_VOXEL_COUNT; ++voxel) {
+        label[voxel] = -1;
+    }
+    for (size_t seed = 0u; seed < WOLF_VOXEL_COUNT; ++seed) {
+        size_t head = 0u;
+        size_t tail = 0u;
+
+        if (!model->occupied[seed] || label[seed] >= 0) {
+            continue;
+        }
+        label[seed] = component_count;
+        queue[tail++] = seed;
+        while (head < tail) {
+            size_t voxel = queue[head++];
+            int x = (int)(voxel % WOLF_VOXEL_DIM);
+            int y = (int)((voxel / WOLF_VOXEL_DIM) % WOLF_VOXEL_DIM);
+            int z = (int)(voxel / (WOLF_VOXEL_DIM * WOLF_VOXEL_DIM));
+
+            for (int face = 0; face < 6; ++face) {
+                int nx = x + offsets[face][0];
+                int ny = y + offsets[face][1];
+                int nz = z + offsets[face][2];
+                size_t neighbour;
+
+                if (!wolf_voxel_in_bounds(nx, ny, nz)) {
+                    continue;
+                }
+                neighbour = wolf_voxel_index(nx, ny, nz);
+                if (model->occupied[neighbour] && label[neighbour] < 0) {
+                    label[neighbour] = component_count;
+                    queue[tail++] = neighbour;
+                }
+            }
+        }
+        if (tail > largest_size) {
+            largest_size = tail;
+            largest = component_count;
+        }
+        ++component_count;
+    }
+
+    for (int32_t fragment = 0; fragment < component_count; ++fragment) {
+        size_t member_count = 0u;
+        long best_distance = LONG_MAX;
+        size_t best_from = 0u;
+        size_t best_to = 0u;
+
+        if (fragment == largest) {
+            continue;
+        }
+        for (size_t voxel = 0u; voxel < WOLF_VOXEL_COUNT; ++voxel) {
+            if (label[voxel] == fragment) {
+                members[member_count++] = voxel;
+            }
+        }
+        /* Closest pair between the fragment and the body, searched within the allowed gap. */
+        for (size_t member = 0u; member < member_count; ++member) {
+            int x = (int)(members[member] % WOLF_VOXEL_DIM);
+            int y = (int)((members[member] / WOLF_VOXEL_DIM) % WOLF_VOXEL_DIM);
+            int z = (int)(members[member] / (WOLF_VOXEL_DIM * WOLF_VOXEL_DIM));
+
+            for (int dz = -BRIDGE_MAXIMUM_GAP; dz <= BRIDGE_MAXIMUM_GAP; ++dz) {
+                for (int dy = -BRIDGE_MAXIMUM_GAP; dy <= BRIDGE_MAXIMUM_GAP; ++dy) {
+                    for (int dx = -BRIDGE_MAXIMUM_GAP; dx <= BRIDGE_MAXIMUM_GAP; ++dx) {
+                        long distance = (long)(dx * dx + dy * dy + dz * dz);
+                        size_t other;
+
+                        if (distance >= best_distance || !wolf_voxel_in_bounds(x + dx, y + dy, z + dz)) {
+                            continue;
+                        }
+                        other = wolf_voxel_index(x + dx, y + dy, z + dz);
+                        if (label[other] == largest) {
+                            best_distance = distance;
+                            best_from = members[member];
+                            best_to = other;
+                        }
+                    }
+                }
+            }
+        }
+        if (best_distance > (long)(BRIDGE_MAXIMUM_GAP * BRIDGE_MAXIMUM_GAP)) {
+            for (size_t member = 0u; member < member_count; ++member) {
+                model->occupied[members[member]] = 0u;
+            }
+            continue;
+        }
+        /* Step from the fragment to the body, filling every voxel on the way. */
+        {
+            int from[3] = {(int)(best_from % WOLF_VOXEL_DIM), (int)((best_from / WOLF_VOXEL_DIM) % WOLF_VOXEL_DIM),
+                (int)(best_from / (WOLF_VOXEL_DIM * WOLF_VOXEL_DIM))};
+            int to[3] = {(int)(best_to % WOLF_VOXEL_DIM), (int)((best_to / WOLF_VOXEL_DIM) % WOLF_VOXEL_DIM),
+                (int)(best_to / (WOLF_VOXEL_DIM * WOLF_VOXEL_DIM))};
+            int position[3] = {from[0], from[1], from[2]};
+            uint8_t colour = model->palette_index[best_from];
+
+            while (position[0] != to[0] || position[1] != to[1] || position[2] != to[2]) {
+                for (int axis = 0; axis < 3; ++axis) {
+                    if (position[axis] != to[axis]) {
+                        position[axis] += position[axis] < to[axis] ? 1 : -1;
+                        break;
+                    }
+                }
+                if (!model->occupied[wolf_voxel_index(position[0], position[1], position[2])]) {
+                    model->occupied[wolf_voxel_index(position[0], position[1], position[2])] = 1u;
+                    model->palette_index[wolf_voxel_index(position[0], position[1], position[2])] = colour;
+                }
+            }
+        }
+        for (size_t member = 0u; member < member_count; ++member) {
+            label[members[member]] = largest;
+        }
+    }
+    free(label);
+    free(queue);
+    free(members);
 }
 
 /*
@@ -580,7 +769,7 @@ static bool on_silhouette_outline(const WolfSpriteImage *view, size_t pixel)
  * keeps each side's texture intact. Face-on frames always take precedence
  * over diagonal ones, so the front, sides and back reproduce their own
  * frames and the independently drawn diagonals only colour what no face-on
- * frame shows.
+ * frame shows. The front frame, the one the player sees most, wins ties.
  *
  * Pixel art outlines every silhouette in dark colours. A voxel on a frame's
  * outline is usually the side of the body, which another frame sees face
@@ -611,7 +800,19 @@ static bool colour_from_facing_views(
     }
 
     for (size_t view = 0u; view < view_count; ++view) {
+        /*
+         * Face-on frames outrank diagonals, and among them the front frame
+         * outranks the back and the back the sides: a detail one side frame
+         * draws at the corner of the face (an eye seen in profile) must not
+         * be painted onto the front, where the front frame already draws it.
+         */
         double preference = fabs(bases[view].half_footprint - 0.5) < 1e-6 ? 10.0 : 0.0;
+
+        if (preference > 0.0 && bases[view].toward_viewer_y < -0.5) {
+            preference += 0.8;
+        } else if (preference > 0.0 && bases[view].toward_viewer_y > 0.5) {
+            preference += 0.4;
+        }
 
         wolf_voxel_render_view(model, rotation_degrees[view], shifts[view], &rendered, voxel_for_pixel);
         for (size_t pixel = 0u; pixel < WOLF_SPRITE_PIXELS; ++pixel) {
@@ -709,8 +910,9 @@ bool wolf_reconstruct_multi_view(
         remove_small_fragments(model, options->minimum_fragment_voxels);
     }
     repair_face_on_coverage(views, rotation_degrees, bases, shifts, face_on_views, face_on_count, model);
-    /* A repair with no body nearby (a lone ear tip) would float; drop such specks. */
+    /* A repair with no body nearby (a lone ear tip) would float; drop such specks, then join the rest. */
     remove_small_fragments(model, options->minimum_fragment_voxels);
+    bridge_fragments_to_body(model);
     if (registration_shifts != NULL) {
         memcpy(registration_shifts, shifts, sizeof(int) * view_count);
     }
@@ -964,23 +1166,219 @@ static void build_first_person(const WolfSpriteImage *image, const double *half_
     }
 }
 
+/* Most common palette entry among the given pixels (ties go to the lowest entry). */
+static uint8_t dominant_colour(const uint8_t *colours, int count)
+{
+    int tally[256] = {0};
+    int best = 0;
+
+    for (int entry = 0; entry < count; ++entry) {
+        ++tally[colours[entry]];
+    }
+    for (int colour = 1; colour < 256; ++colour) {
+        if (tally[colour] > tally[best]) {
+            best = colour;
+        }
+    }
+    return (uint8_t)best;
+}
+
+/*
+ * Plain colours for the back of a camera-facing figure. Rows in the top
+ * fifth of the figure are the head: their back is the colour at the top of
+ * that column (hair, a hat, or skin on a bald head). Below, each pixel takes
+ * the dominant colour of its row within five columns either side, which
+ * keeps large areas (a uniform, an arm) and drops small front details (eyes,
+ * mouth, buttons).
+ */
+static void plain_back_colours(const WolfSpriteImage *image, uint8_t *back)
+{
+    int top_row = WOLF_SPRITE_SIZE;
+    int bottom_row = -1;
+    int head_limit;
+
+    for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+        for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+            if (image->opaque[wolf_sprite_pixel_index(column, row)]) {
+                top_row = row < top_row ? row : top_row;
+                bottom_row = row;
+            }
+        }
+    }
+    head_limit = top_row + (bottom_row - top_row + 1) / 5;
+
+    for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+        uint8_t top_colours[4];
+        int top_count = 0;
+        int first_row = -1;
+
+        for (int row = 0; row < WOLF_SPRITE_SIZE && top_count < 4; ++row) {
+            size_t pixel = wolf_sprite_pixel_index(column, row);
+
+            if (image->opaque[pixel]) {
+                first_row = first_row < 0 ? row : first_row;
+                top_colours[top_count++] = image->palette_index[pixel];
+            }
+        }
+        for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+            size_t pixel = wolf_sprite_pixel_index(column, row);
+            uint8_t window[11];
+            int window_count = 0;
+
+            if (!image->opaque[pixel]) {
+                continue;
+            }
+            if (row <= head_limit && first_row >= 0 && first_row <= head_limit) {
+                back[pixel] = dominant_colour(top_colours, top_count);
+                continue;
+            }
+            for (int other = column - 5; other <= column + 5; ++other) {
+                if (other >= 0 && other < WOLF_SPRITE_SIZE && image->opaque[wolf_sprite_pixel_index(other, row)]) {
+                    window[window_count++] = image->palette_index[wolf_sprite_pixel_index(other, row)];
+                }
+            }
+            back[pixel] = dominant_colour(window, window_count);
+        }
+    }
+}
+
+/* Voxel index whose cell contains a point at the given offset from the actor axis. */
+static int index_for_offset(double offset)
+{
+    int index = (int)floor(offset + (double)(WOLF_VOXEL_DIM / 2));
+
+    return index < 0 ? 0 : (index >= WOLF_VOXEL_DIM ? WOLF_VOXEL_DIM - 1 : index);
+}
+
+/*
+ * Cage profile. Rows are measured by the extent of their bar pixels: narrow
+ * rows (the hanging chain) are lathed solid, mostly-filled rows are hoops
+ * (capped at the top and bottom of the cage), and sparse rows are bars
+ * placed where a cylinder of that radius crosses each bar's column, front
+ * and back. Contents are inflated inside, clear of the bars.
+ */
+static void build_cage(const WolfSpriteImage *image, const WolfSingleViewOptions *options, WolfVoxelModel *model)
+{
+    WolfSpriteImage contents;
+    double contents_depth[WOLF_SPRITE_PIXELS];
+    WolfSingleViewOptions inflate = {WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0, NULL, false};
+    double radius[WOLF_SPRITE_SIZE];
+    double centre[WOLF_SPRITE_SIZE];
+    int filled[WOLF_SPRITE_SIZE];
+    double largest_radius = 0.0;
+    int body_top = -1;
+    int body_bottom = -1;
+
+    wolf_sprite_image_clear(&contents);
+    for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+        int first = -1;
+        int last = -1;
+
+        filled[row] = 0;
+        for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+            size_t pixel = wolf_sprite_pixel_index(column, row);
+
+            if (!image->opaque[pixel]) {
+                continue;
+            }
+            if (options->frame_colours != NULL && options->frame_colours[image->palette_index[pixel]]) {
+                first = first < 0 ? column : first;
+                last = column;
+                ++filled[row];
+            } else {
+                contents.opaque[pixel] = 1u;
+                contents.palette_index[pixel] = image->palette_index[pixel];
+            }
+        }
+        radius[row] = first < 0 ? 0.0 : (double)(last - first + 1) * 0.5;
+        centre[row] = first < 0 ? 0.0 : (double)(first + last + 1) * 0.5;
+        largest_radius = radius[row] > largest_radius ? radius[row] : largest_radius;
+    }
+    for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+        if (radius[row] > 0.0 && radius[row] >= 0.5 * largest_radius) {
+            body_top = body_top < 0 ? row : body_top;
+            body_bottom = row;
+        }
+    }
+
+    for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+        int z = wolf_voxel_row_for_layer(row);
+        /* A hoop row draws most of its width; a bar row only the bars. */
+        bool hoop = radius[row] > 0.0 && (double)filled[row] >= 0.75 * 2.0 * radius[row];
+        bool cap = hoop && (row - body_top < 2 || body_bottom - row < 2);
+        bool chain = radius[row] < 0.5 * largest_radius;
+
+        for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+            size_t pixel = wolf_sprite_pixel_index(column, row);
+            uint8_t colour = image->palette_index[pixel];
+            double across;
+            double depth;
+            int front;
+            int back;
+
+            if (!image->opaque[pixel] || contents.opaque[pixel]) {
+                continue;
+            }
+            across = (double)column + 0.5 - centre[row];
+            depth = sqrt(fmax(0.0, radius[row] * radius[row] - across * across));
+            front = index_for_offset(-depth);
+            back = index_for_offset(depth - 1e-6);
+            if (chain || cap) {
+                fill_depth_span(model, column, z, (double)front, (double)back, colour);
+            } else if (hoop) {
+                fill_depth_span(model, column, z, (double)front, (double)front + 1.0, colour);
+                fill_depth_span(model, column, z, (double)back - 1.0, (double)back, colour);
+            } else {
+                fill_depth_span(model, column, z, (double)front, (double)front, colour);
+                fill_depth_span(model, column, z, (double)back, (double)back, colour);
+            }
+        }
+    }
+
+    /* The prisoner hangs inside, never reaching the bars. */
+    wolf_single_view_half_depths(&contents, &inflate, contents_depth);
+    for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+        for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+            size_t pixel = wolf_sprite_pixel_index(column, row);
+            double limit = radius[row] > 4.0 ? radius[row] - 2.0 : 2.0;
+            double near_y;
+            double far_y;
+
+            if (!contents.opaque[pixel]) {
+                continue;
+            }
+            centred_span(fmin(contents_depth[pixel], limit), &near_y, &far_y);
+            fill_depth_span(model, column, wolf_voxel_row_for_layer(row), near_y, far_y, contents.palette_index[pixel]);
+        }
+    }
+}
+
 void wolf_reconstruct_single_view(
     const WolfSpriteImage *image,
     const WolfSingleViewOptions *options,
     WolfVoxelModel *model)
 {
     double half_depth[WOLF_SPRITE_PIXELS];
+    uint8_t back[WOLF_SPRITE_PIXELS];
 
     wolf_voxel_model_clear(model);
+    if (options->profile == WOLF_DEPTH_PROFILE_CAGE) {
+        build_cage(image, options, model);
+        return;
+    }
     wolf_single_view_half_depths(image, options, half_depth);
     if (options->profile == WOLF_DEPTH_PROFILE_FIRST_PERSON) {
         build_first_person(image, half_depth, model);
         return;
     }
+    if (options->plain_back) {
+        plain_back_colours(image, back);
+    }
 
     for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
         for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
             size_t pixel = wolf_sprite_pixel_index(column, row);
+            int z = wolf_voxel_row_for_layer(row);
             double near_y;
             double far_y;
 
@@ -988,7 +1386,82 @@ void wolf_reconstruct_single_view(
                 continue;
             }
             centred_span(half_depth[pixel], &near_y, &far_y);
-            fill_depth_span(model, column, wolf_voxel_row_for_layer(row), near_y, far_y, image->palette_index[pixel]);
+            fill_depth_span(model, column, z, near_y, far_y, image->palette_index[pixel]);
+            /* Behind the middle of the body, the plain back replaces the drawn front. */
+            if (options->plain_back) {
+                for (int y = (int)lround(near_y); y <= (int)lround(far_y); ++y) {
+                    if ((double)y > 0.5 * (near_y + far_y) && wolf_voxel_in_bounds(column, y, z)) {
+                        model->palette_index[wolf_voxel_index(column, y, z)] = back[pixel];
+                    }
+                }
+            }
+        }
+    }
+}
+
+void wolf_reconstruct_axial_revolve(const WolfSpriteImage *side_view, WolfVoxelModel *model)
+{
+    double axis_sum = 0.0;
+    size_t drawn = 0u;
+    double axis_row;
+
+    wolf_voxel_model_clear(model);
+    /* The flight axis runs through the middle of the drawn profile. */
+    for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+        for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+            if (side_view->opaque[wolf_sprite_pixel_index(column, row)]) {
+                axis_sum += (double)row + 0.5;
+                ++drawn;
+            }
+        }
+    }
+    if (drawn == 0u) {
+        return;
+    }
+    axis_row = axis_sum / (double)drawn;
+
+    /* From the side (viewer at +x), canvas column c shows depth y = c. */
+    for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+        double radius = 0.0;
+
+        for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+            if (side_view->opaque[wolf_sprite_pixel_index(column, row)]) {
+                double reach = fabs((double)row + 0.5 - axis_row) + 0.5;
+
+                radius = reach > radius ? reach : radius;
+            }
+        }
+        if (radius <= 0.0) {
+            continue;
+        }
+        for (int z = 0; z < WOLF_VOXEL_DIM; ++z) {
+            int layer_row = wolf_voxel_row_for_layer(z);
+            double up = (double)layer_row + 0.5 - axis_row;
+
+            for (int x = 0; x < WOLF_VOXEL_DIM; ++x) {
+                double across = wolf_voxel_center_offset(x);
+                int nearest_row = -1;
+
+                if (across * across + up * up > radius * radius) {
+                    continue;
+                }
+                /* Colour by the side profile at this height, or its nearest drawn row. */
+                for (int distance = 0; distance < WOLF_SPRITE_SIZE && nearest_row < 0; ++distance) {
+                    int candidates[2] = {layer_row - distance, layer_row + distance};
+
+                    for (int pick = 0; pick < 2 && nearest_row < 0; ++pick) {
+                        int row = candidates[pick];
+
+                        if (row >= 0 && row < WOLF_SPRITE_SIZE &&
+                            side_view->opaque[wolf_sprite_pixel_index(column, row)]) {
+                            nearest_row = row;
+                        }
+                    }
+                }
+                model->occupied[wolf_voxel_index(x, column, z)] = 1u;
+                model->palette_index[wolf_voxel_index(x, column, z)] =
+                    side_view->palette_index[wolf_sprite_pixel_index(column, nearest_row)];
+            }
         }
     }
 }

@@ -1,10 +1,15 @@
 #include "hand_built_models.h"
 
+#include "game_palette.h"
+#include "reconstruction.h"
+
 #include <math.h>
+#include <string.h>
 
 /*
  * Palette entries sampled from the original sprites. Naming them keeps the
- * model code readable and records where each colour came from.
+ * model code readable and records where each colour came from; every one
+ * appears in its object's own sprite.
  */
 enum {
     /* SPR_STAT_2: orange table and chairs. */
@@ -24,16 +29,43 @@ enum {
     HOLDER_LIGHT = 17,
     HOLDER_SHADE = 23,
     /* SPR_STAT_22: grey bed. */
-    MATTRESS_TOP = 19,
-    MATTRESS_CROWN = 20,
+    MATTRESS_TOP = 20,
+    MATTRESS_CROWN = 19,
     MATTRESS_SIDE = 23,
     MATTRESS_SEAM = 24,
-    PILLOW_TOP = 17,
+    PILLOW_TOP = 19,
     PILLOW_SIDE = 21,
     FRAME_TOP = 28,
     FRAME_SIDE = 29,
     FRAME_DARK = 30,
-    SPRING_HOOK = 0
+    SPRING_HOOK = 0,
+    /* SPR_STAT_24: food. */
+    PLATE_UNDERSIDE = 126,
+    PLATE_RIM = 121,
+    PLATE_RIM_LIGHT = 119,
+    PLATE_SURFACE = 123,
+    POTATO_LIGHT = 16,
+    POTATO_SHADE = 19,
+    GREENS_LIGHT = 99,
+    GREENS_MID = 104,
+    GREENS_DARK = 105,
+    MEAT_SKIN = 61,
+    MEAT_SKIN_DARK = 58,
+    MEAT_SIDE = 212,
+    MEAT_UNDERSIDE = 216,
+    BONE = 18,
+    BONE_KNUCKLE = 17,
+    /* SPR_STAT_25: first aid kit. */
+    KIT_LID = 16,
+    KIT_SIDE_UPPER = 17,
+    KIT_SIDE = 20,
+    KIT_SIDE_LOWER = 22,
+    KIT_CROSS = 52,
+    KIT_CROSS_EDGE = 50,
+    KIT_LATCH = 31,
+    KIT_LATCH_SHADE = 28,
+    KIT_TRIM = 151,
+    KIT_TRIM_DARK = 153
 };
 
 static void set_voxel(WolfVoxelModel *model, int x, int y, int z, int palette_index)
@@ -57,7 +89,7 @@ static void paint_box(WolfVoxelModel *model, int x0, int x1, int y0, int y1, int
     }
 }
 
-/* Upright cylinder around (centre_x, centre_y) in voxel-centre coordinates. */
+/* Upright cylinder around (centre_x, centre_y) in voxel-index coordinates. */
 static void paint_cylinder(WolfVoxelModel *model, double centre_x, double centre_y, double radius,
     int z0, int z1, int side_colour, int top_colour)
 {
@@ -69,6 +101,30 @@ static void paint_cylinder(WolfVoxelModel *model, double centre_x, double centre
 
                 if (dx * dx + dy * dy <= radius * radius) {
                     set_voxel(model, x, y, z, z == z1 ? top_colour : side_colour);
+                }
+            }
+        }
+    }
+}
+
+/*
+ * Ellipsoid with three bands of colour by height, so a rounded shape keeps
+ * the lit top, mid tone and shaded underside the artist painted.
+ */
+static void paint_ellipsoid(WolfVoxelModel *model, double centre_x, double centre_y, double centre_z,
+    double radius_x, double radius_y, double radius_z, int top_colour, int middle_colour, int bottom_colour)
+{
+    for (int z = 0; z < WOLF_VOXEL_DIM; ++z) {
+        for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
+            for (int x = 0; x < WOLF_VOXEL_DIM; ++x) {
+                double dx = ((double)x - centre_x) / radius_x;
+                double dy = ((double)y - centre_y) / radius_y;
+                double dz = ((double)z - centre_z) / radius_z;
+
+                if (dx * dx + dy * dy + dz * dz <= 1.0) {
+                    int colour = dz > 0.35 ? top_colour : (dz < -0.35 ? bottom_colour : middle_colour);
+
+                    set_voxel(model, x, y, z, colour);
                 }
             }
         }
@@ -186,7 +242,229 @@ static void build_bed(WolfVoxelModel *model)
     paint_box(model, 22, 40, y1 - 11, y1 - 6, 21, 21, PILLOW_TOP, PILLOW_TOP);
 }
 
-bool wolf_build_hand_model(WolfHandBuiltModel which, WolfVoxelModel *model)
+/*
+ * A turkey leg on a plate, as the sprite shows: a cyan-rimmed plate (columns
+ * 16-43), a white mound of potato on the left, greens on the right and a
+ * roast drumstick in the middle with its white bone pointing right.
+ */
+static void build_food(WolfVoxelModel *model)
+{
+    const double plate_x = 30.0;
+    const double plate_y = 31.5;
+
+    /* Shallow plate: dark underside, raised rim, flat eating surface. */
+    paint_cylinder(model, plate_x, plate_y, 13.5, 0, 0, PLATE_UNDERSIDE, PLATE_UNDERSIDE);
+    paint_cylinder(model, plate_x, plate_y, 14.0, 1, 1, PLATE_RIM, PLATE_RIM_LIGHT);
+    paint_cylinder(model, plate_x, plate_y, 11.5, 1, 1, PLATE_SURFACE, PLATE_SURFACE);
+    /* Potato on the left and a few greens to the right of the meat. */
+    paint_ellipsoid(model, 22.5, 33.0, 2.0, 3.2, 3.2, 2.0, POTATO_LIGHT, POTATO_SHADE, POTATO_SHADE);
+    for (int y = 26; y <= 36; ++y) {
+        for (int x = 34; x <= 39; ++x) {
+            int pattern = (x * 3 + y * 5) % 7;
+
+            if (pattern < 4 && (x - 36.5) * (x - 36.5) + (y - 31.5) * (y - 31.5) <= 16.0) {
+                set_voxel(model, x, y, 2, pattern == 0 ? GREENS_LIGHT : (pattern < 3 ? GREENS_MID : GREENS_DARK));
+            }
+        }
+    }
+    /* Drumstick: a roast, rounded body with crisp skin on top. */
+    paint_ellipsoid(model, 29.0, 31.5, 4.5, 7.0, 4.2, 3.2, MEAT_SKIN, MEAT_SIDE, MEAT_UNDERSIDE);
+    paint_ellipsoid(model, 27.0, 31.0, 6.8, 3.0, 2.2, 1.0, MEAT_SKIN_DARK, MEAT_SKIN_DARK, MEAT_SKIN_DARK);
+    /* Bone out to the right, ending in a knuckle. */
+    for (int x = 35; x <= 40; ++x) {
+        for (int y = 30; y <= 33; ++y) {
+            for (int z = 3; z <= 6; ++z) {
+                double dy = (double)y - 31.5;
+                double dz = (double)z - 4.5;
+
+                if (dy * dy + dz * dz <= 1.6 * 1.6) {
+                    set_voxel(model, x, y, z, BONE);
+                }
+            }
+        }
+    }
+    paint_ellipsoid(model, 41.5, 31.5, 4.5, 1.6, 2.4, 2.0, BONE_KNUCKLE, BONE_KNUCKLE, BONE);
+}
+
+/*
+ * A flat white first aid kit: blue trim around the base, white sides with a
+ * dark latch at the front, and a red cross on the white lid. The sprite's
+ * box is 25-27 columns wide; it is made 20 deep and 6 high.
+ */
+static void build_first_aid(WolfVoxelModel *model)
+{
+    const int x0 = 19;
+    const int x1 = 43;
+    const int y0 = 22;
+    const int y1 = 41;
+
+    paint_box(model, x0, x1, y0, y1, 0, 0, KIT_TRIM_DARK, KIT_TRIM_DARK);
+    paint_box(model, x0, x1, y0, y1, 1, 1, KIT_TRIM, KIT_TRIM);
+    paint_box(model, x0, x1, y0, y1, 2, 2, KIT_SIDE_LOWER, KIT_SIDE_LOWER);
+    paint_box(model, x0, x1, y0, y1, 3, 3, KIT_SIDE, KIT_SIDE);
+    paint_box(model, x0, x1, y0, y1, 4, 4, KIT_SIDE_UPPER, KIT_SIDE_UPPER);
+    paint_box(model, x0, x1, y0, y1, 5, 5, KIT_LID, KIT_LID);
+    /* Red cross on the lid, outlined in the sprite's darker red. */
+    paint_box(model, 25, 37, 29, 34, 5, 5, KIT_CROSS_EDGE, KIT_CROSS_EDGE);
+    paint_box(model, 28, 34, 25, 38, 5, 5, KIT_CROSS_EDGE, KIT_CROSS_EDGE);
+    paint_box(model, 26, 36, 30, 33, 5, 5, KIT_CROSS, KIT_CROSS);
+    paint_box(model, 29, 33, 26, 37, 5, 5, KIT_CROSS, KIT_CROSS);
+    /* Latch on the front face. */
+    paint_box(model, 29, 32, y0, y0, 3, 3, KIT_LATCH, KIT_LATCH);
+    paint_box(model, 29, 32, y0, y0, 2, 2, KIT_LATCH_SHADE, KIT_LATCH_SHADE);
+}
+
+/* Blood is any strongly red palette entry. */
+static bool is_blood(uint8_t palette_index)
+{
+    const uint8_t *colour = wolf_game_palette_rgba + (size_t)palette_index * 4u;
+
+    return colour[0] > 2 * colour[1] + 10 && colour[0] > 2 * colour[2] + 10;
+}
+
+/* Floor depth for a sprite row: rows lower on screen are nearer the viewer. */
+static int floor_depth_for_row(int row, int nearest_row, double depth_per_row, double nearest_depth)
+{
+    return (int)lround(nearest_depth + (double)(nearest_row - row) * depth_per_row);
+}
+
+/*
+ * Gibs: the sprite's skull is kept as drawn (inflated, sitting on the
+ * floor) and everything else is laid flat. The sprite draws the floor in
+ * perspective, so each row maps to a depth: blood becomes a puddle one
+ * voxel deep and the bones lie on top of it.
+ */
+static void build_gibs(const WolfSpriteImage *reference, WolfVoxelModel *model)
+{
+    WolfSpriteImage skull;
+    uint8_t component[WOLF_SPRITE_PIXELS];
+    int stack[WOLF_SPRITE_PIXELS];
+    int best_component = -1;
+    int best_size = 0;
+    int component_count = 0;
+    int top_row = WOLF_SPRITE_SIZE;
+    int bottom_row = -1;
+    int skull_bottom = -1;
+    const double depth_per_row = 3.0;
+    double nearest_depth;
+
+    if (reference == NULL) {
+        return;
+    }
+    memset(component, 0, sizeof(component));
+    for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+        for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+            if (reference->opaque[wolf_sprite_pixel_index(column, row)]) {
+                top_row = row < top_row ? row : top_row;
+                bottom_row = row;
+            }
+        }
+    }
+    if (bottom_row < 0) {
+        return;
+    }
+
+    /* The skull is the largest connected group of non-blood pixels. */
+    for (int seed = 0; seed < WOLF_SPRITE_PIXELS; ++seed) {
+        int stack_size = 0;
+        int size = 0;
+
+        if (!reference->opaque[seed] || is_blood(reference->palette_index[seed]) || component[seed]) {
+            continue;
+        }
+        ++component_count;
+        component[seed] = (uint8_t)component_count;
+        stack[stack_size++] = seed;
+        while (stack_size > 0) {
+            int pixel = stack[--stack_size];
+            int column = pixel % WOLF_SPRITE_SIZE;
+            int row = pixel / WOLF_SPRITE_SIZE;
+
+            ++size;
+            for (int dy = -1; dy <= 1; ++dy) {
+                for (int dx = -1; dx <= 1; ++dx) {
+                    int next_column = column + dx;
+                    int next_row = row + dy;
+                    int next;
+
+                    if (next_column < 0 || next_row < 0 || next_column >= WOLF_SPRITE_SIZE || next_row >= WOLF_SPRITE_SIZE) {
+                        continue;
+                    }
+                    next = (int)wolf_sprite_pixel_index(next_column, next_row);
+                    if (reference->opaque[next] && !is_blood(reference->palette_index[next]) && !component[next]) {
+                        component[next] = (uint8_t)component_count;
+                        stack[stack_size++] = next;
+                    }
+                }
+            }
+        }
+        if (size > best_size) {
+            best_size = size;
+            best_component = component_count;
+        }
+    }
+
+    wolf_sprite_image_clear(&skull);
+    for (int pixel = 0; pixel < WOLF_SPRITE_PIXELS; ++pixel) {
+        if (best_component > 0 && component[pixel] == best_component) {
+            skull.opaque[pixel] = 1u;
+            skull.palette_index[pixel] = reference->palette_index[pixel];
+            skull_bottom = pixel / WOLF_SPRITE_SIZE > skull_bottom ? pixel / WOLF_SPRITE_SIZE : skull_bottom;
+        }
+    }
+
+    /* Centre the floor's depth range on the tile. */
+    nearest_depth = 31.5 - 0.5 * (double)(bottom_row - top_row) * depth_per_row;
+
+    for (int row = top_row; row <= bottom_row; ++row) {
+        int depth = floor_depth_for_row(row, bottom_row, depth_per_row, nearest_depth);
+
+        for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+            size_t pixel = wolf_sprite_pixel_index(column, row);
+            uint8_t colour = reference->palette_index[pixel];
+
+            if (!reference->opaque[pixel] || skull.opaque[pixel]) {
+                continue;
+            }
+            /* Each row covers its share of the floor, so the puddle has no gaps. */
+            for (int y = depth; y < depth + (int)depth_per_row; ++y) {
+                if (is_blood(colour)) {
+                    set_voxel(model, column, y, 0, colour);
+                } else {
+                    set_voxel(model, column, y, 1, colour);
+                    set_voxel(model, column, y, 0, colour);
+                }
+            }
+        }
+    }
+
+    /* The skull keeps its drawn, rounded shape, resting on the puddle at its base row's depth. */
+    if (best_component > 0) {
+        WolfVoxelModel *rounded = wolf_voxel_model_create();
+        WolfSingleViewOptions inflate = {WOLF_DEPTH_PROFILE_INFLATE, 1.0, 6.0, 0.0, NULL, false};
+        int drop = wolf_voxel_row_for_layer(skull_bottom) - 1;
+        int shift = floor_depth_for_row(skull_bottom, bottom_row, depth_per_row, nearest_depth) - WOLF_VOXEL_DIM / 2;
+
+        if (rounded == NULL) {
+            return;
+        }
+        wolf_reconstruct_single_view(&skull, &inflate, rounded);
+        for (int z = 0; z < WOLF_VOXEL_DIM; ++z) {
+            for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
+                for (int x = 0; x < WOLF_VOXEL_DIM; ++x) {
+                    size_t voxel = wolf_voxel_index(x, y, z);
+
+                    if (rounded->occupied[voxel]) {
+                        set_voxel(model, x, y + shift, z - drop, rounded->palette_index[voxel]);
+                    }
+                }
+            }
+        }
+        wolf_voxel_model_destroy(rounded);
+    }
+}
+
+bool wolf_build_hand_model(WolfHandBuiltModel which, const WolfSpriteImage *reference, WolfVoxelModel *model)
 {
     wolf_voxel_model_clear(model);
     switch (which) {
@@ -195,6 +473,15 @@ bool wolf_build_hand_model(WolfHandBuiltModel which, WolfVoxelModel *model)
         return true;
     case WOLF_HAND_BUILT_BED:
         build_bed(model);
+        return true;
+    case WOLF_HAND_BUILT_FOOD:
+        build_food(model);
+        return true;
+    case WOLF_HAND_BUILT_FIRST_AID:
+        build_first_aid(model);
+        return true;
+    case WOLF_HAND_BUILT_GIBS:
+        build_gibs(reference, model);
         return true;
     case WOLF_HAND_BUILT_NONE:
     default:

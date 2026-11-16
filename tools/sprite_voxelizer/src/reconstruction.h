@@ -77,7 +77,15 @@ typedef enum WolfDepthProfile {
      * front view is unchanged because every pixel's voxels stay on its own
      * line of sight.
      */
-    WOLF_DEPTH_PROFILE_FIRST_PERSON
+    WOLF_DEPTH_PROFILE_FIRST_PERSON,
+    /*
+     * A cage of vertical bars. Pixels in the frame colours are bars and go
+     * on a cylinder around the outside (front and back), solid rows become
+     * hoops with the top and bottom of the cage capped, and anything else
+     * (a prisoner) is inflated inside, so the bars surround the contents
+     * instead of running through the middle.
+     */
+    WOLF_DEPTH_PROFILE_CAGE
 } WolfDepthProfile;
 
 typedef struct WolfSingleViewOptions {
@@ -88,6 +96,18 @@ typedef struct WolfSingleViewOptions {
     double maximum_half_depth;
     /* Half-depth used by the extrude profile. */
     double extrude_half_depth;
+    /*
+     * Cage profile only: 256 flags marking the palette entries of the bars.
+     * NULL for every other profile.
+     */
+    const uint8_t *frame_colours;
+    /*
+     * For actors drawn only from the front: the back half of the body is
+     * coloured plainly (hair or bare head above, the dominant colour of each
+     * body region below) so the model has one face, not a mirrored second
+     * one on the back of its head.
+     */
+    bool plain_back;
 } WolfSingleViewOptions;
 
 /*
@@ -115,6 +135,15 @@ void wolf_reconstruct_pose_transfer(
     const WolfVoxelModel *reference,
     const WolfSingleViewOptions *fallback,
     WolfVoxelModel *model);
+
+/*
+ * Build a projectile as a body of revolution about its flight axis, from
+ * its side frame (rotation 2, nose toward screen-left). The original
+ * nose-on frames are drawn wider than tall, so carving all eight frames
+ * flattens the rocket; revolving the side profile gives a round body that
+ * reproduces both side frames.
+ */
+void wolf_reconstruct_axial_revolve(const WolfSpriteImage *side_view, WolfVoxelModel *model);
 
 /*
  * Compute each pixel's half-depth for a single-view profile. Exposed for

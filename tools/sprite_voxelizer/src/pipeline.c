@@ -15,6 +15,8 @@
 #include <string.h>
 
 #define PATH_LENGTH 1024
+/* SPR_STAT_17, the empty hanging cage, whose colours are a cage's bars. */
+#define WOLF_EMPTY_CAGE_SPRITE 19
 
 /* Everything learned about one pose model, kept for the manifest and reports. */
 typedef struct AssetResult {
@@ -87,6 +89,8 @@ static const char *method_name(const WolfVoxelAsset *asset)
         return "pose_transfer";
     case WOLF_ASSET_HAND_BUILT:
         return "hand_built";
+    case WOLF_ASSET_AXIAL_REVOLVE:
+        return "axial_revolve";
     case WOLF_ASSET_SINGLE_VIEW:
     default:
         switch (asset->single_view.profile) {
@@ -96,6 +100,8 @@ static const char *method_name(const WolfVoxelAsset *asset)
             return "extrude";
         case WOLF_DEPTH_PROFILE_FIRST_PERSON:
             return "first_person";
+        case WOLF_DEPTH_PROFILE_CAGE:
+            return "cage";
         case WOLF_DEPTH_PROFILE_INFLATE:
         default:
             return "inflate";
@@ -216,14 +222,32 @@ static void reconstruct_asset(PipelineState *state, size_t asset_index)
         break;
     }
     case WOLF_ASSET_HAND_BUILT:
-        result->built = wolf_build_hand_model(asset->hand_built, result->model);
+        result->built = wolf_build_hand_model(asset->hand_built, image, result->model);
         result->depth_scale_used = wolf_voxel_model_depth_ratio(result->model);
+        break;
+    case WOLF_ASSET_AXIAL_REVOLVE:
+        /* Rotation 2 is the side view, nose toward screen-left. */
+        wolf_reconstruct_axial_revolve(&state->shadow_free[asset->first_sprite + 2], result->model);
+        result->depth_scale_used = wolf_voxel_model_depth_ratio(result->model);
+        result->built = true;
         break;
     case WOLF_ASSET_SINGLE_VIEW:
     default: {
         WolfSingleViewOptions single_view = asset->single_view;
+        uint8_t frame_colours[256] = {0};
 
         single_view.depth_scale = subject_depth_scale(state, asset);
+        /* A cage's bars are the colours of the empty hanging cage (SPR_STAT_17). */
+        if (single_view.profile == WOLF_DEPTH_PROFILE_CAGE) {
+            const WolfSpriteImage *empty_cage = &state->shadow_free[WOLF_EMPTY_CAGE_SPRITE];
+
+            for (size_t pixel = 0u; pixel < WOLF_SPRITE_PIXELS; ++pixel) {
+                if (empty_cage->opaque[pixel]) {
+                    frame_colours[empty_cage->palette_index[pixel]] = 1u;
+                }
+            }
+            single_view.frame_colours = frame_colours;
+        }
         wolf_reconstruct_single_view(image, &single_view, result->model);
         result->depth_scale_used = single_view.depth_scale;
         result->built = true;
@@ -232,6 +256,49 @@ static void reconstruct_asset(PipelineState *state, size_t asset_index)
     }
     result->voxel_count = wolf_voxel_model_count(result->model);
     result->depth_extent = wolf_voxel_model_depth_extent(result->model);
+}
+
+/*
+ * A hand-built model is checked against its reference sprite for the two
+ * things a faithful rebuild must keep: its width across the front view
+ * (relative to the sprite's), and its palette (the share of voxels whose
+ * colour the sprite itself uses).
+ */
+static void hand_built_reference_check(const WolfSpriteImage *reference, const WolfVoxelModel *model,
+    double *width_ratio, double *palette_share)
+{
+    uint8_t reference_colours[256] = {0};
+    int reference_left = WOLF_SPRITE_SIZE;
+    int reference_right = -1;
+    int model_left = WOLF_VOXEL_DIM;
+    int model_right = -1;
+    size_t matching = 0u;
+    size_t total = 0u;
+
+    for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+        for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+            size_t pixel = wolf_sprite_pixel_index(column, row);
+
+            if (reference->opaque[pixel]) {
+                reference_colours[reference->palette_index[pixel]] = 1u;
+                reference_left = column < reference_left ? column : reference_left;
+                reference_right = column > reference_right ? column : reference_right;
+            }
+        }
+    }
+    for (size_t voxel = 0u; voxel < WOLF_VOXEL_COUNT; ++voxel) {
+        if (model->occupied[voxel]) {
+            int x = (int)(voxel % WOLF_VOXEL_DIM);
+
+            model_left = x < model_left ? x : model_left;
+            model_right = x > model_right ? x : model_right;
+            matching += reference_colours[model->palette_index[voxel]] ? 1u : 0u;
+            ++total;
+        }
+    }
+    *width_ratio = reference_right < 0 || model_right < 0 ? 0.0 :
+        (double)(model_right - model_left + 1) / (double)(reference_right - reference_left + 1);
+    *palette_share = total > 0u ? (double)matching / (double)total : 0.0;
 }
 
 /* Record one more reason for failing validation. */
@@ -315,11 +382,30 @@ static void validate_asset(PipelineState *state, size_t asset_index, const char 
             add_failure(result, reason);
         }
         break;
-    case WOLF_ASSET_HAND_BUILT:
-        if (result->views[0].silhouette_iou < WOLF_HAND_BUILT_MIN_FRONT_IOU) {
-            (void)snprintf(reason, sizeof(reason), "front IoU against reference %.3f < %.2f",
-                result->views[0].silhouette_iou, WOLF_HAND_BUILT_MIN_FRONT_IOU);
+    case WOLF_ASSET_HAND_BUILT: {
+        double width_ratio;
+        double palette_share;
+
+        hand_built_reference_check(targets[0], result->model, &width_ratio, &palette_share);
+        if (width_ratio < 1.0 - WOLF_HAND_BUILT_WIDTH_TOLERANCE || width_ratio > 1.0 + WOLF_HAND_BUILT_WIDTH_TOLERANCE) {
+            (void)snprintf(reason, sizeof(reason), "width is %.2f times the reference", width_ratio);
             add_failure(result, reason);
+        }
+        if (palette_share < WOLF_HAND_BUILT_MIN_PALETTE_SHARE) {
+            (void)snprintf(reason, sizeof(reason), "only %.0f%% of voxels use the reference's colours",
+                palette_share * 100.0);
+            add_failure(result, reason);
+        }
+        break;
+    }
+    case WOLF_ASSET_AXIAL_REVOLVE:
+        /* A body of revolution reproduces the side frames it was turned from. */
+        for (size_t view = 2u; view < result->view_count; view += 4u) {
+            if (result->views[view].silhouette_iou < WOLF_ROTATION_MIN_FACE_ON_IOU) {
+                (void)snprintf(reason, sizeof(reason), "side rotation %u silhouette IoU %.3f < %.2f",
+                    (unsigned)view, result->views[view].silhouette_iou, WOLF_ROTATION_MIN_FACE_ON_IOU);
+                add_failure(result, reason);
+            }
         }
         break;
     case WOLF_ASSET_SINGLE_VIEW:

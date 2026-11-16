@@ -19,8 +19,10 @@ typedef enum WolfAssetMethod {
     WOLF_ASSET_SINGLE_VIEW,
     /* A camera-facing actor frame built on the body of the actor's rotation-set model. */
     WOLF_ASSET_POSE_TRANSFER,
-    /* Furniture modelled directly, using the sprite only as a reference. */
-    WOLF_ASSET_HAND_BUILT
+    /* Objects modelled directly, using the sprite only as a reference. */
+    WOLF_ASSET_HAND_BUILT,
+    /* A projectile revolved about its flight axis from its side frame. */
+    WOLF_ASSET_AXIAL_REVOLVE
 } WolfAssetMethod;
 
 /* One pose model: a rotation set or a single frame. */

@@ -47,7 +47,7 @@ void test_wl6_tables_match_original_enumeration(void)
     }
 }
 
-/* Rotation sets come from the original rotate flags: 25 sets of eight frames. */
+/* Rotation sets come from the original rotate flags: 25 sets of eight frames, the rocket revolved. */
 void test_catalog_groups_rotation_sets_from_state_flags(void)
 {
     WolfAssetCatalog *catalog = malloc(sizeof(WolfAssetCatalog));
@@ -59,7 +59,9 @@ void test_catalog_groups_rotation_sets_from_state_flags(void)
     for (size_t index = 0u; index < catalog->asset_count; ++index) {
         rotation_sets += catalog->assets[index].method == WOLF_ASSET_ROTATION_SET ? 1u : 0u;
     }
-    TEST_ASSERT_EQUAL_size_t(25u, rotation_sets);
+    TEST_ASSERT_EQUAL_size_t(24u, rotation_sets);
+    TEST_ASSERT_EQUAL_INT(WOLF_ASSET_AXIAL_REVOLVE, asset_for(catalog, "SPR_ROCKET_1")->method);
+    TEST_ASSERT_EQUAL_INT(8, asset_for(catalog, "SPR_ROCKET_1")->sprite_count);
     TEST_ASSERT_EQUAL_size_t(WOLF_WL6_SPRITE_COUNT - 25u * 7u, catalog->asset_count);
 
     asset = asset_for(catalog, "SPR_GRD_S_6");
@@ -137,6 +139,17 @@ void test_catalog_assigns_reconstruction_methods(void)
     TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_TABLE_AND_CHAIRS, asset_for(catalog, "SPR_STAT_2")->hand_built);
     TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_BED, asset_for(catalog, "SPR_STAT_22")->hand_built);
     TEST_ASSERT_EQUAL_INT(WOLF_DEPTH_PROFILE_EXTRUDE, asset_for(catalog, "SPR_STAT_20")->single_view.profile);
+    TEST_ASSERT_EQUAL_INT(WOLF_DEPTH_PROFILE_CAGE, asset_for(catalog, "SPR_STAT_17")->single_view.profile);
+    TEST_ASSERT_EQUAL_INT(WOLF_DEPTH_PROFILE_CAGE, asset_for(catalog, "SPR_STAT_18")->single_view.profile);
+    TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_FOOD, asset_for(catalog, "SPR_STAT_24")->hand_built);
+    TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_FIRST_AID, asset_for(catalog, "SPR_STAT_25")->hand_built);
+    TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_GIBS, asset_for(catalog, "SPR_STAT_34")->hand_built);
+    /* Actors drawn only from the front get one face; objects keep their drawing all through. */
+    TEST_ASSERT_TRUE(asset_for(catalog, "SPR_BOSS_W1")->single_view.plain_back);
+    TEST_ASSERT_TRUE(asset_for(catalog, "SPR_GRD_DIE_1")->single_view.plain_back);
+    TEST_ASSERT_TRUE(asset_for(catalog, "SPR_BLINKY_W1")->single_view.plain_back);
+    TEST_ASSERT_FALSE(asset_for(catalog, "SPR_STAT_1")->single_view.plain_back);
+    TEST_ASSERT_FALSE(asset_for(catalog, "SPR_SMOKE_1")->single_view.plain_back);
 
     /* Upright camera-facing frames are built on the actor's body; falling ones are inflated. */
     TEST_ASSERT_EQUAL_INT(WOLF_ASSET_POSE_TRANSFER, asset_for(catalog, "SPR_GRD_PAIN_1")->method);

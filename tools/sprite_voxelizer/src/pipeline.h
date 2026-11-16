@@ -29,11 +29,13 @@
 
 /* A hand-built model is checked only loosely against its reference sprite. */
 /*
- * The reference furniture is drawn in three-quarter perspective (the chairs
- * of the table especially), so an orthographic front view of a faithful
- * model only partly overlaps it; this catches a wrong or misplaced model.
+ * Hand-built models reinterpret sprites drawn in perspective (a table's
+ * chairs in three-quarter view, food seen from above), so their front view
+ * cannot match the sprite pixel for pixel. They must keep the sprite's
+ * width within this tolerance and take nearly all colours from its palette.
  */
-#define WOLF_HAND_BUILT_MIN_FRONT_IOU 0.35
+#define WOLF_HAND_BUILT_WIDTH_TOLERANCE 0.25
+#define WOLF_HAND_BUILT_MIN_PALETTE_SHARE 0.90
 
 /* A first-person weapon must reach at least this far into the screen, in voxels. */
 #define WOLF_FIRST_PERSON_MIN_DEPTH 24

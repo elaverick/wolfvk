@@ -42,7 +42,7 @@ static int column_thickness(const WolfVoxelModel *model, int column, int row)
 void test_extrude_profile_reproduces_front_view_with_constant_depth(void)
 {
     WolfSpriteImage image;
-    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 3.0};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 3.0, NULL, false};
     WolfVoxelModel *model = wolf_voxel_model_create();
 
     test_make_patterned_sprite(&image, 5u);
@@ -57,7 +57,7 @@ void test_extrude_profile_reproduces_front_view_with_constant_depth(void)
 void test_lathe_profile_turns_each_run_into_a_disc(void)
 {
     WolfSpriteImage image;
-    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false};
     WolfVoxelModel *model = wolf_voxel_model_create();
 
     wolf_sprite_image_clear(&image);
@@ -75,7 +75,7 @@ void test_lathe_profile_turns_each_run_into_a_disc(void)
 void test_inflate_profile_rounds_by_local_thickness(void)
 {
     WolfSpriteImage image;
-    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0, NULL, false};
     WolfVoxelModel *model = wolf_voxel_model_create();
     double half_depth[WOLF_SPRITE_PIXELS];
 
@@ -104,7 +104,7 @@ void test_inflate_profile_rounds_by_local_thickness(void)
 void test_single_view_never_drops_a_pixel(void)
 {
     WolfSpriteImage image;
-    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 0.0};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 0.0, NULL, false};
     WolfVoxelModel *model = wolf_voxel_model_create();
 
     wolf_sprite_image_clear(&image);
@@ -261,7 +261,7 @@ void test_pose_transfer_builds_on_the_reference_body(void)
     WolfVoxelModel *reference = wolf_voxel_model_create();
     WolfVoxelModel *model = wolf_voxel_model_create();
     WolfSpriteImage frame;
-    WolfSingleViewOptions fallback = {WOLF_DEPTH_PROFILE_INFLATE, 0.6, 32.0, 0.0};
+    WolfSingleViewOptions fallback = {WOLF_DEPTH_PROFILE_INFLATE, 0.6, 32.0, 0.0, NULL, false};
 
     test_make_box_model(reference, 6, 4, 40);
     wolf_voxel_render_view(reference, 0.0, 0, &frame, NULL);
@@ -290,7 +290,7 @@ void test_pose_transfer_builds_on_the_reference_body(void)
 void test_first_person_profile_recedes_into_the_screen(void)
 {
     WolfSpriteImage weapon;
-    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_FIRST_PERSON, 1.0, 6.0, 0.0};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_FIRST_PERSON, 1.0, 6.0, 0.0, NULL, false};
     WolfVoxelModel *model = wolf_voxel_model_create();
     int nearest_bottom = WOLF_VOXEL_DIM;
     int nearest_top = WOLF_VOXEL_DIM;
@@ -310,5 +310,103 @@ void test_first_person_profile_recedes_into_the_screen(void)
     }
     TEST_ASSERT_TRUE_MESSAGE(nearest_top > nearest_bottom + 30, "the muzzle must be far from the hand");
     TEST_ASSERT_TRUE(wolf_voxel_model_depth_extent(model) >= 40);
+    wolf_voxel_model_destroy(model);
+}
+
+/* Bars of a cage go round the outside; whatever is inside stays inside. */
+void test_cage_profile_puts_bars_around_the_contents(void)
+{
+    WolfSpriteImage cage;
+    WolfVoxelModel *model = wolf_voxel_model_create();
+    uint8_t bar_colours[256] = {0};
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_CAGE, 1.0, 32.0, 0.0, bar_colours, false};
+    int depth_of_bar[2] = {-1, -1};
+
+    bar_colours[60] = 1u;
+    wolf_sprite_image_clear(&cage);
+    test_fill_rectangle(&cage, 20, 20, 43, 21, 60u);   /* top hoop */
+    test_fill_rectangle(&cage, 20, 49, 43, 50, 60u);   /* bottom hoop */
+    for (int bar = 20; bar <= 43; bar += 6) {
+        test_fill_rectangle(&cage, bar, 22, bar, 48, 60u);
+    }
+    test_fill_rectangle(&cage, 43, 22, 43, 48, 60u);
+    test_fill_rectangle(&cage, 30, 30, 33, 40, 16u);   /* a prisoner */
+    wolf_reconstruct_single_view(&cage, &options, model);
+    assert_front_view_exact(model, &cage);
+
+    /* The bar at column 26 stands on the cylinder, front and back, not through the middle. */
+    for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
+        if (model->occupied[wolf_voxel_index(26, y, 63 - 35)]) {
+            depth_of_bar[depth_of_bar[0] < 0 ? 0 : 1] = y;
+        }
+    }
+    TEST_ASSERT_TRUE(depth_of_bar[0] >= 0 && depth_of_bar[0] < 28);
+    TEST_ASSERT_TRUE(depth_of_bar[1] > 35);
+    TEST_ASSERT_FALSE(model->occupied[wolf_voxel_index(26, 31, 63 - 35)]);
+    /* The prisoner is inside, centred, clear of the bars. */
+    TEST_ASSERT_TRUE(model->occupied[wolf_voxel_index(31, 31, 63 - 35)]);
+    TEST_ASSERT_EQUAL_UINT8(16u, model->palette_index[wolf_voxel_index(31, 31, 63 - 35)]);
+    wolf_voxel_model_destroy(model);
+}
+
+/* A figure drawn only from the front gets one face: hair on the back of the head, plain body behind. */
+void test_plain_back_gives_a_single_face(void)
+{
+    WolfSpriteImage figure;
+    WolfVoxelModel *model = wolf_voxel_model_create();
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0, NULL, true};
+    int back_y = -1;
+
+    wolf_sprite_image_clear(&figure);
+    test_fill_rectangle(&figure, 26, 10, 37, 11, 70u);   /* hair on top of the head */
+    test_fill_rectangle(&figure, 26, 12, 37, 19, 200u);  /* face */
+    test_fill_rectangle(&figure, 28, 14, 29, 14, 9u);    /* an eye */
+    test_fill_rectangle(&figure, 20, 20, 43, 60, 150u);  /* body */
+    test_fill_rectangle(&figure, 31, 30, 32, 31, 15u);   /* a button */
+    wolf_reconstruct_single_view(&figure, &options, model);
+    assert_front_view_exact(model, &figure);
+
+    for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
+        if (model->occupied[wolf_voxel_index(28, y, 63 - 14)]) {
+            back_y = y;
+        }
+    }
+    TEST_ASSERT_TRUE(back_y > 32);
+    TEST_ASSERT_EQUAL_UINT8(70u, model->palette_index[wolf_voxel_index(28, back_y, 63 - 14)]);
+    for (int y = WOLF_VOXEL_DIM - 1; y >= 0; --y) {
+        if (model->occupied[wolf_voxel_index(31, y, 63 - 30)]) {
+            TEST_ASSERT_EQUAL_UINT8(150u, model->palette_index[wolf_voxel_index(31, y, 63 - 30)]);
+            break;
+        }
+    }
+    wolf_voxel_model_destroy(model);
+}
+
+/* A rocket drawn side-on becomes a round body about its flight axis. */
+void test_axial_revolve_makes_a_round_body(void)
+{
+    WolfSpriteImage side;
+    WolfVoxelModel *model = wolf_voxel_model_create();
+    WolfSpriteImage rendered;
+    WolfViewMetrics metrics;
+    int high = 0;
+    int wide = 0;
+
+    wolf_sprite_image_clear(&side);
+    test_fill_rectangle(&side, 20, 30, 43, 34, 24u);   /* body, nose at column 20 */
+    test_fill_rectangle(&side, 41, 28, 43, 36, 26u);   /* tail fins */
+    wolf_reconstruct_axial_revolve(&side, model);
+
+    wolf_voxel_render_view(model, 90.0, 0, &rendered, NULL);
+    wolf_compare_views(&side, &rendered, wolf_game_palette_rgba, &metrics);
+    TEST_ASSERT_TRUE(metrics.silhouette_iou >= 0.95);
+    /* As wide as it is tall at mid-body: round, not flattened. */
+    for (int x = 0; x < WOLF_VOXEL_DIM; ++x) {
+        wide += model->occupied[wolf_voxel_index(x, 30, 63 - 32)] ? 1 : 0;
+    }
+    for (int z = 0; z < WOLF_VOXEL_DIM; ++z) {
+        high += model->occupied[wolf_voxel_index(31, 30, z)] ? 1 : 0;
+    }
+    TEST_ASSERT_INT_WITHIN(1, high, wide);
     wolf_voxel_model_destroy(model);
 }
