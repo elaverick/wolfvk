@@ -65,6 +65,8 @@ struct VulkanRenderer {
     VkBuffer weapon_index_buffer;
     VkDeviceMemory weapon_index_buffer_memory;
     uint32_t weapon_quad_count;
+    uint32_t weapon_first_quad;
+    uint32_t weapon_draw_quad_count;
     float weapon_view_projection[16];
 
     VkCommandPool command_pool;
