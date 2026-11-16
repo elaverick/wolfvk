@@ -172,8 +172,8 @@ bool wolf_weapon_state_select(WolfWeaponState *state, WolfWeaponType weapon)
 
 /*
  * Original WL_AGENT attackinfo advances four six-tic states. Pistol and knife
- * complete once; machinegun repeats attack frame 2, while chaingun repeats
- * attack frame 3. The original gameplay attack callbacks are intentionally
+ * complete once; both automatic weapons cycle attack frames 2 and 3 while
+ * held. The original code distinguishes their shot callbacks, but those effects are intentionally
  * not invoked yet: this state only drives the weapon model.
  */
 bool wolf_weapon_state_update(WolfWeaponState *state, bool fire_down, float delta_seconds)
@@ -200,11 +200,13 @@ bool wolf_weapon_state_update(WolfWeaponState *state, bool fire_down, float delt
         elapsed_tics = state->tic_remainder + delta_seconds / WOLF_WEAPON_TIC_SECONDS;
         while (elapsed_tics >= (float)WOLF_WEAPON_ATTACK_TICS) {
             elapsed_tics -= (float)WOLF_WEAPON_ATTACK_TICS;
-            if (state->attack_frame < 3u) {
+            if (state->attack_frame == 2u &&
+                (state->selected == WOLF_WEAPON_MACHINEGUN ||
+                 state->selected == WOLF_WEAPON_CHAINGUN) && fire_down) {
+                /* WL_AGENT.C backs up two attack states, then advances to frame 2 again. */
+                state->attack_frame = 1u;
+            } else if (state->attack_frame < 3u) {
                 ++state->attack_frame;
-            } else if ((state->selected == WOLF_WEAPON_MACHINEGUN ||
-                        state->selected == WOLF_WEAPON_CHAINGUN) && fire_down) {
-                state->attack_frame = state->selected == WOLF_WEAPON_MACHINEGUN ? 2u : 3u;
             } else {
                 state->attack_frame = 0u;
                 state->firing = false;
@@ -215,11 +217,6 @@ bool wolf_weapon_state_update(WolfWeaponState *state, bool fire_down, float delt
         state->tic_remainder = elapsed_tics;
     }
 
-    if (!fire_down && state->selected >= WOLF_WEAPON_MACHINEGUN) {
-        state->firing = false;
-        state->attack_frame = 0u;
-        state->tic_remainder = 0.0f;
-    }
     return true;
 }
 
