@@ -65,7 +65,32 @@ enum {
     KIT_LATCH = 31,
     KIT_LATCH_SHADE = 28,
     KIT_TRIM = 151,
-    KIT_TRIM_DARK = 153
+    KIT_TRIM_DARK = 153,
+    /* SPR_STAT_19: bone greys, lightest to darkest. */
+    BONE_WHITE = 15,
+    BONE_LIGHT = 16,
+    BONE_PALE = 17,
+    BONE_TOP = 18,
+    BONE_MID = 19,
+    BONE_GREY = 20,
+    BONE_SHADE = 22,
+    BONE_DARK = 24,
+    BONE_DEEP = 25,
+    BONE_HOLLOW = 30,
+    /* SPR_STAT_31: treasure chest. */
+    CHEST_GOLD_BRIGHT = 69,
+    CHEST_GOLD_LIGHT = 72,
+    CHEST_GOLD = 73,
+    CHEST_GOLD_MID = 75,
+    CHEST_GOLD_DARK = 77,
+    CHEST_GOLD_SHADE = 78,
+    CHEST_RED = 39,
+    CHEST_RED_DARK = 45,
+    GEM_GREEN = 102,
+    GEM_GREEN_DARK = 105,
+    GEM_PALE = 137,
+    GEM_BLUE = 140,
+    GEM_BLUE_DARK = 146
 };
 
 static void set_voxel(WolfVoxelModel *model, int x, int y, int z, int palette_index)
@@ -615,6 +640,539 @@ static void build_well(const WolfSpriteImage *reference, WolfVoxelModel *model)
     }
 }
 
+/* Perceived brightness of a palette entry. */
+static int colour_brightness(int palette_index)
+{
+    const uint8_t *colour = wolf_game_palette_rgba + (size_t)palette_index * 4u;
+
+    return 3 * colour[0] + 6 * colour[1] + colour[2];
+}
+
+/* Small deterministic hash, so scattered parts land in the same place on every run. */
+static uint32_t scatter_hash(uint32_t a, uint32_t b, uint32_t c)
+{
+    uint32_t value = a * 73856093u ^ b * 19349663u ^ c * 83492791u;
+
+    value ^= value >> 13;
+    value *= 0x5bd1e995u;
+    value ^= value >> 15;
+    return value;
+}
+
+/* Uniform value in [0, 1) from the hash. */
+static double scatter_unit(uint32_t a, uint32_t b, uint32_t c)
+{
+    return (double)(scatter_hash(a, b, c) % 10000u) / 10000.0;
+}
+
+/* Bounding box of the sprite's drawn pixels; false for an empty sprite. */
+static bool drawn_bounds(const WolfSpriteImage *image, int *left, int *top, int *right, int *bottom)
+{
+    *left = WOLF_SPRITE_SIZE;
+    *top = WOLF_SPRITE_SIZE;
+    *right = -1;
+    *bottom = -1;
+    for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+        for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+            if (image->opaque[wolf_sprite_pixel_index(column, row)]) {
+                *left = column < *left ? column : *left;
+                *right = column > *right ? column : *right;
+                *top = row < *top ? row : *top;
+                *bottom = row > *bottom ? row : *bottom;
+            }
+        }
+    }
+    return *right >= 0;
+}
+
+/*
+ * A puddle one voxel thick. The sprite's rows are the puddle seen in
+ * perspective, nearest row at the bottom, so each row is spread over its
+ * share of a floor area 0.55 times as deep as the puddle is wide. Every
+ * voxel samples a slightly jittered row and column, which keeps the drawn
+ * ripples and shades as the puddle's surface colour and frays the edge
+ * instead of leaving straight steps between rows.
+ */
+static void build_puddle(const WolfSpriteImage *reference, WolfVoxelModel *model)
+{
+    int left;
+    int top;
+    int right;
+    int bottom;
+    int depth;
+    int front;
+    double depth_per_row;
+
+    if (reference == NULL || !drawn_bounds(reference, &left, &top, &right, &bottom)) {
+        return;
+    }
+    depth = (int)lround(0.55 * (double)(right - left + 1));
+    if (depth < bottom - top + 1) {
+        depth = bottom - top + 1;
+    }
+    depth_per_row = (double)depth / (double)(bottom - top + 1);
+    front = WOLF_VOXEL_DIM / 2 - depth / 2;
+
+    /* The puddle's shades, darkest first, for rippling the surface. */
+    {
+        int shades[256] = {0};
+        int shade_count = 0;
+        int rank_of[256] = {0};
+        bool used[256] = {false};
+
+        for (size_t pixel = 0u; pixel < WOLF_SPRITE_PIXELS; ++pixel) {
+            if (reference->opaque[pixel]) {
+                used[reference->palette_index[pixel]] = true;
+            }
+        }
+        for (int entry = 0; entry < 256; ++entry) {
+            if (used[entry]) {
+                int slot = shade_count++;
+
+                while (slot > 0 && colour_brightness(shades[slot - 1]) > colour_brightness(entry)) {
+                    shades[slot] = shades[slot - 1];
+                    --slot;
+                }
+                shades[slot] = entry;
+            }
+        }
+        for (int rank = 0; rank < shade_count; ++rank) {
+            rank_of[shades[rank]] = rank;
+        }
+
+        for (int y = front; y < front + depth; ++y) {
+            for (int x = left; x <= right; ++x) {
+                double along = ((double)(y - front) + 0.5) / depth_per_row;
+                int row = bottom - (int)floor(along + 0.9 * (scatter_unit((uint32_t)x, (uint32_t)y, 1u) - 0.5));
+                int column = x + (int)(scatter_hash((uint32_t)x, (uint32_t)y, 2u) % 3u) - 1;
+                /* A wobbly oval outline, so the puddle isn't a rectangle. */
+                double ox = ((double)x + 0.5 - 0.5 * (double)(left + right + 1)) / (0.5 * (double)(right - left + 1));
+                double oy = ((double)y + 0.5 - (double)front - 0.5 * (double)depth) / (0.5 * (double)depth);
+                double angle = atan2(oy, ox);
+                double outline = 1.0 + 0.10 * sin(3.0 * angle + 0.7) + 0.07 * sin(5.0 * angle + 2.1) +
+                    0.05 * sin(8.0 * angle + 4.0);
+                double ripple;
+                int rank;
+                size_t pixel;
+
+                if (row < top || row > bottom || column < 0 || column >= WOLF_SPRITE_SIZE ||
+                    sqrt(ox * ox + oy * oy) > outline + 0.06 * (scatter_unit((uint32_t)x, (uint32_t)y, 3u) - 0.5)) {
+                    continue;
+                }
+                pixel = wolf_sprite_pixel_index(column, row);
+                if (!reference->opaque[pixel]) {
+                    continue;
+                }
+                /* Ripples: shift each voxel a shade or two lighter or darker in soft waves. */
+                ripple = 1.1 * sin(0.45 * x + 0.30 * y) + 0.8 * sin(0.62 * y - 0.21 * x + 1.3) +
+                    0.9 * (scatter_unit((uint32_t)x, (uint32_t)y, 4u) - 0.5);
+                rank = rank_of[reference->palette_index[pixel]] + (int)lround(ripple);
+                rank = rank < 0 ? 0 : (rank >= shade_count ? shade_count - 1 : rank);
+                set_voxel(model, x, y, 0, shades[rank]);
+            }
+        }
+    }
+}
+
+/* One part of the bone pile, in world-aligned offsets from its own origin. */
+#define PILE_PART_EXTENT 16
+#define PILE_PART_SIZE (2 * PILE_PART_EXTENT + 1)
+
+typedef struct PilePart {
+    /* 0 = empty, otherwise palette entry + 1, indexed [z][y][x] with z from 0 up. */
+    uint16_t cells[PILE_PART_SIZE][PILE_PART_SIZE][PILE_PART_SIZE];
+} PilePart;
+
+static void part_set(PilePart *part, int x, int y, int z, int colour)
+{
+    if (x >= -PILE_PART_EXTENT && x <= PILE_PART_EXTENT && y >= -PILE_PART_EXTENT && y <= PILE_PART_EXTENT &&
+        z >= 0 && z < PILE_PART_SIZE) {
+        part->cells[z][y + PILE_PART_EXTENT][x + PILE_PART_EXTENT] = (uint16_t)(colour + 1);
+    }
+}
+
+/* Squared distance from a point to the segment a-b. */
+static double segment_distance_squared(double px, double py, double pz,
+    double ax, double ay, double az, double bx, double by, double bz)
+{
+    double dx = bx - ax;
+    double dy = by - ay;
+    double dz = bz - az;
+    double length_squared = dx * dx + dy * dy + dz * dz;
+    double t = length_squared > 0.0 ? ((px - ax) * dx + (py - ay) * dy + (pz - az) * dz) / length_squared : 0.0;
+    double cx;
+    double cy;
+    double cz;
+
+    t = t < 0.0 ? 0.0 : (t > 1.0 ? 1.0 : t);
+    cx = ax + t * dx - px;
+    cy = ay + t * dy - py;
+    cz = az + t * dz - pz;
+    return cx * cx + cy * cy + cz * cz;
+}
+
+/*
+ * A long bone lying almost flat: a round shaft with a pair of knuckles at
+ * each end, lit from above (white on top, grey underneath). shade picks a
+ * fresher or an older bone.
+ */
+static void make_bone(PilePart *part, double length, double heading, double tilt, int shade)
+{
+    /* Bones are a shade greyer than the skulls, so the skulls stand out. */
+    static const int tops[2] = {BONE_PALE, BONE_TOP};
+    static const int middles[2] = {BONE_MID, BONE_GREY};
+    static const int bottoms[2] = {BONE_SHADE, BONE_DEEP};
+    double half = 0.5 * length;
+    double ux = cos(heading);
+    double uy = sin(heading);
+    const double base = 1.6;
+    double ends[2][3] = {
+        {-ux * half, -uy * half, base - tilt * half},
+        {ux * half, uy * half, base + tilt * half}
+    };
+
+    memset(part, 0, sizeof(*part));
+    for (int z = 0; z < 8; ++z) {
+        for (int y = -PILE_PART_EXTENT; y <= PILE_PART_EXTENT; ++y) {
+            for (int x = -PILE_PART_EXTENT; x <= PILE_PART_EXTENT; ++x) {
+                double px = (double)x;
+                double py = (double)y;
+                double pz = (double)z + 0.5;
+                bool inside = segment_distance_squared(px, py, pz, ends[0][0], ends[0][1], ends[0][2],
+                    ends[1][0], ends[1][1], ends[1][2]) <= 0.85 * 0.85;
+                bool knuckle = false;
+                double height;
+                int colour;
+
+                /* Two knuckles side by side at each end. */
+                for (int end = 0; end < 2; ++end) {
+                    for (int side = -1; side <= 1; side += 2) {
+                        double kx = ends[end][0] - uy * 0.9 * side - px;
+                        double ky = ends[end][1] + ux * 0.9 * side - py;
+                        double kz = ends[end][2] - pz;
+
+                        if (kx * kx + ky * ky + kz * kz <= 1.35 * 1.35) {
+                            inside = true;
+                            knuckle = true;
+                        }
+                    }
+                }
+                if (!inside) {
+                    continue;
+                }
+                height = pz - base;
+                colour = height > 0.4 ? tops[shade] : (height < -0.6 ? bottoms[shade] : middles[shade]);
+                part_set(part, x, y, z, knuckle && colour == middles[shade] ? tops[shade] : colour);
+            }
+        }
+    }
+}
+
+/*
+ * A skull facing (face_x, face_y): a rounded cranium over a narrower face,
+ * dark eye sockets and nose, and a row of teeth along the jaw.
+ */
+static void make_skull(PilePart *part, double face_x, double face_y)
+{
+    double length = sqrt(face_x * face_x + face_y * face_y);
+    double dx = face_x / length;
+    double dy = face_y / length;
+
+    memset(part, 0, sizeof(*part));
+    for (int z = 0; z < 10; ++z) {
+        for (int y = -6; y <= 6; ++y) {
+            for (int x = -6; x <= 6; ++x) {
+                /* Local frame: lx across the face, ly from the face toward the back of the head. */
+                double lx = (double)x * -dy + (double)y * dx;
+                double ly = -((double)x * dx + (double)y * dy);
+                double lz = (double)z + 0.5;
+                double cranium = (lx / 3.3) * (lx / 3.3) + ((ly - 0.8) / 3.7) * ((ly - 0.8) / 3.7) +
+                    ((lz - 4.0) / 3.3) * ((lz - 4.0) / 3.3);
+                double face = (lx / 2.5) * (lx / 2.5) + ((ly + 1.6) / 2.0) * ((ly + 1.6) / 2.0) +
+                    ((lz - 1.8) / 1.8) * ((lz - 1.8) / 1.8);
+                int colour;
+
+                if (cranium > 1.0 && face > 1.0) {
+                    continue;
+                }
+                colour = lz > 5.2 ? BONE_WHITE : (lz > 3.0 ? BONE_LIGHT : BONE_PALE);
+                /* Eye sockets and nose on the front of the face. */
+                for (int side = -1; side <= 1; side += 2) {
+                    double ex = lx - 1.35 * side;
+                    double ey = ly + 3.0;
+                    double ez = lz - 3.6;
+
+                    if (ex * ex + ey * ey + ez * ez <= 1.3 * 1.3) {
+                        colour = BONE_HOLLOW;
+                    }
+                }
+                if (fabs(lx) < 0.7 && ly < -2.2 && lz > 1.6 && lz < 3.0) {
+                    colour = BONE_HOLLOW;
+                }
+                /* Teeth: alternating light and dark along the bottom of the face. */
+                if (ly < -2.6 && lz < 1.5) {
+                    colour = ((int)floor(lx + 10.0) % 2 == 0) ? BONE_WHITE : BONE_DARK;
+                }
+                part_set(part, x, y, z, colour);
+            }
+        }
+    }
+}
+
+/*
+ * Drop a part at (centre_x, centre_y) until it rests on the floor or on
+ * the parts already in the pile, then let it settle sink voxels further
+ * in among them. Returns false, placing nothing, if it would rest higher
+ * than max_height or overhang the tile.
+ */
+static bool drop_part(WolfVoxelModel *model, int heights[WOLF_VOXEL_DIM][WOLF_VOXEL_DIM], const PilePart *part,
+    int centre_x, int centre_y, int max_height, int sink)
+{
+    int rest = 0;
+
+    for (int y = -PILE_PART_EXTENT; y <= PILE_PART_EXTENT; ++y) {
+        for (int x = -PILE_PART_EXTENT; x <= PILE_PART_EXTENT; ++x) {
+            int wx = centre_x + x;
+            int wy = centre_y + y;
+
+            for (int z = 0; z < PILE_PART_SIZE; ++z) {
+                if (part->cells[z][y + PILE_PART_EXTENT][x + PILE_PART_EXTENT] != 0u) {
+                    if (wx < 0 || wy < 0 || wx >= WOLF_VOXEL_DIM || wy >= WOLF_VOXEL_DIM) {
+                        return false;
+                    }
+                    /* The lowest cell of each column must sit on top of what is already there. */
+                    rest = heights[wy][wx] - z > rest ? heights[wy][wx] - z : rest;
+                    break;
+                }
+            }
+        }
+    }
+    if (rest > max_height) {
+        return false;
+    }
+    /* Settle down into the bones below by up to sink voxels, never through the floor. */
+    rest = rest - sink > 0 ? rest - sink : 0;
+    for (int z = 0; z < PILE_PART_SIZE; ++z) {
+        for (int y = -PILE_PART_EXTENT; y <= PILE_PART_EXTENT; ++y) {
+            for (int x = -PILE_PART_EXTENT; x <= PILE_PART_EXTENT; ++x) {
+                uint16_t cell = part->cells[z][y + PILE_PART_EXTENT][x + PILE_PART_EXTENT];
+                int wx = centre_x + x;
+                int wy = centre_y + y;
+
+                if (cell != 0u && rest + z < WOLF_VOXEL_DIM) {
+                    set_voxel(model, wx, wy, rest + z, cell - 1);
+                    if (rest + z + 1 > heights[wy][wx]) {
+                        heights[wy][wx] = rest + z + 1;
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+
+/*
+ * A low, jumbled pile of bones with a skull. Bones of random length are
+ * dropped one at a time at random headings and tilts, spread over an oval
+ * (the sprite's width, made rounder) and a little more often near the
+ * middle, so they come to rest across one another. The pile is kept low:
+ * no bone may come to rest more than a third of the sprite's pile
+ * height off the floor in the middle, less toward the edge. A single skull
+ * then settles in among the bones near the front, turned a little aside.
+ */
+static void build_bone_pile(const WolfSpriteImage *reference, WolfVoxelModel *model)
+{
+    static int heights[WOLF_VOXEL_DIM][WOLF_VOXEL_DIM];
+    static PilePart part;
+    int left = 2;
+    int top = 49;
+    int right = 62;
+    int bottom = 63;
+    double radius_x;
+    double radius_y;
+    double centre_x;
+    const double centre_y = 31.5;
+    int max_rest;
+    int placed = 0;
+
+    if (reference != NULL) {
+        (void)drawn_bounds(reference, &left, &top, &right, &bottom);
+    }
+    radius_x = 0.42 * (double)(right - left + 1);
+    radius_y = 0.8 * radius_x;
+    centre_x = 0.5 * (double)(left + right);
+    max_rest = (bottom - top + 1) / 3;
+    memset(heights, 0, sizeof(heights));
+
+    for (int attempt = 0; attempt < 500 && placed < 100; ++attempt) {
+        uint32_t seed = (uint32_t)attempt;
+        double angle = 6.28318530717958647692 * scatter_unit(seed, 11u, 0u);
+        /* The square root spreads bones evenly over the area; every third one is pulled toward the middle. */
+        double reach = sqrt(scatter_unit(seed, 12u, 0u)) * (attempt % 3 == 0 ? 0.55 : 0.95);
+        int x = (int)lround(centre_x + cos(angle) * reach * (radius_x - 3.0));
+        int y = (int)lround(centre_y + sin(angle) * reach * (radius_y - 3.0));
+        int limit = (int)lround((double)max_rest * (1.0 - reach * reach * 0.7));
+
+        make_bone(&part, 6.0 + 8.0 * scatter_unit(seed, 13u, 0u), 3.14159265358979 * scatter_unit(seed, 14u, 0u),
+            0.5 * (scatter_unit(seed, 15u, 0u) - 0.5), (int)(scatter_hash(seed, 16u, 0u) % 2u));
+        if (drop_part(model, heights, &part, x, y, limit, 0)) {
+            ++placed;
+        }
+    }
+    /* One skull, settled in among the bones near the front, looking out and a little to the left. */
+    make_skull(&part, -0.35, -1.0);
+    (void)drop_part(model, heights, &part, (int)lround(centre_x) - 4, (int)lround(centre_y - 0.35 * radius_y),
+        max_rest + 4, 1);
+}
+
+/*
+ * A small open treasure chest standing on the floor. Its front is the
+ * sprite's own drawing of the chest's face; the sides and back are
+ * gold-framed red panels with a gold band; the lid stands open, tipped
+ * back; inside, a heap of gold coins with gems among them rises above the
+ * rim, and a few coins have spilled on the floor, as the sprite shows.
+ */
+static void build_treasure_chest(const WolfSpriteImage *reference, WolfVoxelModel *model)
+{
+    /* The chest's face in SPR_STAT_31 spans columns 23-38 and rows 54-61. */
+    const int x0 = 23;
+    const int x1 = 38;
+    const int face_top_row = 54;
+    const int y0 = 26;
+    const int y1 = 36;
+    const int height = 8;
+    static const int coins[5] = {CHEST_GOLD_BRIGHT, CHEST_GOLD_LIGHT, CHEST_GOLD, CHEST_GOLD_MID, CHEST_GOLD_LIGHT};
+    static const int gems[5] = {GEM_GREEN, GEM_GREEN_DARK, GEM_PALE, GEM_BLUE, GEM_BLUE_DARK};
+    static const int spilled[][2] = {{18, 22}, {20, 24}, {17, 25}, {21, 21}, {41, 23}, {40, 21}, {19, 19}, {26, 22}};
+
+    for (int z = 0; z < height; ++z) {
+        int row = face_top_row + (height - 1 - z);
+
+        for (int y = y0; y <= y1; ++y) {
+            for (int x = x0; x <= x1; ++x) {
+                bool wall = x == x0 || x == x1 || y == y0 || y == y1;
+                bool corner = (x == x0 || x == x1) && (y == y0 || y == y1);
+                bool frame = corner || (y == y1 && (x == x0 + 1 || x == x1 - 1)) ||
+                    ((x == x0 || x == x1) && (y == y0 + 1 || y == y1 - 1));
+                int colour;
+
+                if (!wall && z > 0) {
+                    continue;
+                }
+                if (y == y0 && reference != NULL && reference->opaque[wolf_sprite_pixel_index(x, row)]) {
+                    colour = reference->palette_index[wolf_sprite_pixel_index(x, row)];
+                } else if (z == 0 || z == height - 1 || frame) {
+                    colour = z == height - 1 ? CHEST_GOLD_LIGHT : CHEST_GOLD_MID;
+                } else if (z == 3) {
+                    colour = CHEST_GOLD;
+                } else {
+                    colour = z < 3 ? CHEST_RED_DARK : CHEST_RED;
+                }
+                set_voxel(model, x, y, z, colour);
+            }
+        }
+    }
+
+    /* Treasure heaped inside, highest in the middle: coins, with gems near the top. */
+    for (int y = y0 + 1; y < y1; ++y) {
+        for (int x = x0 + 1; x < x1; ++x) {
+            double dx = ((double)x - 0.5 * (double)(x0 + x1)) / (0.5 * (double)(x1 - x0));
+            double dy = ((double)y - 0.5 * (double)(y0 + y1)) / (0.5 * (double)(y1 - y0));
+            int heap = height - 2 + (int)lround(2.6 * (1.0 - 0.6 * (dx * dx + dy * dy)) +
+                0.8 * scatter_unit((uint32_t)x, (uint32_t)y, 21u));
+
+            for (int z = 1; z <= heap; ++z) {
+                uint32_t pick = scatter_hash((uint32_t)x, (uint32_t)y, (uint32_t)z + 30u);
+                int colour = coins[pick % 5u];
+
+                if (z >= height - 1 && pick % 100u < 14u) {
+                    colour = gems[(pick / 100u) % 5u];
+                }
+                set_voxel(model, x, y, z, colour);
+            }
+        }
+    }
+
+    /* The lid, open and tipped back 20 degrees from upright, hinged on the back top edge. */
+    for (int step = 0; step <= y1 - y0; ++step) {
+        int z = height + (int)lround((double)step * 0.94);
+        int y = y1 + (int)lround((double)step * 0.34);
+
+        for (int x = x0; x <= x1; ++x) {
+            bool rim = x == x0 || x == x1 || step == y1 - y0 || step == 0;
+
+            set_voxel(model, x, y, z, rim ? CHEST_GOLD_MID : CHEST_RED);
+            set_voxel(model, x, y + 1, z, rim ? CHEST_GOLD_DARK : CHEST_GOLD_SHADE);
+        }
+    }
+
+    for (size_t coin = 0u; coin < sizeof(spilled) / sizeof(spilled[0]); ++coin) {
+        set_voxel(model, spilled[coin][0], spilled[coin][1], 0, coin % 2u == 0u ? CHEST_GOLD_LIGHT : CHEST_GOLD);
+    }
+}
+
+/* Strongly red, for picking out the flag's cloth. */
+static bool is_cloth_red(uint8_t palette_index)
+{
+    const uint8_t *colour = wolf_game_palette_rgba + (size_t)palette_index * 4u;
+
+    return colour[0] > 120 && colour[1] < 60 && colour[2] < 60;
+}
+
+/*
+ * A flag hanging on its pole. The whole sprite is turned on the lathe,
+ * which gives the finial, pole and base and wraps the cloth round the
+ * pole. Then the cloth rows (any row with red in it, wider than the pole)
+ * are pleated: voxels further out than a radius that rises and falls
+ * seven times around the pole are cut away, leaving vertical folds that
+ * drift a little from top to bottom.
+ */
+static void build_flag(const WolfSpriteImage *reference, WolfVoxelModel *model)
+{
+    WolfSingleViewOptions lathe = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false, false, 0, 0, false};
+
+    if (reference == NULL) {
+        return;
+    }
+    wolf_reconstruct_single_view(reference, &lathe, model);
+
+    for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+        int left = -1;
+        int right = -1;
+        bool red = false;
+        double centre;
+        double radius;
+        int z = wolf_voxel_row_for_layer(row);
+
+        for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+            size_t pixel = wolf_sprite_pixel_index(column, row);
+
+            if (reference->opaque[pixel]) {
+                left = left < 0 ? column : left;
+                right = column;
+                red = red || is_cloth_red(reference->palette_index[pixel]);
+            }
+        }
+        if (!red || right - left + 1 < 5) {
+            continue;
+        }
+        centre = 0.5 * (double)(left + right + 1);
+        radius = 0.5 * (double)(right - left + 1);
+        for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
+            for (int x = left; x <= right; ++x) {
+                double dx = (double)x + 0.5 - centre;
+                double dy = (double)y + 0.5 - (double)(WOLF_VOXEL_DIM / 2);
+                double distance = sqrt(dx * dx + dy * dy);
+                double fold = radius * (0.80 + 0.20 * cos(7.0 * atan2(dx, -dy) + 0.06 * (double)row));
+
+                if (distance > 2.0 && distance > fold) {
+                    model->occupied[wolf_voxel_index(x, y, z)] = 0u;
+                }
+            }
+        }
+    }
+}
+
 bool wolf_build_hand_model(WolfHandBuiltModel which, const WolfSpriteImage *reference, WolfVoxelModel *model)
 {
     wolf_voxel_model_clear(model);
@@ -636,6 +1194,18 @@ bool wolf_build_hand_model(WolfHandBuiltModel which, const WolfSpriteImage *refe
         return true;
     case WOLF_HAND_BUILT_WELL:
         build_well(reference, model);
+        return true;
+    case WOLF_HAND_BUILT_PUDDLE:
+        build_puddle(reference, model);
+        return true;
+    case WOLF_HAND_BUILT_BONE_PILE:
+        build_bone_pile(reference, model);
+        return true;
+    case WOLF_HAND_BUILT_TREASURE_CHEST:
+        build_treasure_chest(reference, model);
+        return true;
+    case WOLF_HAND_BUILT_FLAG:
+        build_flag(reference, model);
         return true;
     case WOLF_HAND_BUILT_NONE:
     default:

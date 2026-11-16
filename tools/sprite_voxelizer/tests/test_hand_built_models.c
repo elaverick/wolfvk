@@ -199,3 +199,106 @@ void test_well_model_holds_the_sprite_water(void)
     TEST_ASSERT_EQUAL_size_t(0u, wolf_voxel_model_count(model));
     wolf_voxel_model_destroy(model);
 }
+
+/* A puddle is one voxel thick and spreads back across the floor, keeping the sprite's shades. */
+void test_puddle_model_is_one_voxel_thick(void)
+{
+    WolfVoxelModel *model = wolf_voxel_model_create();
+    WolfSpriteImage reference;
+    bool used[256] = {false};
+    int shades = 0;
+
+    wolf_sprite_image_clear(&reference);
+    test_fill_rectangle(&reference, 8, 58, 55, 63, 148u);
+    test_fill_rectangle(&reference, 12, 60, 50, 60, 146u);
+    test_fill_rectangle(&reference, 14, 62, 40, 62, 152u);
+    TEST_ASSERT_TRUE(wolf_build_hand_model(WOLF_HAND_BUILT_PUDDLE, &reference, model));
+    TEST_ASSERT_TRUE(wolf_voxel_model_count(model) > 500u);
+    TEST_ASSERT_FALSE(has_colour_at_or_above(model, 148u, 1));
+    TEST_ASSERT_FALSE(has_colour_at_or_above(model, 146u, 1));
+    TEST_ASSERT_FALSE(has_colour_at_or_above(model, 152u, 1));
+    TEST_ASSERT_TRUE(wolf_voxel_model_depth_extent(model) >= 20);
+    for (size_t voxel = 0u; voxel < WOLF_VOXEL_COUNT; ++voxel) {
+        if (model->occupied[voxel] && !used[model->palette_index[voxel]]) {
+            used[model->palette_index[voxel]] = true;
+            ++shades;
+            /* Only the sprite's own colours. */
+            TEST_ASSERT_TRUE(model->palette_index[voxel] == 146u || model->palette_index[voxel] == 148u ||
+                model->palette_index[voxel] == 152u);
+        }
+    }
+    TEST_ASSERT_EQUAL_INT(3, shades);
+    wolf_voxel_model_destroy(model);
+}
+
+/* The bone pile is low and roughly round, with one dark-eyed skull among the bones. */
+void test_bone_pile_model_is_a_low_pile_with_a_skull(void)
+{
+    WolfVoxelModel *model = wolf_voxel_model_create();
+    WolfSpriteImage reference;
+    int top = 0;
+
+    wolf_sprite_image_clear(&reference);
+    test_fill_rectangle(&reference, 2, 49, 62, 63, 19u);
+    TEST_ASSERT_TRUE(wolf_build_hand_model(WOLF_HAND_BUILT_BONE_PILE, &reference, model));
+    for (size_t voxel = 0u; voxel < WOLF_VOXEL_COUNT; ++voxel) {
+        if (model->occupied[voxel]) {
+            int z = (int)(voxel / (WOLF_VOXEL_DIM * WOLF_VOXEL_DIM));
+
+            top = z > top ? z : top;
+        }
+    }
+    /* Far lower than the sprite's 15 rows: bones lying in a heap, not stacked up. */
+    TEST_ASSERT_TRUE(top >= 4 && top <= 12);
+    /* Round: about as deep as it is wide. */
+    TEST_ASSERT_DOUBLE_WITHIN(0.3, 0.9, wolf_voxel_model_depth_ratio(model));
+    TEST_ASSERT_TRUE(has_colour_at_or_above(model, 30u, 0));   /* eye sockets */
+    TEST_ASSERT_TRUE(has_colour_at_or_above(model, 15u, 4));   /* the white top of the skull */
+    wolf_voxel_model_destroy(model);
+}
+
+/* The chest stands on the floor, open, its face as drawn and treasure heaped above the rim. */
+void test_treasure_chest_model_is_open_and_full(void)
+{
+    WolfVoxelModel *model = wolf_voxel_model_create();
+    WolfSpriteImage reference;
+
+    wolf_sprite_image_clear(&reference);
+    test_fill_rectangle(&reference, 23, 54, 38, 61, 39u);
+    test_fill_rectangle(&reference, 29, 57, 32, 58, 125u);   /* the lock */
+    TEST_ASSERT_TRUE(wolf_build_hand_model(WOLF_HAND_BUILT_TREASURE_CHEST, &reference, model));
+    /* The face spans rows 54-61, so its bottom row 61 is layer 0. */
+    TEST_ASSERT_EQUAL_UINT8(125u, model->palette_index[wolf_voxel_index(30, 26, 61 - 57)]);
+    TEST_ASSERT_TRUE(model->occupied[wolf_voxel_index(30, 31, 0)]);
+    /* Coins rise above the walls (top layer 7) and the open lid stands up behind. */
+    TEST_ASSERT_TRUE(model->occupied[wolf_voxel_index(30, 31, 8)]);
+    TEST_ASSERT_TRUE(has_colour_at_or_above(model, 39u, 14));
+    TEST_ASSERT_TRUE(has_colour_at_or_above(model, 102u, 6) || has_colour_at_or_above(model, 140u, 6) ||
+        has_colour_at_or_above(model, 105u, 6) || has_colour_at_or_above(model, 137u, 6) ||
+        has_colour_at_or_above(model, 146u, 6));
+    TEST_ASSERT_FALSE(model->occupied[wolf_voxel_index(30, 31, 20)]);
+    wolf_voxel_model_destroy(model);
+}
+
+/* The flag's cloth is pleated round the pole: folds cut into the turned cloth, the pole intact. */
+void test_flag_model_pleats_the_cloth_round_the_pole(void)
+{
+    WolfVoxelModel *flag = wolf_voxel_model_create();
+    WolfVoxelModel *plain = wolf_voxel_model_create();
+    WolfSpriteImage reference;
+    WolfSingleViewOptions lathe = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false};
+
+    wolf_sprite_image_clear(&reference);
+    test_fill_rectangle(&reference, 31, 4, 33, 60, 210u);   /* pole */
+    test_fill_rectangle(&reference, 26, 14, 37, 50, 39u);   /* red cloth */
+    test_fill_rectangle(&reference, 24, 60, 40, 63, 73u);   /* gold base */
+    TEST_ASSERT_TRUE(wolf_build_hand_model(WOLF_HAND_BUILT_FLAG, &reference, flag));
+    wolf_reconstruct_single_view(&reference, &lathe, plain);
+    TEST_ASSERT_TRUE(wolf_voxel_model_count(flag) < wolf_voxel_model_count(plain));
+    TEST_ASSERT_TRUE(wolf_voxel_model_count(flag) > wolf_voxel_model_count(plain) / 2u);
+    TEST_ASSERT_TRUE(flag->occupied[wolf_voxel_index(32, 31, 63 - 30)]);   /* round the pole */
+    TEST_ASSERT_TRUE(has_colour_at_or_above(flag, 73u, 0));
+    TEST_ASSERT_TRUE(has_colour_at_or_above(flag, 210u, 55));
+    wolf_voxel_model_destroy(plain);
+    wolf_voxel_model_destroy(flag);
+}

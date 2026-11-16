@@ -133,7 +133,20 @@ void test_catalog_assigns_reconstruction_methods(void)
     WolfAssetCatalog *catalog = malloc(sizeof(WolfAssetCatalog));
 
     wolf_asset_catalog_build(catalog);
-    TEST_ASSERT_EQUAL_STRING("green barrel", asset_for(catalog, "SPR_STAT_1")->description);
+    TEST_ASSERT_EQUAL_STRING("open green barrel", asset_for(catalog, "SPR_STAT_1")->description);
+    TEST_ASSERT_TRUE(asset_for(catalog, "SPR_STAT_1")->single_view.hollow_depth > 0);
+    TEST_ASSERT_TRUE(asset_for(catalog, "SPR_STAT_1")->trim_shadow_fringe);
+    TEST_ASSERT_TRUE(asset_for(catalog, "SPR_STAT_30")->single_view.hollow_depth > 0);
+    TEST_ASSERT_TRUE(asset_for(catalog, "SPR_STAT_11")->single_view.rough_surface);
+    TEST_ASSERT_TRUE(asset_for(catalog, "SPR_STAT_3")->remove_light_pool);
+    TEST_ASSERT_TRUE(asset_for(catalog, "SPR_STAT_4")->remove_light_pool);
+    TEST_ASSERT_TRUE(asset_for(catalog, "SPR_STAT_14")->remove_light_pool);
+    TEST_ASSERT_FALSE(asset_for(catalog, "SPR_STAT_7")->remove_light_pool);
+    TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_PUDDLE, asset_for(catalog, "SPR_STAT_0")->hand_built);
+    TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_PUDDLE, asset_for(catalog, "SPR_STAT_38")->hand_built);
+    TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_BONE_PILE, asset_for(catalog, "SPR_STAT_19")->hand_built);
+    TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_TREASURE_CHEST, asset_for(catalog, "SPR_STAT_31")->hand_built);
+    TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_FLAG, asset_for(catalog, "SPR_STAT_39")->hand_built);
     TEST_ASSERT_EQUAL_INT(WOLF_DEPTH_PROFILE_LATHE, asset_for(catalog, "SPR_STAT_1")->single_view.profile);
     TEST_ASSERT_EQUAL_INT(WOLF_ASSET_HAND_BUILT, asset_for(catalog, "SPR_STAT_2")->method);
     TEST_ASSERT_EQUAL_INT(WOLF_HAND_BUILT_TABLE_AND_CHAIRS, asset_for(catalog, "SPR_STAT_2")->hand_built);
@@ -150,6 +163,8 @@ void test_catalog_assigns_reconstruction_methods(void)
     TEST_ASSERT_TRUE(asset_for(catalog, "SPR_BOSS_W1")->single_view.plain_back);
     TEST_ASSERT_TRUE(asset_for(catalog, "SPR_GRD_DIE_1")->single_view.plain_back);
     TEST_ASSERT_TRUE(asset_for(catalog, "SPR_BLINKY_W1")->single_view.plain_back);
+    TEST_ASSERT_TRUE(asset_for(catalog, "SPR_BLINKY_W1")->single_view.solid_back);
+    TEST_ASSERT_FALSE(asset_for(catalog, "SPR_BOSS_W1")->single_view.solid_back);
     TEST_ASSERT_FALSE(asset_for(catalog, "SPR_STAT_1")->single_view.plain_back);
     TEST_ASSERT_FALSE(asset_for(catalog, "SPR_SMOKE_1")->single_view.plain_back);
 

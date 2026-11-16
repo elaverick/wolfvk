@@ -555,3 +555,110 @@ void test_axial_revolve_makes_a_round_body(void)
     TEST_ASSERT_INT_WITHIN(1, high, wide);
     wolf_voxel_model_destroy(model);
 }
+
+/*
+ * The lathe wraps each row round its disc: a stripe drawn down the left
+ * edge stays on the left edge from every side, instead of running in a
+ * straight band from front to back as the column it was drawn in.
+ */
+void test_lathe_wraps_the_texture_round_the_disc(void)
+{
+    WolfSpriteImage image;
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false};
+    WolfVoxelModel *model = wolf_voxel_model_create();
+    int z = 63 - 40;
+    int back_y = -1;
+
+    wolf_sprite_image_clear(&image);
+    test_fill_rectangle(&image, 22, 30, 41, 63, 80u);
+    test_fill_rectangle(&image, 22, 30, 24, 63, 9u);    /* a dark stripe down the left edge */
+    wolf_reconstruct_single_view(&image, &options, model);
+    assert_front_view_exact(model, &image);
+
+    /* Column 24 is in the stripe at the front, but its back end is round the back of the disc. */
+    for (int y = 0; y < WOLF_VOXEL_DIM; ++y) {
+        if (model->occupied[wolf_voxel_index(24, y, z)]) {
+            back_y = y;
+        }
+    }
+    TEST_ASSERT_TRUE(back_y > 36);
+    TEST_ASSERT_EQUAL_UINT8(80u, model->palette_index[wolf_voxel_index(24, back_y, z)]);
+    /* The far left of the disc, seen side-on, is the stripe. */
+    TEST_ASSERT_EQUAL_UINT8(9u, model->palette_index[wolf_voxel_index(22, 31, z)]);
+    wolf_voxel_model_destroy(model);
+}
+
+/* An open top: the inside is hollow down to a floor in the body's darkest shade, the front unchanged. */
+void test_lathe_hollow_top_opens_the_object(void)
+{
+    WolfSpriteImage image;
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false, false, 20, 2, false};
+    WolfVoxelModel *model = wolf_voxel_model_create();
+
+    wolf_sprite_image_clear(&image);
+    test_fill_rectangle(&image, 22, 30, 41, 63, 100u);
+    test_fill_rectangle(&image, 22, 50, 41, 50, 111u);  /* the darkest colour, in the row below the opening */
+    wolf_reconstruct_single_view(&image, &options, model);
+    assert_front_view_exact(model, &image);
+
+    /* Rows 30-49 are hollow in the middle; row 50 is the floor. */
+    TEST_ASSERT_FALSE(model->occupied[wolf_voxel_index(31, 32, 63 - 30)]);
+    TEST_ASSERT_FALSE(model->occupied[wolf_voxel_index(31, 32, 63 - 49)]);
+    TEST_ASSERT_TRUE(model->occupied[wolf_voxel_index(31, 32, 63 - 50)]);
+    TEST_ASSERT_EQUAL_UINT8(111u, model->palette_index[wolf_voxel_index(31, 32, 63 - 50)]);
+    /* The wall still stands all round, front and back. */
+    TEST_ASSERT_TRUE(model->occupied[wolf_voxel_index(31, 23, 63 - 35)]);
+    TEST_ASSERT_TRUE(model->occupied[wolf_voxel_index(31, 40, 63 - 35)]);
+    /* Below the floor the object is solid. */
+    TEST_ASSERT_TRUE(model->occupied[wolf_voxel_index(31, 32, 63 - 60)]);
+    wolf_voxel_model_destroy(model);
+}
+
+/* A rough lathe keeps the front exact but breaks up the round outline seen from the side. */
+void test_lathe_rough_surface_breaks_up_the_outline(void)
+{
+    WolfSpriteImage image;
+    WolfSingleViewOptions smooth = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false};
+    WolfSingleViewOptions rough = {WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, NULL, false, false, 0, 0, true};
+    WolfVoxelModel *model = wolf_voxel_model_create();
+    int differing = 0;
+
+    wolf_sprite_image_clear(&image);
+    test_fill_rectangle(&image, 22, 20, 41, 63, 120u);
+    wolf_reconstruct_single_view(&image, &rough, model);
+    assert_front_view_exact(model, &image);
+    for (int row = 20; row < 64; ++row) {
+        int previous = column_thickness(model, 31, row - 1);
+
+        differing += row > 20 && column_thickness(model, 31, row) != previous ? 1 : 0;
+    }
+    TEST_ASSERT_TRUE(differing >= 10);
+    wolf_reconstruct_single_view(&image, &smooth, model);
+    TEST_ASSERT_EQUAL_INT(column_thickness(model, 31, 30), column_thickness(model, 31, 40));
+    wolf_voxel_model_destroy(model);
+}
+
+/* A ghost's back is all body colour: its eyes are not repeated behind. */
+void test_solid_back_is_one_colour(void)
+{
+    WolfSpriteImage ghost;
+    WolfVoxelModel *model = wolf_voxel_model_create();
+    WolfSingleViewOptions options = {WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0, NULL, true, true, 0, 0, false};
+
+    wolf_sprite_image_clear(&ghost);
+    test_fill_rectangle(&ghost, 16, 16, 47, 60, 40u);   /* body */
+    test_fill_rectangle(&ghost, 18, 20, 29, 29, 15u);   /* big white eyes, filling the head rows */
+    test_fill_rectangle(&ghost, 34, 20, 45, 29, 15u);
+    wolf_reconstruct_single_view(&ghost, &options, model);
+    assert_front_view_exact(model, &ghost);
+
+    for (int column = 16; column <= 47; ++column) {
+        for (int y = WOLF_VOXEL_DIM - 1; y >= 0; --y) {
+            if (model->occupied[wolf_voxel_index(column, y, 63 - 24)]) {
+                TEST_ASSERT_EQUAL_UINT8(40u, model->palette_index[wolf_voxel_index(column, y, 63 - 24)]);
+                break;
+            }
+        }
+    }
+    wolf_voxel_model_destroy(model);
+}

@@ -75,3 +75,52 @@ void test_shadow_palette_matches_the_painted_shadow_colours(void)
     TEST_ASSERT_FALSE(wolf_palette_index_is_shadow(32u));
     TEST_ASSERT_FALSE(wolf_palette_index_is_shadow(100u));
 }
+
+/*
+ * A floor lamp: a pole on a coloured base, standing in a wide grey pool of
+ * light. The pool goes; the pole and its base stay.
+ */
+void test_light_pool_removal_keeps_the_lamp(void)
+{
+    WolfSpriteImage image;
+    uint8_t mask[WOLF_SPRITE_PIXELS] = {0};
+    size_t removed;
+
+    wolf_sprite_image_clear(&image);
+    test_fill_rectangle(&image, 30, 10, 33, 57, 72u);   /* yellow pole */
+    test_fill_rectangle(&image, 8, 56, 55, 63, 20u);    /* grey pool of light */
+    test_fill_rectangle(&image, 26, 58, 37, 61, 67u);   /* yellow base in the middle of it */
+    test_fill_rectangle(&image, 30, 56, 33, 57, 72u);
+    removed = wolf_sprite_remove_light_pool(&image, mask);
+    TEST_ASSERT_TRUE(removed > 0u);
+    TEST_ASSERT_EQUAL_UINT8(0u, image.opaque[wolf_sprite_pixel_index(10, 62)]);
+    TEST_ASSERT_EQUAL_UINT8(1u, mask[wolf_sprite_pixel_index(10, 62)]);
+    TEST_ASSERT_EQUAL_UINT8(1u, image.opaque[wolf_sprite_pixel_index(30, 59)]);
+    TEST_ASSERT_EQUAL_UINT8(1u, image.opaque[wolf_sprite_pixel_index(31, 20)]);
+    TEST_ASSERT_EQUAL_size_t(4u * 48u + 12u * 4u, wolf_sprite_image_opaque_count(&image));
+
+    /* A grey object standing up (taller than a pool is) is left alone. */
+    wolf_sprite_image_clear(&image);
+    test_fill_rectangle(&image, 20, 30, 40, 63, 20u);
+    TEST_ASSERT_EQUAL_size_t(0u, wolf_sprite_remove_light_pool(&image, NULL));
+}
+
+/* Shadow-coloured pixels left on the object's edge beside the removed shadow are trimmed. */
+void test_shadow_fringe_trim_removes_the_dark_edge(void)
+{
+    WolfSpriteImage image;
+    WolfSpriteImage shadow_free;
+    uint8_t mask[WOLF_SPRITE_PIXELS];
+
+    wolf_sprite_image_clear(&image);
+    test_fill_rectangle(&image, 20, 30, 35, 63, 100u);
+    test_fill_rectangle(&image, 36, 58, 36, 60, 28u);   /* dark fringe on the object's edge */
+    test_fill_rectangle(&image, 36, 61, 36, 63, 100u);  /* over the object's own lowest pixels */
+    test_fill_rectangle(&image, 37, 58, 49, 63, 0u);    /* the shadow beside it */
+    (void)wolf_sprite_remove_floor_shadow(&image, &shadow_free, mask);
+    TEST_ASSERT_EQUAL_UINT8(1u, shadow_free.opaque[wolf_sprite_pixel_index(36, 59)]);
+    TEST_ASSERT_EQUAL_size_t(3u, wolf_sprite_trim_shadow_fringe(&shadow_free, mask));
+    TEST_ASSERT_EQUAL_UINT8(0u, shadow_free.opaque[wolf_sprite_pixel_index(36, 59)]);
+    TEST_ASSERT_EQUAL_UINT8(1u, shadow_free.opaque[wolf_sprite_pixel_index(36, 62)]);
+    TEST_ASSERT_EQUAL_UINT8(1u, shadow_free.opaque[wolf_sprite_pixel_index(35, 59)]);
+}

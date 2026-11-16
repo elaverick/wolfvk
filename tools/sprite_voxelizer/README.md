@@ -75,7 +75,9 @@ Objects, actors and bosses have a drop shadow painted on the floor. It is drawn 
 - Scanning up its column from the floor, an unbroken run of shadow colours ends within the bottom eight rows. A dark run that continues up into the object is the object's own shading.
 - The patch it belongs to is at least as wide as it is tall, because a shadow lies flat. A dark robe hem between two legs stands up.
 
-Tiny shadow-coloured crumbs left beside a removed shadow go with it. Effects, projectiles, the title lettering and the weapons are never touched. Comparison sheets show removed pixels in purple.
+Small shadow-coloured crumbs (up to 12 pixels) left beside a removed shadow go with it, such as the fleck past the tip of the white pillar's shadow. On the green barrel, the shadow was painted over the barrel's lowest pixels, so the shadow-coloured pixels left at the ends of those rows are trimmed too. This isn't done for every object, because the pillar shades its own edge in the same greys. Effects, projectiles, the title lettering and the weapons are never touched. Comparison sheets show removed pixels in purple.
+
+**Pools of light.** The floor lamp, chandelier and ceiling light (`stat_3`, `stat_4`, `stat_14`) also have a pool of light painted on the floor beneath them. Like shadows, these don't work as voxels. Any patch of neutral greys in the bottom ten rows that touches the floor and is at least three times as wide as it is tall is removed. The floor lamp keeps its yellow base.
 
 ### Eight-way rotation sets (guards, SS, officers, mutants, dogs)
 
@@ -103,18 +105,19 @@ The rocket's nose-on frames are drawn wider than they are tall, so carving flatt
 | Method | Used for | How depth is made |
 |---|---|---|
 | `pose_transfer` | pain and attack frames of guards, SS, officers, mutants | The frame is built on the actor's own rotation-set body. The front face shows the frame; the body's real depth, sides and back stay underneath. Parts the body lacks (a levelled gun, a raised arm) are inflated around its centre line. |
-| `inflate` | death frames, bosses, BJ, ghosts, effects, armour, bones | Rounded by the outline's local thickness. Death frames use the actor's body depth ratio; bosses use 0.8. |
-| `lathe` | barrels, pillars, lamps, plants, urns, chalice, crown | Each horizontal run becomes a disc. |
+| `inflate` | death frames, bosses, BJ, ghosts, effects, armour, skeletons | Rounded by the outline's local thickness. Death frames use the actor's body depth ratio; bosses use 0.8. |
+| `lathe` | barrels, pillars, lamps, plants, urns, chalice, crown | Each horizontal run becomes a disc. The row's colours wrap round the disc: the front half unrolls across the run as drawn, and the back half mirrors it. The pillar's pitting and shading therefore carry all the way round, instead of the edge colour streaking along the sides. Optional extras:<br>• an open top: the green barrel is hollow almost to its base, with a wall two voxels thick, and the chalice has a bowl four voxels deep. The inside takes the darkest colour of the row just below the opening.<br>• a ragged outline: the brown potted plant (`stat_11`) has each column's front and back ends pushed in or out by up to two voxels, so its sides are as rough as its drawn edge. |
 | `cage` | hanging cage, skeleton in cage | Bars (the empty cage's colours) go on a cylinder around the outside, front and back. Mostly-filled rows become hoops, with the top and bottom capped, and anything else (the skeleton) hangs inside. Behind a bar or hoop with the skeleton on both sides of it (within three pixels), the skeleton continues in its neighbour's colour, so the bars no longer cut it into pieces. |
-| `extrude` | keys, cross, chest, flag, signs, racks | Constant thickness. |
+| `extrude` | keys, cross, ammunition, signs, racks, vines | Constant thickness. |
 | `first_person` | the 20 first-person weapon frames | Each row higher up the screen sits further from the eye, so the barrel reaches into the screen. Thickness across the gun matches the sprite's width. |
-| `hand_built` | table and chairs (`stat_2`), bed (`stat_22`), food (`stat_24`), first aid kit (`stat_25`), gibs (`stat_34`), wells (`stat_36`, `stat_37`) | Modelled in voxels using only the sprite's proportions and palette entries:<br>• a round pedestal table with candles and two ladder-back chairs<br>• a metal-framed bed with mattress and pillow<br>• a turkey leg with its bone, potato and greens on a cyan-rimmed plate<br>• a flat white box with blue trim and a red cross on the lid<br>• the sprite's own skull standing in a puddle of blood, with the bones lying in it (the floor is laid out in perspective from the drawing)<br>• a round brick well: a hollow wall four voxels thick and the same radius all the way down (the sprite's narrowing base is only perspective), with no shadow. The sprite's brick rows are wrapped evenly around the wall, with its light rim on top. Inside is either a dark floor or the sprite's water, filled to just below the rim. |
+| `hand_built` | puddles (`stat_0`, `stat_38`), table and chairs (`stat_2`), bone pile (`stat_19`), bed (`stat_22`), food (`stat_24`), first aid kit (`stat_25`), treasure chest (`stat_31`), gibs (`stat_34`), wells (`stat_36`, `stat_37`), flag (`stat_39`) | Modelled in voxels using only the sprite's proportions and palette entries:<br>• puddles of water and blood, one voxel thick. The sprite's rows are laid out on the floor in perspective, over an area about half as deep as the puddle is wide, inside a wobbly oval. Each voxel samples a slightly jittered row and column, and soft ripples shift it a shade or two lighter or darker, so the surface varies in colour rather than in depth.<br>• a low, jumbled pile of bones (shafts with knuckled ends) with a skull (eye sockets, nose and teeth). The bones are dropped one by one at random angles and tilts over a rounded oval and come to rest across one another, no more than a third of the sprite's pile height off the floor. The skull settles in among them near the front, a shade whiter than the bones so it stands out.<br>• a gold-trimmed treasure chest standing on the floor. Its front is the sprite's own drawing, with red panels and a gold band on the sides and back. It is open, with the lid tipped back, heaped above the rim with coins and gems, and a few coins are spilled in front.<br>• a flag hanging limp on its pole. The sprite is turned on the lathe, giving the finial, pole, base and the cloth furled round the pole. The cloth is then cut into seven vertical folds.<br>• a round pedestal table with candles and two ladder-back chairs<br>• a metal-framed bed with mattress and pillow<br>• a turkey leg with its bone, potato and greens on a cyan-rimmed plate<br>• a flat white box with blue trim and a red cross on the lid<br>• the sprite's own skull standing in a puddle of blood, with the bones lying in it (the floor is laid out in perspective from the drawing)<br>• a round brick well: a hollow wall four voxels thick and the same radius all the way down (the sprite's narrowing base is only perspective), with no shadow. The sprite's brick rows are wrapped evenly around the wall, with its light rim on top. Inside is either a dark floor or the sprite's water, filled to just below the rim. |
 
 In every method except `hand_built`, each pixel's line of sight reproduces that pixel's colour at the front, so the front view matches the shadow-free original exactly.
 
 **One face.** Camera-facing people and creatures (bosses, BJ, death frames, the ghosts) were only ever drawn from the front, so a straight extrusion would show the face again, mirrored, on the back of the head. Instead, the back half of these models is coloured plainly:
 - **Head rows** (the top fifth of the figure) take the colour at the top of that column: Hans's and Gretel's yellow hair, Schabbs's bald scalp, Fat Face's hat.
 - **Body rows** take the dominant colour of their region, which keeps the uniform and arms and drops front details such as eyes and buttons.
+- **The ghosts** (Blinky, Pinky, Inky and Clyde) have no hair or clothing, and their eyes are big enough to fill the head rows. Their whole back half takes the body's single most common colour.
 
 Pose-transfer frames don't need this, because their backs come from the actor's own body.
 
@@ -136,8 +139,8 @@ Every pose is rendered orthographically from each original direction (cubes at t
 
 - 261 poses in 77 subject files. All files were written and read back identically.
 - All 261 poses pass:
-  - All 231 camera-facing poses reproduce their frames exactly.
-  - All 7 hand-built objects keep their sprite's width and palette.
+  - All 224 camera-facing poses reproduce their frames exactly.
+  - All 12 hand-built objects keep their sprite's width and palette.
   - The rocket's side views score 1.00 and 0.86.
 - Every rotation-set pose is a single connected piece with no loose flakes.
 - Rotation sets:
@@ -151,5 +154,6 @@ Colour agreement is limited by geometry. With one voxel per pixel, a voxel on th
 
 - Depth for camera-facing frames (bosses, death frames, objects) is invented. The front view is exact, but other angles are a plausible guess.
 - Walking and dog models are a single solid fitted to frames that disagree with each other. They are connected and clean from every side, but stride details differ from the diagonal drawings. Restored limbs (such as a stride foot only the side frame draws), and the short bridges joining them, can look blocky.
+- Lathed objects keep the lighting painted into the sprite, so where an object's shaded side wraps round the back it stays dark. The outline colour at the edge of a run can also show as a thin line down each side (on the bare table's top, it shows as a cross).
 - Plain backs are a rule of thumb: hair is whatever sits at the top of the head, and the body's back takes its front's dominant colours.
 - The first-person weapon models reproduce the sprite from the player's eye and extend into the screen. Seen from the side, they are a smooth wedge rather than a modelled gun.

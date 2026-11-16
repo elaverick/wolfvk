@@ -1,5 +1,7 @@
 #include "sprite_shadow.h"
 
+#include "game_palette.h"
+
 #include <string.h>
 
 bool wolf_palette_index_is_shadow(uint8_t palette_index)
@@ -91,7 +93,8 @@ static void remove_shadow_crumbs(const WolfSpriteImage *source, int band_top, ui
     uint8_t visited[WOLF_SPRITE_PIXELS];
     int stack[WOLF_SPRITE_PIXELS];
     int members[WOLF_SPRITE_PIXELS];
-    const int largest_crumb = 4;
+    /* The pillar's shadow leaves a seven-pixel fleck of shadow grey beyond its tip. */
+    const int largest_crumb = 12;
 
     memset(visited, 0, sizeof(visited));
     for (int seed = 0; seed < WOLF_SPRITE_PIXELS; ++seed) {
@@ -196,6 +199,131 @@ size_t wolf_sprite_remove_floor_shadow(
             ++removed;
             if (removed_mask != NULL) {
                 removed_mask[pixel] = 1u;
+            }
+        }
+    }
+    return removed;
+}
+
+/* A neutral grey (including black and white): the colours of a painted pool of light. */
+static bool is_neutral_grey(uint8_t palette_index)
+{
+    const uint8_t *colour = wolf_game_palette_rgba + (size_t)palette_index * 4u;
+
+    return colour[0] == colour[1] && colour[1] == colour[2];
+}
+
+size_t wolf_sprite_remove_light_pool(WolfSpriteImage *image, uint8_t *removed_mask)
+{
+    uint8_t visited[WOLF_SPRITE_PIXELS];
+    int stack[WOLF_SPRITE_PIXELS];
+    int members[WOLF_SPRITE_PIXELS];
+    int bottom = lowest_drawn_row(image);
+    int band_top = bottom - WOLF_LIGHT_POOL_BAND_ROWS + 1;
+    size_t removed = 0u;
+
+    if (bottom < 0) {
+        return 0u;
+    }
+    memset(visited, 0, sizeof(visited));
+    for (int seed = 0; seed < WOLF_SPRITE_PIXELS; ++seed) {
+        int stack_size = 0;
+        int member_count = 0;
+        int left = WOLF_SPRITE_SIZE;
+        int right = -1;
+        int top = WOLF_SPRITE_SIZE;
+        int lowest = -1;
+
+        if (visited[seed] || !image->opaque[seed] || seed / WOLF_SPRITE_SIZE < band_top ||
+            !is_neutral_grey(image->palette_index[seed])) {
+            continue;
+        }
+        visited[seed] = 1u;
+        stack[stack_size++] = seed;
+        while (stack_size > 0) {
+            int pixel = stack[--stack_size];
+            int column = pixel % WOLF_SPRITE_SIZE;
+            int row = pixel / WOLF_SPRITE_SIZE;
+            static const int offsets[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+            members[member_count++] = pixel;
+            left = column < left ? column : left;
+            right = column > right ? column : right;
+            top = row < top ? row : top;
+            lowest = row > lowest ? row : lowest;
+            for (int direction = 0; direction < 4; ++direction) {
+                int next_column = column + offsets[direction][0];
+                int next_row = row + offsets[direction][1];
+                int next;
+
+                if (next_column < 0 || next_row < band_top || next_column >= WOLF_SPRITE_SIZE || next_row >= WOLF_SPRITE_SIZE) {
+                    continue;
+                }
+                next = (int)wolf_sprite_pixel_index(next_column, next_row);
+                if (!visited[next] && image->opaque[next] && is_neutral_grey(image->palette_index[next])) {
+                    visited[next] = 1u;
+                    stack[stack_size++] = next;
+                }
+            }
+        }
+        /* A pool lies on the floor and is much wider than it is tall. */
+        if (lowest >= bottom - 1 && right - left + 1 >= 3 * (lowest - top + 1)) {
+            for (int member = 0; member < member_count; ++member) {
+                image->opaque[members[member]] = 0u;
+                image->palette_index[members[member]] = 0u;
+                if (removed_mask != NULL) {
+                    removed_mask[members[member]] = 1u;
+                }
+                ++removed;
+            }
+        }
+    }
+    return removed;
+}
+
+size_t wolf_sprite_trim_shadow_fringe(WolfSpriteImage *image, uint8_t *removed_mask)
+{
+    int bottom = -1;
+    size_t removed = 0u;
+
+    if (removed_mask == NULL) {
+        return 0u;
+    }
+    for (size_t pixel = 0u; pixel < WOLF_SPRITE_PIXELS; ++pixel) {
+        if (removed_mask[pixel] || image->opaque[pixel]) {
+            int row = (int)(pixel / WOLF_SPRITE_SIZE);
+
+            bottom = row > bottom ? row : bottom;
+        }
+    }
+    for (int pass = 0; pass < 2; ++pass) {
+        uint8_t trim[WOLF_SPRITE_PIXELS];
+
+        memset(trim, 0, sizeof(trim));
+        for (int row = bottom - WOLF_SHADOW_BAND_ROWS + 1; row <= bottom; ++row) {
+            for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+                size_t pixel;
+
+                if (row < 0) {
+                    continue;
+                }
+                pixel = wolf_sprite_pixel_index(column, row);
+                if (!image->opaque[pixel] || !wolf_palette_index_is_shadow(image->palette_index[pixel])) {
+                    continue;
+                }
+                /* Only the end of a row, where the removed shadow carried on sideways. */
+                if ((column > 0 && removed_mask[pixel - 1u]) ||
+                    (column + 1 < WOLF_SPRITE_SIZE && removed_mask[pixel + 1u])) {
+                    trim[pixel] = 1u;
+                }
+            }
+        }
+        for (size_t pixel = 0u; pixel < WOLF_SPRITE_PIXELS; ++pixel) {
+            if (trim[pixel]) {
+                image->opaque[pixel] = 0u;
+                image->palette_index[pixel] = 0u;
+                removed_mask[pixel] = 1u;
+                ++removed;
             }
         }
     }

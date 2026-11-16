@@ -74,7 +74,12 @@ bool wolf_reconstruct_multi_view(
 typedef enum WolfDepthProfile {
     /* Round every limb and blob by its own width, like inflating the outline. */
     WOLF_DEPTH_PROFILE_INFLATE,
-    /* Turn each horizontal run into a disc, suiting barrels, lamps and pillars. */
+    /*
+     * Turn each horizontal run into a disc, suiting barrels, lamps and
+     * pillars. The row's colours are wrapped around the disc (front half as
+     * drawn, back half mirrored), so the texture and shading carry all the
+     * way round instead of streaking the sides with the outline colour.
+     */
     WOLF_DEPTH_PROFILE_LATHE,
     /* A constant thickness, suiting signs, flat treasure and floor clutter. */
     WOLF_DEPTH_PROFILE_EXTRUDE,
@@ -117,6 +122,26 @@ typedef struct WolfSingleViewOptions {
      * one on the back of its head.
      */
     bool plain_back;
+    /*
+     * With plain_back: the whole back half takes the figure's single most
+     * common colour, for creatures with no separate head or clothing (the
+     * ghosts), so their big eyes are not repeated on the back.
+     */
+    bool solid_back;
+    /*
+     * Lathe profile only: hollow out the top this many layers deep, leaving
+     * a wall hollow_wall voxels thick, so a barrel is open and a chalice has
+     * a bowl. The inside and its floor take the darkest colour of the row
+     * they belong to. 0 leaves the object solid.
+     */
+    int hollow_depth;
+    int hollow_wall;
+    /*
+     * Lathe profile only: break up the round outline seen from the sides
+     * and back, so foliage keeps the ragged edge the front frame draws
+     * instead of turning into smooth discs.
+     */
+    bool rough_surface;
 } WolfSingleViewOptions;
 
 /*

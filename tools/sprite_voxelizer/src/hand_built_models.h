@@ -35,7 +35,33 @@ typedef enum WolfHandBuiltModel {
      * sprite and laid evenly around the circumference, a light rim on top,
      * and inside either a dark floor or the sprite's water.
      */
-    WOLF_HAND_BUILT_WELL
+    WOLF_HAND_BUILT_WELL,
+    /*
+     * SPR_STAT_0 and SPR_STAT_38: a puddle of water or blood one voxel
+     * thick. The sprite's rows are laid out on the floor in perspective
+     * (rows higher up the sprite lie further away), so its drawn colours
+     * become the puddle's surface texture instead of a heap.
+     */
+    WOLF_HAND_BUILT_PUDDLE,
+    /*
+     * SPR_STAT_19: a low, jumbled pile of individual bones (shafts with
+     * knobbed ends) with a skull (eye sockets, nose and teeth), the bones
+     * dropped one by one at random so they rest across each other, in the
+     * sprite's own bone greys.
+     */
+    WOLF_HAND_BUILT_BONE_PILE,
+    /*
+     * SPR_STAT_31: a small gold-trimmed chest standing on the floor, its
+     * front as drawn, open with the lid tipped back and heaped with coins
+     * and gems, and a few coins spilled in front.
+     */
+    WOLF_HAND_BUILT_TREASURE_CHEST,
+    /*
+     * SPR_STAT_39: a flag hanging limp from its pole. The sprite is turned
+     * on the lathe (finial, pole, base and the furled cloth), then the
+     * cloth is pleated into vertical folds so it reads as fabric.
+     */
+    WOLF_HAND_BUILT_FLAG
 } WolfHandBuiltModel;
 
 /*

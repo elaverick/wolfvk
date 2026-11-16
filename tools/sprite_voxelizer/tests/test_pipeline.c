@@ -71,6 +71,15 @@ static bool build_synthetic_wl6_vswap(const char *path)
                 test_fill_rectangle(&sprites[sprite], 16, 40, 47, 61, 24u);
                 test_fill_rectangle(&sprites[sprite], 16, 40, 47, 42, 16u);
                 test_fill_rectangle(&sprites[sprite], 20, 44, 43, 45, 8u);
+            } else if (asset->method == WOLF_ASSET_HAND_BUILT && asset->hand_built == WOLF_HAND_BUILT_PUDDLE) {
+                /* Puddles are laid out from their sprite: a flat smear of two shades. */
+                test_fill_rectangle(&sprites[sprite], 8, 59, 55, 63, 148u);
+                test_fill_rectangle(&sprites[sprite], 12, 61, 50, 61, 146u);
+            } else if (asset->method == WOLF_ASSET_HAND_BUILT && asset->hand_built == WOLF_HAND_BUILT_FLAG) {
+                /* The flag is turned from its sprite: pole, cloth and base. */
+                test_fill_rectangle(&sprites[sprite], 31, 4, 33, 60, 210u);
+                test_fill_rectangle(&sprites[sprite], 26, 14, 37, 50, 39u);
+                test_fill_rectangle(&sprites[sprite], 24, 60, 40, 63, 73u);
             } else if (asset->method == WOLF_ASSET_HAND_BUILT) {
                 /* The hand-built object's reference is its own front view here. */
                 WolfVoxelModel *furniture = wolf_voxel_model_create();

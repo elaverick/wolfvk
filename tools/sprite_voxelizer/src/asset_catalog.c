@@ -18,37 +18,49 @@ typedef struct StaticObjectProfile {
     double maximum_half_depth;
     double extrude_half_depth;
     WolfHandBuiltModel hand_built;
+    /* STATIC_* flags below. */
+    unsigned flags;
+    /* Lathe objects with an open top: layers hollowed and wall thickness (see WolfSingleViewOptions). */
+    int hollow_depth;
+    int hollow_wall;
 } StaticObjectProfile;
+
+/* The sprite paints a pool of light on the floor beneath the lamp; it is not part of the object. */
+#define STATIC_LIGHT_POOL 1u
+/* Shadow colours are left on the object's edge beside the removed shadow. */
+#define STATIC_SHADOW_FRINGE 2u
+/* Foliage: keep a ragged outline from every side. */
+#define STATIC_ROUGH 4u
 
 /*
  * Depth choices for the WL6 static objects, in SPR_STAT order. Descriptions
  * follow the comments of statinfo[] in WL_ACT1.C (with the retail WL6 art
  * where the comment is stale). Round objects use the lathe; cages put their
  * bars around the outside; flat treasure, signs and racks are extruded;
- * irregular shapes are inflated; objects no profile can represent are
- * modelled by hand.
+ * irregular shapes are inflated; objects no profile can represent (and
+ * puddles, which must stay flat) are modelled by hand.
  */
 static const StaticObjectProfile static_object_profiles[STATIC_SPRITE_COUNT] = {
-    {"puddle", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
-    {"green barrel", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"puddle", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_PUDDLE},
+    {"open green barrel", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE, STATIC_SHADOW_FRINGE, 27, 2},
     {"table and chairs", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_TABLE_AND_CHAIRS},
-    {"floor lamp", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
-    {"chandelier", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"floor lamp", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE, STATIC_LIGHT_POOL, 0, 0},
+    {"chandelier", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE, STATIC_LIGHT_POOL, 0, 0},
     {"hanged skeleton", WOLF_DEPTH_PROFILE_INFLATE, 0.6, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"dog food", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"white pillar", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"potted tree", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"skeleton lying flat", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 4.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"sink", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
-    {"potted plant", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"potted plant", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE, STATIC_ROUGH, 0, 0},
     {"blue urn", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"bare table", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
-    {"ceiling light", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"ceiling light", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE, STATIC_LIGHT_POOL, 0, 0},
     {"kitchen utensils", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.5, WOLF_HAND_BUILT_NONE},
     {"suit of armour", WOLF_DEPTH_PROFILE_INFLATE, 0.6, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"hanging cage", WOLF_DEPTH_PROFILE_CAGE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"skeleton in cage", WOLF_DEPTH_PROFILE_CAGE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
-    {"pile of bones", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 6.0, 0.0, WOLF_HAND_BUILT_NONE},
+    {"pile of bones", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 6.0, 0.0, WOLF_HAND_BUILT_BONE_PILE},
     {"gold key", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.0, WOLF_HAND_BUILT_NONE},
     {"silver key", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.0, WOLF_HAND_BUILT_NONE},
     {"bed", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_BED},
@@ -59,16 +71,16 @@ static const StaticObjectProfile static_object_profiles[STATIC_SPRITE_COUNT] = {
     {"machine gun", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 2.5, 0.0, WOLF_HAND_BUILT_NONE},
     {"chain gun", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"cross", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.5, WOLF_HAND_BUILT_NONE},
-    {"chalice", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
-    {"treasure chest", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 5.0, WOLF_HAND_BUILT_NONE},
+    {"chalice", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE, 0u, 4, 1},
+    {"treasure chest", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 5.0, WOLF_HAND_BUILT_TREASURE_CHEST},
     {"crown", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"extra life", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"bones in a pool of blood", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 4.0, 0.0, WOLF_HAND_BUILT_GIBS},
     {"wooden barrel", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"well with water", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_WELL},
     {"empty well", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_WELL},
-    {"pool of blood", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_NONE},
-    {"flag", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.0, WOLF_HAND_BUILT_NONE},
+    {"pool of blood", WOLF_DEPTH_PROFILE_LATHE, 1.0, 32.0, 0.0, WOLF_HAND_BUILT_PUDDLE},
+    {"flag", WOLF_DEPTH_PROFILE_EXTRUDE, 1.0, 32.0, 1.0, WOLF_HAND_BUILT_FLAG},
     {"junk", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"junk", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0, WOLF_HAND_BUILT_NONE},
     {"junk", WOLF_DEPTH_PROFILE_INFLATE, 1.0, 3.0, 0.0, WOLF_HAND_BUILT_NONE},
@@ -256,6 +268,8 @@ static void configure_dynamic_single_view(WolfAssetCatalog *catalog, WolfVoxelAs
         asset->description = "round effect or ghost";
         asset->single_view.plain_back = name_in_list(subject_key, shadowed_actor_subjects,
             sizeof(shadowed_actor_subjects) / sizeof(shadowed_actor_subjects[0]));
+        /* A ghost has no head or clothing: its back is all body colour, without the eyes. */
+        asset->single_view.solid_back = asset->single_view.plain_back;
     } else if (strcmp(subject_key, "HYPO") == 0) {
         asset->description = "thrown syringe";
         asset->single_view.depth_scale = 0.6;
@@ -369,8 +383,13 @@ void wolf_asset_catalog_build(WolfAssetCatalog *catalog)
                 asset->single_view.depth_scale = profile->depth_scale;
                 asset->single_view.maximum_half_depth = profile->maximum_half_depth;
                 asset->single_view.extrude_half_depth = profile->extrude_half_depth;
+                asset->single_view.hollow_depth = profile->hollow_depth;
+                asset->single_view.hollow_wall = profile->hollow_wall;
+                asset->single_view.rough_surface = (profile->flags & STATIC_ROUGH) != 0u;
                 asset->depth_from_subject = false;
                 asset->strip_shadow = true;
+                asset->trim_shadow_fringe = (profile->flags & STATIC_SHADOW_FRINGE) != 0u;
+                asset->remove_light_pool = (profile->flags & STATIC_LIGHT_POOL) != 0u;
             } else {
                 configure_dynamic_single_view(catalog, asset, subject_key, animation_key);
             }

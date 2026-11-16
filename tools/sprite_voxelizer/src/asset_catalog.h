@@ -44,6 +44,10 @@ typedef struct WolfVoxelAsset {
     bool depth_from_subject;
     /* Remove the floor shadow painted beneath the sprite before reconstruction. */
     bool strip_shadow;
+    /* Also trim shadow-coloured pixels left on the object's edge beside the removed shadow. */
+    bool trim_shadow_fringe;
+    /* Remove the pool of light painted on the floor beneath a lamp. */
+    bool remove_light_pool;
     WolfHandBuiltModel hand_built;
 } WolfVoxelAsset;
 

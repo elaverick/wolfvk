@@ -161,10 +161,18 @@ static void strip_shadows(PipelineState *state)
         if (asset->strip_shadow) {
             state->shadow_pixels[sprite] = wolf_sprite_remove_floor_shadow(
                 &state->archive.sprites[sprite], &state->shadow_free[sprite], state->shadow_masks[sprite]);
+            if (asset->trim_shadow_fringe) {
+                state->shadow_pixels[sprite] += wolf_sprite_trim_shadow_fringe(
+                    &state->shadow_free[sprite], state->shadow_masks[sprite]);
+            }
         } else {
             memcpy(&state->shadow_free[sprite], &state->archive.sprites[sprite], sizeof(WolfSpriteImage));
             memset(state->shadow_masks[sprite], 0, WOLF_SPRITE_PIXELS);
             state->shadow_pixels[sprite] = 0u;
+        }
+        if (asset->remove_light_pool) {
+            state->shadow_pixels[sprite] += wolf_sprite_remove_light_pool(
+                &state->shadow_free[sprite], state->shadow_masks[sprite]);
         }
     }
 }

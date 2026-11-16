@@ -1,5 +1,7 @@
 #include "reconstruction.h"
 
+#include "game_palette.h"
+
 #include <float.h>
 #include <limits.h>
 #include <math.h>
@@ -1735,6 +1737,190 @@ static void build_cage(const WolfSpriteImage *image, const WolfSingleViewOptions
     }
 }
 
+/* Perceived brightness of a palette entry, for picking shaded colours. */
+static int palette_brightness(uint8_t palette_index)
+{
+    const uint8_t *colour = wolf_game_palette_rgba + (size_t)palette_index * 4u;
+
+    return 3 * colour[0] + 6 * colour[1] + colour[2];
+}
+
+/* Small deterministic hash, so roughened outlines are the same on every run. */
+static uint32_t lattice_hash(int x, int y, int z, uint32_t salt)
+{
+    uint32_t value = (uint32_t)x * 73856093u ^ (uint32_t)y * 19349663u ^ (uint32_t)z * 83492791u ^ salt * 2654435761u;
+
+    value ^= value >> 13;
+    value *= 0x5bd1e995u;
+    value ^= value >> 15;
+    return value;
+}
+
+/*
+ * Sprite column whose colour belongs at a point on a lathed disc. The front
+ * half of the disc unrolls across the run as drawn and the back half
+ * mirrors it, so the texture (and the artist's shading) wraps all the way
+ * round. offset_x and offset_y are measured from the disc's centre, with
+ * negative y toward the front viewer.
+ */
+static int wrapped_column(double offset_x, double offset_y, int run_start, int run_end)
+{
+    double around = atan2(offset_x, -offset_y) / (3.14159265358979323846 * 0.5);
+    double unfolded = fabs(around) <= 1.0 ? around : (around > 0.0 ? 2.0 - around : -2.0 - around);
+    double centre = 0.5 * (double)(run_start + run_end);
+    double half_width = 0.5 * (double)(run_end - run_start);
+    int column = (int)floor(centre + unfolded * half_width);
+
+    return column < run_start ? run_start : (column >= run_end ? run_end - 1 : column);
+}
+
+/*
+ * Lathe profile. Each run of a row becomes a disc spanning the same depth
+ * as before (half-depth per column from lathe_half_depths), but only the
+ * voxel nearest the front viewer keeps its pixel's colour; every other
+ * voxel takes the colour wrapped round from its angle on the disc, so the
+ * sides and back carry the drawn texture instead of streaks. Optional
+ * extras: a ragged outline (foliage) and an open top (barrels, cups).
+ */
+static void build_lathe(const WolfSpriteImage *image, const WolfSingleViewOptions *options,
+    const double *half_depth, WolfVoxelModel *model)
+{
+    int top_row = WOLF_SPRITE_SIZE;
+    int hollow_last_row = -1;
+    double inner_radius = 0.0;
+    uint8_t hollow_floor = 0u;
+
+    for (int row = 0; row < WOLF_SPRITE_SIZE && top_row == WOLF_SPRITE_SIZE; ++row) {
+        for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+            if (image->opaque[wolf_sprite_pixel_index(column, row)]) {
+                top_row = row;
+                break;
+            }
+        }
+    }
+    if (top_row == WOLF_SPRITE_SIZE) {
+        return;
+    }
+
+    /*
+     * The opening is as wide as the narrowest hollowed row allows, less the
+     * wall, so ribs and rims don't make the inside bulge.
+     */
+    if (options->hollow_depth > 0) {
+        double narrowest = 1e30;
+        int darkest = -1;
+
+        hollow_last_row = top_row + options->hollow_depth - 1;
+        for (int row = top_row; row <= hollow_last_row && row < WOLF_SPRITE_SIZE; ++row) {
+            int left = -1;
+            int right = -1;
+
+            for (int column = 0; column < WOLF_SPRITE_SIZE; ++column) {
+                if (image->opaque[wolf_sprite_pixel_index(column, row)]) {
+                    left = left < 0 ? column : left;
+                    right = column;
+                }
+            }
+            if (left >= 0 && 0.5 * (double)(right - left + 1) < narrowest) {
+                narrowest = 0.5 * (double)(right - left + 1);
+            }
+        }
+        inner_radius = narrowest - (double)(options->hollow_wall > 0 ? options->hollow_wall : 1);
+        /*
+         * The inside takes the darkest colour of the row just below the
+         * opening: the body's own shade, not a jewel or rim highlight drawn
+         * higher up.
+         */
+        for (int column = 0; column < WOLF_SPRITE_SIZE && hollow_last_row + 1 < WOLF_SPRITE_SIZE; ++column) {
+            size_t pixel = wolf_sprite_pixel_index(column, hollow_last_row + 1);
+
+            if (image->opaque[pixel] &&
+                (darkest < 0 || palette_brightness(image->palette_index[pixel]) < palette_brightness((uint8_t)darkest))) {
+                darkest = image->palette_index[pixel];
+            }
+        }
+        hollow_floor = (uint8_t)(darkest < 0 ? 0 : darkest);
+    }
+
+    for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {
+        int z = wolf_voxel_row_for_layer(row);
+        int column = 0;
+        bool hollow_row = row <= hollow_last_row && inner_radius > 0.5;
+        bool hollow_floor_row = options->hollow_depth > 0 && row == hollow_last_row + 1 && inner_radius > 0.5;
+
+        while (column < WOLF_SPRITE_SIZE) {
+            int run_start;
+            int run_end;
+            double run_centre;
+
+            if (!image->opaque[wolf_sprite_pixel_index(column, row)]) {
+                ++column;
+                continue;
+            }
+            run_start = column;
+            while (column < WOLF_SPRITE_SIZE && image->opaque[wolf_sprite_pixel_index(column, row)]) {
+                ++column;
+            }
+            run_end = column;
+            run_centre = 0.5 * (double)(run_start + run_end);
+
+            for (int member = run_start; member < run_end; ++member) {
+                size_t pixel = wolf_sprite_pixel_index(member, row);
+                double near_y;
+                double far_y;
+                int first;
+                int last;
+
+                centred_span(half_depth[pixel], &near_y, &far_y);
+                first = (int)lround(near_y);
+                last = (int)lround(far_y);
+                if (options->rough_surface) {
+                    /*
+                     * Push each end of the column in or out by up to two
+                     * voxels. The front end may move too: the front view
+                     * only sees the nearest voxel, which keeps the pixel's
+                     * colour wherever it ends up.
+                     */
+                    int front_jitter = (int)(lattice_hash(member, row, 1, 7u) % 5u) - 2;
+                    int back_jitter = (int)(lattice_hash(member, row, 2, 7u) % 5u) - 2;
+
+                    first -= front_jitter;
+                    last += back_jitter;
+                    if (last < first) {
+                        last = first;
+                    }
+                }
+                first = first < 0 ? 0 : first;
+                last = last > WOLF_VOXEL_DIM - 1 ? WOLF_VOXEL_DIM - 1 : last;
+
+                for (int y = first; y <= last; ++y) {
+                    double offset_x = (double)member + 0.5 - run_centre;
+                    double offset_y = (double)y + 0.5 - (double)(WOLF_VOXEL_DIM / 2);
+                    double distance = sqrt(offset_x * offset_x + offset_y * offset_y);
+                    size_t voxel = wolf_voxel_index(member, y, z);
+                    uint8_t colour;
+
+                    if (y > first && hollow_row && distance < inner_radius) {
+                        continue;
+                    }
+                    if (y == first) {
+                        colour = image->palette_index[pixel];
+                    } else if ((hollow_row && distance < inner_radius + 0.75) ||
+                        (hollow_floor_row && distance < inner_radius)) {
+                        /* The inside wall and floor of the opening are in shade. */
+                        colour = hollow_floor;
+                    } else {
+                        colour = image->palette_index[wolf_sprite_pixel_index(
+                            wrapped_column(offset_x, offset_y, run_start, run_end), row)];
+                    }
+                    model->occupied[voxel] = 1u;
+                    model->palette_index[voxel] = colour;
+                }
+            }
+        }
+    }
+}
+
 void wolf_reconstruct_single_view(
     const WolfSpriteImage *image,
     const WolfSingleViewOptions *options,
@@ -1753,8 +1939,25 @@ void wolf_reconstruct_single_view(
         build_first_person(image, half_depth, model);
         return;
     }
+    if (options->profile == WOLF_DEPTH_PROFILE_LATHE) {
+        build_lathe(image, options, half_depth, model);
+        return;
+    }
     if (options->plain_back) {
         plain_back_colours(image, back);
+        if (options->solid_back) {
+            uint8_t drawn[WOLF_SPRITE_PIXELS];
+            int drawn_count = 0;
+            uint8_t body;
+
+            for (size_t pixel = 0u; pixel < WOLF_SPRITE_PIXELS; ++pixel) {
+                if (image->opaque[pixel]) {
+                    drawn[drawn_count++] = image->palette_index[pixel];
+                }
+            }
+            body = dominant_colour(drawn, drawn_count);
+            memset(back, body, sizeof(back));
+        }
     }
 
     for (int row = 0; row < WOLF_SPRITE_SIZE; ++row) {

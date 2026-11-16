@@ -29,11 +29,17 @@ void test_cage_prisoner_continues_behind_bars(void);
 void test_multi_view_result_is_one_solid_piece(void);
 void test_plain_back_gives_a_single_face(void);
 void test_axial_revolve_makes_a_round_body(void);
+void test_lathe_wraps_the_texture_round_the_disc(void);
+void test_lathe_hollow_top_opens_the_object(void);
+void test_lathe_rough_surface_breaks_up_the_outline(void);
+void test_solid_back_is_one_colour(void);
 
 void test_shadow_removal_lifts_a_flat_floor_shadow(void);
 void test_shadow_removal_keeps_dark_parts_of_the_object(void);
 void test_shadow_removal_clears_detached_crumbs(void);
 void test_shadow_palette_matches_the_painted_shadow_colours(void);
+void test_light_pool_removal_keeps_the_lamp(void);
+void test_shadow_fringe_trim_removes_the_dark_edge(void);
 
 void test_table_and_chairs_model_is_furniture_shaped(void);
 void test_bed_model_is_long_and_raised(void);
@@ -42,6 +48,10 @@ void test_first_aid_model_is_a_flat_box_with_a_red_cross(void);
 void test_gibs_model_lays_blood_flat_under_the_skull(void);
 void test_well_model_is_a_hollow_ring_of_constant_radius(void);
 void test_well_model_holds_the_sprite_water(void);
+void test_puddle_model_is_one_voxel_thick(void);
+void test_bone_pile_model_is_a_low_pile_with_a_skull(void);
+void test_treasure_chest_model_is_open_and_full(void);
+void test_flag_model_pleats_the_cloth_round_the_pole(void);
 
 void test_vox_single_object_round_trips_with_original_palette(void);
 void test_vox_named_animations_record_keyframes(void);
@@ -109,11 +119,17 @@ int main(void)
     RUN_TEST(test_multi_view_result_is_one_solid_piece);
     RUN_TEST(test_plain_back_gives_a_single_face);
     RUN_TEST(test_axial_revolve_makes_a_round_body);
+    RUN_TEST(test_lathe_wraps_the_texture_round_the_disc);
+    RUN_TEST(test_lathe_hollow_top_opens_the_object);
+    RUN_TEST(test_lathe_rough_surface_breaks_up_the_outline);
+    RUN_TEST(test_solid_back_is_one_colour);
 
     RUN_TEST(test_shadow_removal_lifts_a_flat_floor_shadow);
     RUN_TEST(test_shadow_removal_keeps_dark_parts_of_the_object);
     RUN_TEST(test_shadow_removal_clears_detached_crumbs);
     RUN_TEST(test_shadow_palette_matches_the_painted_shadow_colours);
+    RUN_TEST(test_light_pool_removal_keeps_the_lamp);
+    RUN_TEST(test_shadow_fringe_trim_removes_the_dark_edge);
 
     RUN_TEST(test_table_and_chairs_model_is_furniture_shaped);
     RUN_TEST(test_bed_model_is_long_and_raised);
@@ -122,6 +138,10 @@ int main(void)
     RUN_TEST(test_gibs_model_lays_blood_flat_under_the_skull);
     RUN_TEST(test_well_model_is_a_hollow_ring_of_constant_radius);
     RUN_TEST(test_well_model_holds_the_sprite_water);
+    RUN_TEST(test_puddle_model_is_one_voxel_thick);
+    RUN_TEST(test_bone_pile_model_is_a_low_pile_with_a_skull);
+    RUN_TEST(test_treasure_chest_model_is_open_and_full);
+    RUN_TEST(test_flag_model_pleats_the_cloth_round_the_pole);
 
     RUN_TEST(test_vox_single_object_round_trips_with_original_palette);
     RUN_TEST(test_vox_named_animations_record_keyframes);

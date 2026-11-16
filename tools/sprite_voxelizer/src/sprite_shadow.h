@@ -29,4 +29,28 @@ size_t wolf_sprite_remove_floor_shadow(
     WolfSpriteImage *shadow_free,
     uint8_t *removed_mask);
 
+/* Rows above the lowest drawn row in which a lamp's pool of light may lie. */
+#define WOLF_LIGHT_POOL_BAND_ROWS 10
+
+/*
+ * Remove the pool of light painted on the floor under a lamp (the floor
+ * lamp, chandelier and ceiling light). The pool is drawn in neutral greys,
+ * touches the floor and is far wider than it is tall: at least three times.
+ * The lamp's own coloured base is kept. Works in place and adds the removed
+ * pixels to removed_mask (optional). Returns the number removed.
+ */
+size_t wolf_sprite_remove_light_pool(WolfSpriteImage *image, uint8_t *removed_mask);
+
+/*
+ * After wolf_sprite_remove_floor_shadow, remove the shadow-coloured pixels
+ * left at the end of a floor-band row right beside the removed shadow (two
+ * passes). Shadow removal works column by column, so where the shadow was
+ * painted over the object's lowest pixels a dark fringe can remain on its
+ * edge. Only for objects whose own outline isn't drawn in shadow colours
+ * (the green barrel): the pillar shades its edge in those greys. Works in
+ * place and needs the mask from the shadow removal. Returns the number
+ * removed.
+ */
+size_t wolf_sprite_trim_shadow_fringe(WolfSpriteImage *image, uint8_t *removed_mask);
+
 #endif
