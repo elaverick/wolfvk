@@ -304,6 +304,7 @@ int main(int argc, char *argv[])
     Uint64 previous_counter;
     int running = 1;
     bool use_was_down = false;
+    bool weapon_assets_uploaded = false;
     float drawable_aspect_ratio = 16.0f / 9.0f;
 
     if (!wolf_parse_command_line(
@@ -444,6 +445,7 @@ int main(int argc, char *argv[])
                 SDL_Quit();
                 return 1;
             }
+            weapon_assets_uploaded = true;
             printf("Loaded all four voxel weapons (%u quads).\\n", (unsigned int)weapon_scene.quad_count);
         } else {
             fprintf(stderr, "First-person weapons are incomplete and will be hidden (%s).\\n",
@@ -542,8 +544,9 @@ int main(int argc, char *argv[])
                 running = 0;
             }
             {
-                const WolfWeaponPose *pose =
-                    wolf_weapon_scene_current_pose(&weapon_scene, &weapon_state);
+                const WolfWeaponPose *pose = weapon_assets_uploaded
+                    ? wolf_weapon_scene_current_pose(&weapon_scene, &weapon_state)
+                    : NULL;
                 int drawable_width = 0;
                 int drawable_height = 0;
                 float weapon_matrix[16];
