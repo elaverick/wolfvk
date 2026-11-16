@@ -1603,7 +1603,7 @@ static void build_cage(const WolfSpriteImage *image, const WolfSingleViewOptions
     WolfSpriteImage contents;
     WolfSpriteImage inner;
     double contents_depth[WOLF_SPRITE_PIXELS];
-    WolfSingleViewOptions inflate = {WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0, NULL, false};
+    WolfSingleViewOptions inflate = {WOLF_DEPTH_PROFILE_INFLATE, 1.0, 32.0, 0.0, NULL, false, false, 0, 0, false};
     double radius[WOLF_SPRITE_SIZE];
     double centre[WOLF_SPRITE_SIZE];
     int filled[WOLF_SPRITE_SIZE];
