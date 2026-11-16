@@ -70,7 +70,7 @@ static bool load_weapon_subject(
     {
         int path_length = snprintf(path, sizeof(path), "%s/%s.vox", asset_directory, subject);
         if (path_length < 0 || (size_t)path_length >= sizeof(path)) {
-        record_problem(scene, subject, "asset path is too long");
+            record_problem(scene, subject, "asset path is too long");
             scene->unavailable_pose_count += 5u;
             return true;
         }
@@ -173,8 +173,8 @@ bool wolf_weapon_state_select(WolfWeaponState *state, WolfWeaponType weapon)
 /*
  * Original WL_AGENT attackinfo advances four six-tic states. Pistol and knife
  * complete once; both automatic weapons cycle attack frames 2 and 3 while
- * held. The original code distinguishes their shot callbacks, but those effects are intentionally
- * not invoked yet: this state only drives the weapon model.
+ * held. The original code distinguishes their shot callbacks, but this state
+ * only drives the visible weapon model until projectile interaction is added.
  */
 bool wolf_weapon_state_update(WolfWeaponState *state, bool fire_down, float delta_seconds)
 {
