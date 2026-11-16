@@ -916,6 +916,14 @@ static void destroy_swapchain_resources(VulkanRenderer *renderer)
     free(renderer->command_buffers);
     renderer->command_buffers = NULL;
 
+    if (renderer->weapon_pipeline != VK_NULL_HANDLE) {
+        vkDestroyPipeline(renderer->device, renderer->weapon_pipeline, NULL);
+        renderer->weapon_pipeline = VK_NULL_HANDLE;
+    }
+    if (renderer->graphics_pipeline != VK_NULL_HANDLE) {
+        vkDestroyPipeline(renderer->device, renderer->graphics_pipeline, NULL);
+        renderer->graphics_pipeline = VK_NULL_HANDLE;
+    }
     if (renderer->framebuffers != NULL) {
         for (image_index = 0; image_index < renderer->swapchain_image_count; ++image_index) {
             if (renderer->framebuffers[image_index] != VK_NULL_HANDLE) {
@@ -939,14 +947,6 @@ static void destroy_swapchain_resources(VulkanRenderer *renderer)
         renderer->depth_image_memory = VK_NULL_HANDLE;
     }
 
-    if (renderer->weapon_pipeline != VK_NULL_HANDLE) {
-        vkDestroyPipeline(renderer->device, renderer->weapon_pipeline, NULL);
-        renderer->weapon_pipeline = VK_NULL_HANDLE;
-    }
-    if (renderer->graphics_pipeline != VK_NULL_HANDLE) {
-        vkDestroyPipeline(renderer->device, renderer->graphics_pipeline, NULL);
-        renderer->graphics_pipeline = VK_NULL_HANDLE;
-    }
     if (renderer->pipeline_layout != VK_NULL_HANDLE) {
         vkDestroyPipelineLayout(renderer->device, renderer->pipeline_layout, NULL);
         renderer->pipeline_layout = VK_NULL_HANDLE;
