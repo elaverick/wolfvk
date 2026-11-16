@@ -130,6 +130,17 @@ void test_voxel_scene_rejects_invalid_arguments(void);
 void test_model_matrix_turns_north_facing_models_to_their_yaw(void);
 void test_renderer_draws_placed_model_instances(void);
 
+
+void test_weapon_starts_with_ready_pistol(void);
+void test_weapon_pistol_uses_four_six_tic_attack_frames(void);
+void test_weapon_knife_finishes_the_attack_after_four_frames(void);
+void test_weapon_machinegun_repeats_original_attack_frames_while_held(void);
+void test_weapon_chaingun_repeats_and_returns_to_ready_when_released(void);
+void test_weapon_selection_resets_animation_and_rejects_invalid_values(void);
+void test_weapon_scene_selects_ready_and_attack_poses(void);
+void test_weapon_transform_tracks_camera_and_validates_projection(void);
+void test_weapon_scene_loader_rejects_invalid_arguments(void);
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -261,5 +272,14 @@ int main(void)
     RUN_TEST(test_voxel_scene_rejects_invalid_arguments);
     RUN_TEST(test_model_matrix_turns_north_facing_models_to_their_yaw);
     RUN_TEST(test_renderer_draws_placed_model_instances);
+    RUN_TEST(test_weapon_starts_with_ready_pistol);
+    RUN_TEST(test_weapon_pistol_uses_four_six_tic_attack_frames);
+    RUN_TEST(test_weapon_knife_finishes_the_attack_after_four_frames);
+    RUN_TEST(test_weapon_machinegun_repeats_original_attack_frames_while_held);
+    RUN_TEST(test_weapon_chaingun_repeats_and_returns_to_ready_when_released);
+    RUN_TEST(test_weapon_selection_resets_animation_and_rejects_invalid_values);
+    RUN_TEST(test_weapon_scene_selects_ready_and_attack_poses);
+    RUN_TEST(test_weapon_transform_tracks_camera_and_validates_projection);
+    RUN_TEST(test_weapon_scene_loader_rejects_invalid_arguments);
     return UNITY_END();
 }
