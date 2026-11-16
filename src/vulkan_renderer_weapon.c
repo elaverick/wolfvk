@@ -37,6 +37,8 @@ bool vulkan_renderer_weapon_set_meshes(
     renderer->weapon_index_buffer = index_buffer;
     renderer->weapon_index_buffer_memory = index_memory;
     renderer->weapon_quad_count = quad_count;
+    renderer->weapon_first_quad = 0u;
+    renderer->weapon_draw_quad_count = 0u;
     return true;
 }
 
