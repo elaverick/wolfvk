@@ -1,9 +1,72 @@
 #include "unity.h"
 
 #include "wolfvk/weapon.h"
+#include "test_vox_builder.h"
 
 #include <math.h>
 #include <string.h>
+
+
+static const WolfVoxVoxel weapon_voxels[] = {{32u, 32u, 8u, 5u}};
+
+/* Build four weapon subjects with the named ready pose and four attack keyframes. */
+static bool write_test_weapon_assets(void)
+{
+    static const WolfVoxVoxel *const ready_poses[] = {weapon_voxels};
+    static const uint32_t ready_counts[] = {1u};
+    static const WolfVoxVoxel *const attack_poses[] = {
+        weapon_voxels, weapon_voxels, weapon_voxels, weapon_voxels
+    };
+    static const uint32_t attack_counts[] = {1u, 1u, 1u, 1u};
+    static const char *const subjects[] = {"knife", "pistol", "machinegun", "chain"};
+    static const char *const animations[] = {
+        "player_knife", "player_pistol", "player_machinegun", "player_chaingun"
+    };
+
+    for (size_t weapon = 0u; weapon < 4u; ++weapon) {
+        TestVoxBytes bytes;
+        TestVoxAnimation sequences[] = {
+            {NULL, 1u, ready_poses, ready_counts},
+            {NULL, 4u, attack_poses, attack_counts}
+        };
+        char ready_name[WOLF_VOX_OBJECT_NAME_LENGTH];
+        char attack_name[WOLF_VOX_OBJECT_NAME_LENGTH];
+        char path[128];
+
+        (void)snprintf(ready_name, sizeof(ready_name), "%s_ready", animations[weapon]);
+        (void)snprintf(attack_name, sizeof(attack_name), "%s_attack", animations[weapon]);
+        (void)snprintf(path, sizeof(path), "./wolfvk_test_%s.vox", subjects[weapon]);
+        sequences[0].name = ready_name;
+        sequences[1].name = attack_name;
+        if (!test_vox_build(sequences, 2u, 64u, true, &bytes)) {
+            return false;
+        }
+        {
+            FILE *file = fopen(path, "wb");
+            bool written = file != NULL &&
+                fwrite(bytes.data, 1u, bytes.size, file) == bytes.size;
+            if (file != NULL) {
+                written = fclose(file) == 0 && written;
+            }
+            test_vox_bytes_free(&bytes);
+            if (!written) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+static void remove_test_weapon_assets(void)
+{
+    static const char *const subjects[] = {"knife", "pistol", "machinegun", "chain"};
+    char path[128];
+
+    for (size_t weapon = 0u; weapon < 4u; ++weapon) {
+        (void)snprintf(path, sizeof(path), "./wolfvk_test_%s.vox", subjects[weapon]);
+        (void)remove(path);
+    }
+}
 
 void test_weapon_starts_with_ready_pistol(void)
 {
@@ -162,6 +225,43 @@ void test_weapon_transform_tracks_camera_and_validates_projection(void)
     TEST_ASSERT_FALSE(wolf_weapon_build_view_projection(&camera, 0.0f, 0.0f, first_matrix));
     TEST_ASSERT_FALSE(wolf_weapon_build_view_projection(&camera, 1.0f, NAN, first_matrix));
     TEST_ASSERT_FALSE(wolf_weapon_build_view_projection(NULL, 1.0f, 0.0f, first_matrix));
+}
+
+
+void test_weapon_scene_loads_all_twenty_original_named_poses(void)
+{
+    WolfWeaponScene scene;
+
+    TEST_ASSERT_TRUE(write_test_weapon_assets());
+    TEST_ASSERT_TRUE(wolf_weapon_scene_load(&scene, "./wolfvk_test"));
+    TEST_ASSERT_EQUAL_UINT32(0u, scene.unavailable_pose_count);
+    TEST_ASSERT_EQUAL_UINT32(20u, WOLF_WEAPON_COUNT * 5u);
+    TEST_ASSERT_TRUE(scene.quad_count > 0u);
+    for (uint32_t weapon = 0u; weapon < WOLF_WEAPON_COUNT; ++weapon) {
+        TEST_ASSERT_TRUE(scene.ready[weapon].available);
+        TEST_ASSERT_EQUAL_UINT32(1u, scene.ready[weapon].quad_count);
+        for (uint32_t frame = 0u; frame < 4u; ++frame) {
+            TEST_ASSERT_TRUE(scene.attack[weapon][frame].available);
+            TEST_ASSERT_EQUAL_UINT32(1u, scene.attack[weapon][frame].quad_count);
+        }
+    }
+    wolf_weapon_scene_destroy(&scene);
+    remove_test_weapon_assets();
+}
+
+void test_weapon_scene_keeps_available_subjects_when_one_file_is_missing(void)
+{
+    WolfWeaponScene scene;
+
+    TEST_ASSERT_TRUE(write_test_weapon_assets());
+    TEST_ASSERT_TRUE(remove("./wolfvk_test_chain.vox") == 0);
+    TEST_ASSERT_TRUE(wolf_weapon_scene_load(&scene, "./wolfvk_test"));
+    TEST_ASSERT_EQUAL_UINT32(5u, scene.unavailable_pose_count);
+    TEST_ASSERT_TRUE(scene.ready[WOLF_WEAPON_PISTOL].available);
+    TEST_ASSERT_FALSE(scene.ready[WOLF_WEAPON_CHAINGUN].available);
+    TEST_ASSERT_TRUE(scene.quad_count > 0u);
+    wolf_weapon_scene_destroy(&scene);
+    remove_test_weapon_assets();
 }
 
 void test_weapon_scene_loader_rejects_invalid_arguments(void)
