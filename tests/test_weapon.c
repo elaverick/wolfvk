@@ -204,6 +204,7 @@ void test_weapon_transform_tracks_camera_and_validates_projection(void)
     float first_matrix[16];
     float second_matrix[16];
     float attack_matrix[16];
+    float pitch_matrix[16];
 
     wolf_camera_initialize(&camera);
     camera.position[0] = 4.0f;
@@ -214,12 +215,16 @@ void test_weapon_transform_tracks_camera_and_validates_projection(void)
         &camera, 16.0f / 9.0f, 0.0f, first_matrix));
 
     camera.yaw_radians = 0.75f;
+    camera.pitch_radians = 0.2f;
     TEST_ASSERT_TRUE(wolf_weapon_build_view_projection(
         &camera, 16.0f / 9.0f, 0.0f, second_matrix));
     TEST_ASSERT_FALSE(memcmp(first_matrix, second_matrix, sizeof(first_matrix)) == 0);
 
     TEST_ASSERT_TRUE(wolf_weapon_build_view_projection(
         &camera, 16.0f / 9.0f, 0.12f, attack_matrix));
+    TEST_ASSERT_TRUE(wolf_weapon_build_view_projection(
+        &camera, 16.0f / 9.0f, 0.0f, pitch_matrix));
+    TEST_ASSERT_FALSE(memcmp(first_matrix, pitch_matrix, sizeof(first_matrix)) == 0);
     TEST_ASSERT_FALSE(memcmp(second_matrix, attack_matrix, sizeof(second_matrix)) == 0);
 
     TEST_ASSERT_FALSE(wolf_weapon_build_view_projection(&camera, 0.0f, 0.0f, first_matrix));
