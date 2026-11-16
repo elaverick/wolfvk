@@ -26,7 +26,6 @@ static bool write_test_weapon_assets(void)
 
     (void)SDL_CreateDirectory("./wolfvk_test");
     for (size_t weapon = 0u; weapon < 4u; ++weapon) {
-        TestVoxBytes bytes;
         TestVoxAnimation sequences[] = {
             {NULL, 1u, ready_poses, ready_counts},
             {NULL, 4u, attack_poses, attack_counts}
@@ -40,20 +39,8 @@ static bool write_test_weapon_assets(void)
         (void)snprintf(path, sizeof(path), "./wolfvk_test/%s.vox", subjects[weapon]);
         sequences[0].name = ready_name;
         sequences[1].name = attack_name;
-        if (!test_vox_build(sequences, 2u, 64u, true, &bytes)) {
+        if (!test_vox_write_file(path, sequences, 2u)) {
             return false;
-        }
-        {
-            FILE *file = fopen(path, "wb");
-            bool written = file != NULL &&
-                fwrite(bytes.data, 1u, bytes.size, file) == bytes.size;
-            if (file != NULL) {
-                written = fclose(file) == 0 && written;
-            }
-            test_vox_bytes_free(&bytes);
-            if (!written) {
-                return false;
-            }
         }
     }
     return true;
