@@ -24,6 +24,7 @@ struct VulkanRenderer {
     VkRenderPass render_pass;
     VkPipelineLayout pipeline_layout;
     VkPipeline graphics_pipeline;
+    VkPipeline weapon_pipeline;
     VkFramebuffer *framebuffers;
 
     VkImage depth_image;
@@ -57,6 +58,14 @@ struct VulkanRenderer {
     uint32_t model_quad_count;
     VulkanModelInstance *model_instances;
     uint32_t model_instance_count;
+
+    /* First-person weapon meshes use a depth-independent pass after the world models. */
+    VkBuffer weapon_vertex_buffer;
+    VkDeviceMemory weapon_vertex_buffer_memory;
+    VkBuffer weapon_index_buffer;
+    VkDeviceMemory weapon_index_buffer_memory;
+    uint32_t weapon_quad_count;
+    float weapon_view_projection[16];
 
     VkCommandPool command_pool;
     VkCommandBuffer *command_buffers;
@@ -112,6 +121,18 @@ bool vulkan_renderer_models_set_instances(
 /* Record one indexed draw per instance, each with its own model-view-projection push constant. */
 void vulkan_renderer_models_record(VulkanRenderer *renderer, VkCommandBuffer command_buffer);
 void vulkan_renderer_models_destroy(VulkanRenderer *renderer);
+
+bool vulkan_renderer_weapon_set_meshes(
+    VulkanRenderer *renderer,
+    const VulkanQuad *quads,
+    uint32_t quad_count);
+bool vulkan_renderer_weapon_set_pose(
+    VulkanRenderer *renderer,
+    uint32_t first_quad,
+    uint32_t quad_count,
+    const float view_projection[16]);
+void vulkan_renderer_weapon_record(VulkanRenderer *renderer, VkCommandBuffer command_buffer);
+void vulkan_renderer_weapon_destroy(VulkanRenderer *renderer);
 
 bool vulkan_renderer_texture_layout_create(VulkanRenderer *renderer);
 bool vulkan_renderer_texture_set(
