@@ -434,7 +434,7 @@ int main(int argc, char *argv[])
     if (find_voxel_asset_directory(error_message, sizeof(error_message))) {
         if (!wolf_weapon_scene_load(&weapon_scene, error_message)) {
             fprintf(stderr, "Could not load first-person weapon meshes from %s.\n", error_message);
-        } else if (weapon_scene.unavailable_pose_count == 0u && weapon_scene.quad_count > 0u) {
+        } else if (weapon_scene.quad_count > 0u) {
             if (!vulkan_renderer_set_weapon_meshes(renderer, weapon_scene.quads, weapon_scene.quad_count)) {
                 fprintf(stderr, "Could not upload the first-person weapon meshes.\n");
                 wolf_weapon_scene_destroy(&weapon_scene);
