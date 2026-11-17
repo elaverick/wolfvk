@@ -140,6 +140,7 @@ void test_weapon_chaingun_repeats_and_returns_to_ready_when_released(void);
 void test_weapon_selection_resets_animation_and_rejects_invalid_values(void);
 void test_weapon_scene_selects_ready_and_attack_poses(void);
 void test_weapon_transform_tracks_camera_and_validates_projection(void);
+void test_weapon_transform_maps_voxel_axes_to_camera_basis(void);
 void test_weapon_scene_loads_all_twenty_voxelizer_named_poses(void);
 void test_weapon_scene_keeps_available_subjects_when_one_file_is_missing(void);
 void test_weapon_scene_loader_rejects_invalid_arguments(void);
@@ -284,6 +285,7 @@ int main(void)
     RUN_TEST(test_weapon_selection_resets_animation_and_rejects_invalid_values);
     RUN_TEST(test_weapon_scene_selects_ready_and_attack_poses);
     RUN_TEST(test_weapon_transform_tracks_camera_and_validates_projection);
+    RUN_TEST(test_weapon_transform_maps_voxel_axes_to_camera_basis);
     RUN_TEST(test_weapon_scene_loads_all_twenty_voxelizer_named_poses);
     RUN_TEST(test_weapon_scene_keeps_available_subjects_when_one_file_is_missing);
     RUN_TEST(test_weapon_scene_loader_rejects_invalid_arguments);
