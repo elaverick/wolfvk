@@ -51,7 +51,7 @@ The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedica
 - 5 keyboard, mouse and gamepad input tests, including held mouse-button state
 - 18 world-state tests for doors, keys, secret pushwalls and their original timing/material behaviour
 - 17 Vulkan selection and renderer tests, including the SwiftShader-backed frame submission test, the model transform, and a frame that draws placed model instances
-- 14 weapon tests: original 70 Hz/six-tic attack timing, automatic repeat, weapon selection, pose selection, view-model anchoring, all 20 named VOX poses and partial-asset fallback
+- 13 weapon tests: original 70 Hz/six-tic attack timing, automatic repeat, weapon selection, pose selection, view-model anchoring, all 20 named VOX poses and partial-asset fallback
 
 CTest runs the suite in Windows CI. The world-state tests cover original door orientation and locks, opening/closing speeds, the 300-tic timeout, obstruction handling, key collection, door-page selection, horizontal and vertical panel movement, fully-open panel removal, and secret pushwall movement/collision, valid texture-page selection, held-use activation, the Level 1 secret-wall page pairs and ambush-marker removal.
 
