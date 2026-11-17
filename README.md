@@ -35,7 +35,7 @@ The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the wor
 
 ## Automated tests
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It currently registers 140 Unity test cases (including the SwiftShader-backed renderer integration tests). The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite:
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It currently registers 141 Unity test cases (including the SwiftShader-backed renderer integration tests). The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite:
 
 - 3 SDL3 window and event tests
 - 4 camera projection tests
@@ -51,7 +51,7 @@ The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedica
 - 5 keyboard, mouse and gamepad input tests, including held mouse-button state
 - 18 world-state tests for doors, keys, secret pushwalls and their original timing/material behaviour
 - 17 Vulkan selection and renderer tests, including the SwiftShader-backed frame submission test, the model transform, and a frame that draws placed model instances
-- 11 weapon tests: original 70 Hz/six-tic attack timing, automatic repeat, weapon selection, pose selection, view-model anchoring, all 20 named VOX poses and partial-asset fallback
+- 12 weapon tests: original 70 Hz/six-tic attack timing, automatic repeat, weapon selection, pose selection, view-model anchoring, all 20 named VOX poses and partial-asset fallback
 
 CTest runs the suite in Windows CI. The world-state tests cover original door orientation and locks, opening/closing speeds, the 300-tic timeout, obstruction handling, key collection, door-page selection, horizontal and vertical panel movement, fully-open panel removal, and secret pushwall movement/collision, valid texture-page selection, held-use activation, the Level 1 secret-wall page pairs and ambush-marker removal.
 
