@@ -23,7 +23,7 @@ Every actor and static object that the original `ScanInfoPlane` would spawn is d
 - **Rendering:** each distinct pose a level uses is meshed once. Only faces between a voxel and empty space are kept, and same-coloured neighbours are merged into larger rectangles. Faces on the floor or against the ceiling can never be seen, so they are dropped. Colours come straight from the original palette, converted to linear space for the sRGB swapchain, with a fixed brightness per face direction so shapes read clearly without lighting. The meshes live in their own vertex buffer. Each placed model is one indexed draw with its own model-view-projection push constant, so the shaders are unchanged and door animation never re-copies model vertices. Later animation only has to point an instance at a different pose. Level 1 places 142 objects at the default difficulty, using 31 poses and about 42,000 quads.
 - **First-person weapons:** `knife.vox`, `pistol.vox`, `machinegun.vox` and `chain.vox` contain the voxeliser's `<subject>_ready` and `<subject>_atk` scene objects (for example, `knife_ready` and `knife_atk`). Each weapon's ready pose and four attack poses are loaded from those objects. The separate `player_*` names in the voxeliser manifest describe the original game's timed state sequences, not VOX scene objects. The weapon model is transformed relative to camera position, yaw and pitch, then drawn after the world models using a cleared depth buffer: nearby walls cannot hide it, while its own near-side voxels correctly occlude the far-side geometry. Missing weapon poses are reported but do not prevent the rest of the game from running.
 - **Firing:** the original four six-tic attack states run at 70 tics per second. The pistol and knife return to ready after one attack; the automatic weapons repeat their original attack loop while fire is held. A firing kick is applied to the view model. Hit detection, projectiles, damage, ammunition and weapon pickups are deliberately not implemented yet.
-- **Collected keys** disappear because the placed models are rebuilt from the info plane when a key is picked up. Other pickups cannot be collected yet, and static objects and actors do not block movement yet.
+- **Collected keys** disappear because the placed models are rebuilt from the info plane when a key is picked up. Other pickups cannot be collected yet. Static objects use the original WL6 `statinfo[]` block flags for movement collision: tables, barrels, armour and other `block` entries stop the player, while puddles, floor skeletons, the dead guard and pickups remain passable. Living actors do not yet participate in movement collision.
 
 All 60 retail WL6 levels were loaded at the hardest difficulty, which places every enemy tier, and every pose they need was available.
 
@@ -35,15 +35,15 @@ The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the wor
 
 ## Automated tests
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It currently registers 142 Unity test cases (including the SwiftShader-backed renderer integration tests). The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite:
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It currently registers 145 Unity test cases (including the SwiftShader-backed renderer integration tests). The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite:
 
 - 3 SDL3 window and event tests
 - 4 camera projection tests
-- 11 player movement, mouse-look and collision tests, including door traversal and secret-wall pushing
+- 13 player movement, mouse-look and collision tests, including original static-object blocking, door traversal and secret-wall pushing
 - 11 command-line parser tests, including `--difficulty`
 - 7 MagicaVoxel reader tests: named animations and keyframed poses, the stored palette, oversized models, truncated or foreign data and dangling model references, against synthetic files laid out as the voxelizer writes them
 - 6 voxel mesher tests: hidden floor and ceiling faces, face merging by colour, model-space orientation and linear, shaded colour
-- 7 actor and object placement tests: static markers, standing and patrolling facings, difficulty tiers, bosses, ghosts, the dead guard and open-floor facing
+- 8 actor and object placement tests: static markers, original WL6 static-object collision flags, standing and patrolling facings, difficulty tiers, bosses, ghosts, the dead guard and open-floor facing
 - 4 voxel scene tests: one mesh per shared pose, missing files and poses, and tile placement
 - 11 Carmack/RLEW decoder and level-loader tests
 - 18 wall-geometry and player-start tests, including original wall-page selection, door-side textures and all four face UV directions

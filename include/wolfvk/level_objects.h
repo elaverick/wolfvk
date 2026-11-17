@@ -62,4 +62,10 @@ bool wolf_level_find_objects(
     WolfLevelObject **objects,
     uint32_t *object_count);
 
+/*
+ * Match WL6 WL_ACT1.C statinfo[]: true only for static markers whose type is
+ * block. Pickups, floor corpses and non-blocking decoration return false.
+ */
+bool wolf_level_object_marker_blocks_player(uint16_t marker);
+
 #endif

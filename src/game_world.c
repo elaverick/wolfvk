@@ -1,5 +1,6 @@
 #include "wolfvk/game_world.h"
 
+#include "wolfvk/level_objects.h"
 #include "wolfvk/wall_textures.h"
 #include "wolfvk/world.h"
 
@@ -615,8 +616,12 @@ bool wolf_world_state_position_overlaps_solid(
 
     for (int y = minimum_y; y <= maximum_y; ++y) {
         for (int x = minimum_x; x <= maximum_x; ++x) {
+            uint16_t object_marker =
+                world->level.object_tiles[tile_index((uint16_t)x, (uint16_t)y)];
+
             if (!map_cell_is_solid(world, x, y) &&
-                !pushwall_occupies_cell(world, x, y)) {
+                !pushwall_occupies_cell(world, x, y) &&
+                !wolf_level_object_marker_blocks_player(object_marker)) {
                 continue;
             }
 

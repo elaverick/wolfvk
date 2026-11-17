@@ -192,6 +192,33 @@ void test_level_objects_face_camera_sprites_towards_open_floor(void)
     free(objects);
 }
 
+void test_level_object_block_flags_match_original_wl6_statinfo(void)
+{
+    static const uint16_t blocking_markers[] = {
+        24u, 25u, 26u, 28u, 30u, 31u, 33u, 34u, 35u, 36u, 39u,
+        40u, 41u, 45u, 58u, 59u, 60u, 62u, 63u, 68u, 69u
+    };
+    static const uint16_t passable_markers[] = {
+        23u, /* puddle */
+        32u, /* flat skeleton */
+        37u, /* ceiling light */
+        42u, /* relaxed skeleton */
+        43u, 44u, /* keys */
+        48u, 57u, 61u, 64u, 65u, 66u, 67u, 70u, /* pickups and decoration */
+        71u, /* extra ammo clip */
+        124u /* dead guard: SpawnDeadGuard creates an inert, non-shootable actor */
+    };
+
+    for (size_t index = 0u; index < sizeof(blocking_markers) / sizeof(blocking_markers[0]); ++index) {
+        TEST_ASSERT_TRUE(wolf_level_object_marker_blocks_player(blocking_markers[index]));
+    }
+    for (size_t index = 0u; index < sizeof(passable_markers) / sizeof(passable_markers[0]); ++index) {
+        TEST_ASSERT_FALSE(wolf_level_object_marker_blocks_player(passable_markers[index]));
+    }
+    TEST_ASSERT_FALSE(wolf_level_object_marker_blocks_player(0u));
+    TEST_ASSERT_FALSE(wolf_level_object_marker_blocks_player(WOLF_LEVEL_INFO_PUSHWALL_MARKER));
+}
+
 void test_level_objects_reject_invalid_arguments(void)
 {
     WolfLevel *level = open_level();

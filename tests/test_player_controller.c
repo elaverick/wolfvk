@@ -302,6 +302,66 @@ void test_player_pushes_secret_wall_in_facing_direction_at_original_speed(void)
     wolf_input_destroy(input);
 }
 
+/* Move right past a single info-plane object and return the final world-space X coordinate. */
+static bool move_right_with_object(uint16_t marker, float *final_x)
+{
+    WolfCamera camera;
+    WolfWorldState world = {0};
+    WolfInput *input = create_test_input();
+
+    if (input == NULL || final_x == NULL) {
+        wolf_input_destroy(input);
+        return false;
+    }
+    wolf_camera_initialize(&camera);
+    if (!create_open_test_world(&world)) {
+        wolf_input_destroy(input);
+        return false;
+    }
+
+    world.level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u] = marker;
+    set_key(input, SDL_SCANCODE_D, true);
+    if (!wolf_player_update(&camera, input, &world, 0.1f)) {
+        wolf_input_destroy(input);
+        return false;
+    }
+    *final_x = camera.position[0];
+    wolf_input_destroy(input);
+    return true;
+}
+
+void test_player_cannot_walk_through_wl6_blocking_static_objects(void)
+{
+    float table_x;
+    float armour_x;
+    float barrel_x;
+
+    /* Info markers 25, 39 and 24 are the table, suit of armour and green barrel. */
+    TEST_ASSERT_TRUE(move_right_with_object(25u, &table_x));
+    TEST_ASSERT_TRUE(move_right_with_object(39u, &armour_x));
+    TEST_ASSERT_TRUE(move_right_with_object(24u, &barrel_x));
+    TEST_ASSERT_TRUE(table_x < 0.97f);
+    TEST_ASSERT_TRUE(armour_x < 0.97f);
+    TEST_ASSERT_TRUE(barrel_x < 0.97f);
+}
+
+void test_player_can_walk_through_wl6_non_blocking_corpses_and_puddles(void)
+{
+    static const uint16_t passable_markers[] = {
+        23u, /* puddle */
+        32u, /* skeleton flat */
+        42u, /* skeleton relaxed */
+        124u /* dead guard */
+    };
+
+    for (size_t index = 0u; index < sizeof(passable_markers) / sizeof(passable_markers[0]); ++index) {
+        float final_x = 0.0f;
+
+        TEST_ASSERT_TRUE(move_right_with_object(passable_markers[index], &final_x));
+        TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.12f, final_x);
+    }
+}
+
 void test_player_rejects_invalid_state_and_frame_time(void)
 {
     WolfCamera camera;

@@ -34,6 +34,63 @@ typedef struct SingleActor {
     const char *subject;
 } SingleActor;
 
+/*
+ * WL_ACT1.C statinfo[] block flags for the original Wolfenstein 3D WL6
+ * build, indexed by SPR_STAT_0..SPR_STAT_47. This is deliberately based on
+ * the game's collision type, not on the voxel model's visible dimensions.
+ */
+static const bool static_object_blocks_player[] = {
+    false, /*  0: puddle */
+    true,  /*  1: green barrel */
+    true,  /*  2: table and chairs */
+    true,  /*  3: floor lamp */
+    false, /*  4: chandelier */
+    true,  /*  5: hanged man */
+    false, /*  6: bad food */
+    true,  /*  7: red pillar */
+    true,  /*  8: tree */
+    false, /*  9: skeleton flat */
+    true,  /* 10: sink */
+    true,  /* 11: potted plant */
+    true,  /* 12: urn */
+    true,  /* 13: bare table */
+    false, /* 14: ceiling light */
+    false, /* 15: kitchen stuff (Wolf3D; Spear uses a blocking gibs sprite) */
+    true,  /* 16: suit of armour */
+    true,  /* 17: hanging cage */
+    true,  /* 18: skeleton in cage */
+    false, /* 19: skeleton relaxed */
+    false, /* 20: red key */
+    false, /* 21: yellow key */
+    true,  /* 22: stat_22; statinfo marks this entry block */
+    false, /* 23: decoration */
+    false, /* 24: food */
+    false, /* 25: first aid */
+    false, /* 26: ammunition clip */
+    false, /* 27: machine gun pickup */
+    false, /* 28: chaingun pickup */
+    false, /* 29: cross */
+    false, /* 30: chalice */
+    false, /* 31: bible */
+    false, /* 32: crown */
+    false, /* 33: extra life */
+    false, /* 34: gibs */
+    true,  /* 35: wooden barrel */
+    true,  /* 36: well with water */
+    true,  /* 37: empty well */
+    false, /* 38: blood pool / gibs */
+    true,  /* 39: flag */
+    true,  /* 40: Call Apogee (Wolf3D; Spear uses a non-blocking light) */
+    false, /* 41: junk */
+    false, /* 42: junk */
+    false, /* 43: junk */
+    false, /* 44: pots */
+    true,  /* 45: stove */
+    true,  /* 46: spears */
+    false  /* 47: vines */
+};
+
+/* Bosses and ghosts are single sprites; each stands in the first frame of its walk. */
 static const SingleActor single_actors[] = {
     {214u, "boss"},   /* Hans Grosse */
     {197u, "gretel"}, /* Gretel Grosse */
@@ -200,6 +257,20 @@ static bool classify_marker(
     }
 
     return false;
+}
+
+bool wolf_level_object_marker_blocks_player(uint16_t marker)
+{
+    unsigned int sprite;
+
+    if (marker < WOLF_LEVEL_STATIC_FIRST || marker > WOLF_LEVEL_STATIC_LAST) {
+        /* Marker 71 is the additional ammo clip (SPR_STAT_26), not a block. */
+        return false;
+    }
+
+    sprite = (unsigned int)(marker - WOLF_LEVEL_STATIC_FIRST);
+    return sprite < sizeof(static_object_blocks_player) / sizeof(static_object_blocks_player[0]) &&
+        static_object_blocks_player[sprite];
 }
 
 bool wolf_level_find_objects(
