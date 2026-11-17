@@ -272,18 +272,22 @@ bool wolf_weapon_build_view_projection(
     }
 
     /*
-     * First-person VOX assets extend along local +y into the screen (hand
-     * nearest, muzzle furthest). Keep local +x horizontal and +z vertical.
+     * voxel_mesh.c converts VOX coordinates to model space as:
+     *   model X = -VOX X (horizontal, mirrored for the viewer-facing front),
+     *   model Y =  VOX Z (vertical),
+     *   model Z =  VOX Y (weapon depth; +Y points away from the eye).
+     * Map those model axes onto the camera basis. In particular, the weapon's
+     * broad X/Y silhouette must face the player; only model +Z recedes.
      */
-    model[0] = right[0] * scale;
-    model[1] = right[1] * scale;
-    model[2] = right[2] * scale;
-    model[4] = forward[0] * scale;
-    model[5] = forward[1] * scale;
-    model[6] = forward[2] * scale;
-    model[8] = up[0] * scale;
-    model[9] = up[1] * scale;
-    model[10] = up[2] * scale;
+    model[0] = -right[0] * scale;
+    model[1] = -right[1] * scale;
+    model[2] = -right[2] * scale;
+    model[4] = up[0] * scale;
+    model[5] = up[1] * scale;
+    model[6] = up[2] * scale;
+    model[8] = forward[0] * scale;
+    model[9] = forward[1] * scale;
+    model[10] = forward[2] * scale;
     model[12] = position[0];
     model[13] = position[1];
     model[14] = position[2];

@@ -185,6 +185,37 @@ void test_weapon_scene_selects_ready_and_attack_poses(void)
     wolf_weapon_scene_destroy(&scene);
 }
 
+void test_weapon_transform_maps_voxel_axes_to_camera_basis(void)
+{
+    WolfCamera camera;
+    float camera_matrix[16];
+    float weapon_matrix[16];
+    const float scale = 0.30f;
+
+    wolf_camera_initialize(&camera);
+    camera.yaw_radians = 0.0f;
+    camera.pitch_radians = 0.0f;
+
+    TEST_ASSERT_TRUE(wolf_camera_build_view_projection(
+        &camera, 16.0f / 9.0f, camera_matrix));
+    TEST_ASSERT_TRUE(wolf_weapon_build_view_projection(
+        &camera, 16.0f / 9.0f, 0.0f, weapon_matrix));
+
+    /*
+     * At zero yaw/pitch the mesh's model X axis must face screen-left,
+     * model Y must point up, and model Z must recede into the scene.
+     * These assertions catch accidentally treating VOX Y/Z as engine Y/Z.
+     */
+    for (uint32_t row = 0u; row < 4u; ++row) {
+        TEST_ASSERT_FLOAT_WITHIN(0.00001f,
+            -camera_matrix[row] * scale, weapon_matrix[row]);
+        TEST_ASSERT_FLOAT_WITHIN(0.00001f,
+            camera_matrix[4u + row] * scale, weapon_matrix[4u + row]);
+        TEST_ASSERT_FLOAT_WITHIN(0.00001f,
+            -camera_matrix[8u + row] * scale, weapon_matrix[8u + row]);
+    }
+}
+
 void test_weapon_transform_tracks_camera_and_validates_projection(void)
 {
     WolfCamera camera;
