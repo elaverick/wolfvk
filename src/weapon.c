@@ -265,10 +265,10 @@ bool wolf_weapon_build_view_projection(
     up[1] = cosf(camera->pitch_radians);
     up[2] = cosf(camera->yaw_radians) * sinf(camera->pitch_radians);
 
-    /* Offset the model to the player's right and below eye level, with a subtle firing kick. */
+    /* Keep the weapon centred on the view axis; only lower it and move it in front of the camera. */
     for (int axis = 0; axis < 3; ++axis) {
         position[axis] = camera->position[axis] +
-            forward[axis] * 1.0f + right[axis] * 0.38f - up[axis] * (0.48f + attack_offset);
+            forward[axis] * 1.0f - up[axis] * (0.48f + attack_offset);
     }
 
     /*

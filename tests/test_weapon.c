@@ -185,6 +185,21 @@ void test_weapon_scene_selects_ready_and_attack_poses(void)
     wolf_weapon_scene_destroy(&scene);
 }
 
+void test_weapon_view_model_is_centred_on_the_camera_axis(void)
+{
+    WolfCamera camera;
+    float matrix[16];
+
+    wolf_camera_initialize(&camera);
+    camera.yaw_radians = 0.0f;
+    camera.pitch_radians = 0.0f;
+    TEST_ASSERT_TRUE(wolf_weapon_build_view_projection(
+        &camera, 16.0f / 9.0f, 0.0f, matrix));
+
+    /* With no yaw, camera-right is clip X; the transformed model origin is centred. */
+    TEST_ASSERT_FLOAT_WITHIN(0.00001f, 0.0f, matrix[12]);
+}
+
 void test_weapon_transform_maps_voxel_axes_to_camera_basis(void)
 {
     WolfCamera camera;

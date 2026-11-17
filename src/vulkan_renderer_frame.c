@@ -736,10 +736,11 @@ static bool create_graphics_pipelines(VulkanRenderer *renderer)
         return false;
     }
 
-    /* Weapon geometry is a first-person overlay and must not inherit map depth. */
+    /*
+     * Weapon geometry gets a fresh depth buffer at draw time, so it overlays
+     * the world but still depth-tests and depth-writes against its own voxels.
+     */
     overlay_depth_stencil = depth_stencil;
-    overlay_depth_stencil.depthTestEnable = VK_FALSE;
-    overlay_depth_stencil.depthWriteEnable = VK_FALSE;
     pipeline_info.pDepthStencilState = &overlay_depth_stencil;
     result = vkCreateGraphicsPipelines(
         renderer->device, VK_NULL_HANDLE, 1, &pipeline_info, NULL,
@@ -1113,7 +1114,21 @@ static bool record_command_buffer(
         vkCmdDrawIndexed(command_buffer, renderer->index_count, 1, 0, 0, 0);
     }
     vulkan_renderer_models_record(renderer, command_buffer);
-    vulkan_renderer_weapon_record(renderer, command_buffer);
+    if (renderer->weapon_draw_quad_count > 0u) {
+        VkClearAttachment clear_depth = {0};
+        VkClearRect clear_rect = {0};
+
+        /* Discard world depth before the view-model pass, retaining its colour. */
+        clear_depth.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        clear_depth.clearValue.depthStencil.depth = 1.0f;
+        clear_rect.rect.offset.x = 0;
+        clear_rect.rect.offset.y = 0;
+        clear_rect.rect.extent = renderer->swapchain_extent;
+        clear_rect.baseArrayLayer = 0u;
+        clear_rect.layerCount = 1u;
+        vkCmdClearAttachments(command_buffer, 1u, &clear_depth, 1u, &clear_rect);
+        vulkan_renderer_weapon_record(renderer, command_buffer);
+    }
     vkCmdEndRenderPass(command_buffer);
 
     result = vkEndCommandBuffer(command_buffer);
