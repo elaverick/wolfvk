@@ -90,8 +90,8 @@ jobs:
           door panels are loaded from VSWAP.WL6. Press E or Space to operate doors
           and marked secret pushwalls; locked doors require their matching key.
           The four voxel weapons are anchored to the player's view and use the original
-          six-tic attack animation timing. Firing is currently visual only: hit detection,
-          damage and ammunition use are not implemented yet. Walk towards keys, health,
+          six-tic attack animation timing. Each shot uses a bullet, and the knife comes
+          out when they run out; shots do no damage yet. Walk towards keys, health,
           ammunition, weapons and treasure to pick them up; you start with the knife and
           pistol, and 1-4 select only weapons you have found. Actors remain in their
           spawn poses; enemy AI is follow-on work.
