@@ -157,6 +157,11 @@ void test_bonus_health_items_heal_only_when_useful(void);
 void test_bonus_ammunition_weapons_and_treasure(void);
 void test_world_removes_picked_up_items_and_leaves_unneeded_ones(void);
 void test_new_game_holds_only_the_knife_and_pistol(void);
+void test_weapon_pistol_shot_uses_one_bullet_on_its_second_frame(void);
+void test_weapon_pistol_and_knife_need_a_fresh_press_for_each_attack(void);
+void test_weapon_machinegun_fires_every_twelve_tics_while_held(void);
+void test_weapon_chaingun_fires_every_six_tics_and_twice_per_tap(void);
+void test_weapon_switches_to_the_knife_when_the_bullets_run_out(void);
 
 
 void test_weapon_starts_with_ready_pistol(void);
@@ -345,5 +350,10 @@ int main(void)
     RUN_TEST(test_bonus_ammunition_weapons_and_treasure);
     RUN_TEST(test_world_removes_picked_up_items_and_leaves_unneeded_ones);
     RUN_TEST(test_new_game_holds_only_the_knife_and_pistol);
+    RUN_TEST(test_weapon_pistol_shot_uses_one_bullet_on_its_second_frame);
+    RUN_TEST(test_weapon_pistol_and_knife_need_a_fresh_press_for_each_attack);
+    RUN_TEST(test_weapon_machinegun_fires_every_twelve_tics_while_held);
+    RUN_TEST(test_weapon_chaingun_fires_every_six_tics_and_twice_per_tap);
+    RUN_TEST(test_weapon_switches_to_the_knife_when_the_bullets_run_out);
     return UNITY_END();
 }

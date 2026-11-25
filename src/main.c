@@ -625,8 +625,13 @@ int main(int argc, char *argv[])
                 wolf_input_key_down(input, SDL_SCANCODE_LCTRL) ||
                 wolf_input_gamepad_button_down(input, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER) ||
                 wolf_input_gamepad_axis(input, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) > 0.35f;
-            /* Keys 1-4 choose among the weapons picked up so far, as CheckWeaponChange does. */
-            for (int weapon = WOLF_WEAPON_KNIFE; weapon <= WOLF_WEAPON_CHAINGUN; ++weapon) {
+            /*
+             * Keys 1-4 choose among the weapons picked up so far, as CheckWeaponChange
+             * does. As in the original, the weapon cannot change part-way through an attack.
+             */
+            for (int weapon = WOLF_WEAPON_KNIFE;
+                 !weapon_state.firing && weapon <= WOLF_WEAPON_CHAINGUN;
+                 ++weapon) {
                 if (wolf_input_key_down(input, (SDL_Scancode)(SDL_SCANCODE_1 + weapon))) {
                     (void)wolf_player_state_select_weapon(&world.player, (WolfWeaponType)weapon);
                     break;
@@ -639,8 +644,13 @@ int main(int argc, char *argv[])
             if (weapon_state.selected != world.player.weapon) {
                 (void)wolf_weapon_state_select(&weapon_state, world.player.weapon);
             }
-            if (!wolf_weapon_state_update(&weapon_state, fire_down, delta_seconds)) {
-                fprintf(stderr, "Weapon animation state update failed.\n");
+            /*
+             * Firing uses bullets and swaps to the knife when they run out. The
+             * shot and knife events are not used until enemies can take damage.
+             */
+            if (!wolf_weapon_state_update(
+                    &weapon_state, &world.player, fire_down, delta_seconds, NULL)) {
+                fprintf(stderr, "Weapon attack update failed.\n");
                 running = 0;
             }
             {

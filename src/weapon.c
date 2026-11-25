@@ -165,53 +165,126 @@ bool wolf_weapon_state_select(WolfWeaponState *state, WolfWeaponType weapon)
     return true;
 }
 
-/*
- * Original WL_AGENT attackinfo advances four six-tic states. Pistol and knife
- * complete once; both automatic weapons cycle attack frames 2 and 3 while
- * held. The original code distinguishes their shot callbacks, but this state
- * only drives the visible weapon model until projectile interaction is added.
- */
-bool wolf_weapon_state_update(WolfWeaponState *state, bool fire_down, float delta_seconds)
-{
-    float elapsed_tics;
+/* What each attackinfo entry does when its six tics end, from WL_AGENT.C. */
+typedef enum AttackAction {
+    ATTACK_END = -1,
+    ATTACK_NONE = 0,
+    ATTACK_GUN_SHOT = 1,
+    ATTACK_KNIFE = 2,
+    ATTACK_MACHINEGUN_REPEAT = 3,
+    ATTACK_CHAINGUN_REPEAT = 4
+} AttackAction;
 
+static const AttackAction attack_actions[WOLF_WEAPON_COUNT][4] = {
+    {ATTACK_NONE, ATTACK_KNIFE, ATTACK_NONE, ATTACK_END},
+    {ATTACK_NONE, ATTACK_GUN_SHOT, ATTACK_NONE, ATTACK_END},
+    {ATTACK_NONE, ATTACK_GUN_SHOT, ATTACK_MACHINEGUN_REPEAT, ATTACK_END},
+    {ATTACK_NONE, ATTACK_GUN_SHOT, ATTACK_CHAINGUN_REPEAT, ATTACK_END}
+};
+
+/* Without a player state the animation runs as if there were always bullets. */
+static bool has_ammo(const WolfPlayerState *player)
+{
+    return player == NULL || player->ammo > 0;
+}
+
+/* Fire a bullet, or skip the shot frame when the chaingun has run dry mid-burst. */
+static void gun_shot(
+    WolfWeaponState *state,
+    WolfPlayerState *player,
+    WolfWeaponAttackEvents *events)
+{
+    if (!has_ammo(player)) {
+        ++state->attack_frame;
+        return;
+    }
+    if (player != NULL) {
+        --player->ammo;
+    }
+    ++events->gun_shots;
+}
+
+/* The attack is over: the knife comes out if the bullets ran out, otherwise the chosen gun returns. */
+static void finish_attack(WolfWeaponState *state, WolfPlayerState *player)
+{
+    state->attack_frame = 0u;
+    state->firing = false;
+    state->tic_remainder = 0.0f;
+    if (player != NULL) {
+        player->weapon = player->ammo <= 0 ? WOLF_WEAPON_KNIFE : player->chosen_weapon;
+        state->selected = player->weapon;
+    }
+}
+
+bool wolf_weapon_state_update(
+    WolfWeaponState *state,
+    WolfPlayerState *player,
+    bool fire_down,
+    float delta_seconds,
+    WolfWeaponAttackEvents *events)
+{
+    WolfWeaponAttackEvents ignored_events;
+    float elapsed_tics;
+    bool fire_pressed;
+
+    if (events == NULL) {
+        events = &ignored_events;
+    }
+    memset(events, 0, sizeof(*events));
     if (state == NULL || state->selected < WOLF_WEAPON_KNIFE ||
         state->selected >= WOLF_WEAPON_COUNT || !isfinite(delta_seconds) ||
         delta_seconds < 0.0f) {
         return false;
     }
 
-    if (!fire_down && !state->firing) {
-        return true;
-    }
-
-    if (fire_down && !state->firing) {
+    /* Cmd_Fire: only a new press starts an attack. */
+    fire_pressed = fire_down && !state->fire_was_down;
+    state->fire_was_down = fire_down;
+    if (!state->firing) {
+        if (!fire_pressed) {
+            return true;
+        }
         state->firing = true;
         state->attack_frame = 0u;
         state->tic_remainder = 0.0f;
     }
 
-    if (delta_seconds > 0.0f) {
-        elapsed_tics = state->tic_remainder + delta_seconds / WOLF_WEAPON_TIC_SECONDS;
-        while (elapsed_tics >= (float)WOLF_WEAPON_ATTACK_TICS) {
-            elapsed_tics -= (float)WOLF_WEAPON_ATTACK_TICS;
-            if (state->attack_frame == 2u &&
-                (state->selected == WOLF_WEAPON_MACHINEGUN ||
-                 state->selected == WOLF_WEAPON_CHAINGUN) && fire_down) {
-                /* WL_AGENT.C backs up two attack states, then advances to frame 2 again. */
-                state->attack_frame = 1u;
-            } else if (state->attack_frame < 3u) {
-                ++state->attack_frame;
-            } else {
-                state->attack_frame = 0u;
-                state->firing = false;
-                state->tic_remainder = 0.0f;
-                return true;
+    /* T_Attack: each entry acts when its six tics have passed, then the next entry shows. */
+    elapsed_tics = state->tic_remainder + delta_seconds / WOLF_WEAPON_TIC_SECONDS;
+    while (elapsed_tics >= (float)WOLF_WEAPON_ATTACK_TICS) {
+        elapsed_tics -= (float)WOLF_WEAPON_ATTACK_TICS;
+        switch (attack_actions[state->selected][state->attack_frame]) {
+        case ATTACK_END:
+            finish_attack(state, player);
+            return true;
+        case ATTACK_CHAINGUN_REPEAT:
+            if (!has_ammo(player)) {
+                break;
             }
+            /* The chaingun fires on this frame too, and loops back while fire is held. */
+            if (fire_down) {
+                state->attack_frame -= 2u;
+            }
+            gun_shot(state, player, events);
+            break;
+        case ATTACK_GUN_SHOT:
+            gun_shot(state, player, events);
+            break;
+        case ATTACK_KNIFE:
+            ++events->knife_attacks;
+            break;
+        case ATTACK_MACHINEGUN_REPEAT:
+            if (has_ammo(player) && fire_down) {
+                state->attack_frame -= 2u;
+            }
+            break;
+        case ATTACK_NONE:
+        default:
+            break;
         }
-        state->tic_remainder = elapsed_tics;
+        ++state->attack_frame;
     }
-
+    state->tic_remainder = elapsed_tics;
     return true;
 }
 

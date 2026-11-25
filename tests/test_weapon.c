@@ -63,7 +63,7 @@ void test_weapon_starts_with_ready_pistol(void)
     TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_PISTOL, state.selected);
     TEST_ASSERT_FALSE(state.firing);
     TEST_ASSERT_EQUAL_UINT8(0u, state.attack_frame);
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, false, 0.25f));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, false, 0.25f, NULL));
     TEST_ASSERT_FALSE(state.firing);
 }
 
@@ -73,17 +73,17 @@ void test_weapon_pistol_uses_four_six_tic_attack_frames(void)
     const float six_tics = 6.0f / 70.0f;
 
     wolf_weapon_state_initialize(&state);
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, true, 0.0f));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, true, 0.0f, NULL));
     TEST_ASSERT_TRUE(state.firing);
     TEST_ASSERT_EQUAL_UINT8(0u, state.attack_frame);
 
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, true, six_tics));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, true, six_tics, NULL));
     TEST_ASSERT_EQUAL_UINT8(1u, state.attack_frame);
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, true, six_tics));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, true, six_tics, NULL));
     TEST_ASSERT_EQUAL_UINT8(2u, state.attack_frame);
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, true, six_tics));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, true, six_tics, NULL));
     TEST_ASSERT_EQUAL_UINT8(3u, state.attack_frame);
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, true, six_tics));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, true, six_tics, NULL));
     TEST_ASSERT_FALSE(state.firing);
     TEST_ASSERT_EQUAL_UINT8(0u, state.attack_frame);
 }
@@ -94,8 +94,8 @@ void test_weapon_knife_finishes_the_attack_after_four_frames(void)
 
     wolf_weapon_state_initialize(&state);
     TEST_ASSERT_TRUE(wolf_weapon_state_select(&state, WOLF_WEAPON_KNIFE));
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, true, 0.0f));
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, false, 24.0f / 70.0f));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, true, 0.0f, NULL));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, false, 24.0f / 70.0f, NULL));
     TEST_ASSERT_FALSE(state.firing);
     TEST_ASSERT_EQUAL_UINT8(0u, state.attack_frame);
     TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_KNIFE, state.selected);
@@ -108,13 +108,13 @@ void test_weapon_machinegun_repeats_original_attack_frames_while_held(void)
 
     wolf_weapon_state_initialize(&state);
     TEST_ASSERT_TRUE(wolf_weapon_state_select(&state, WOLF_WEAPON_MACHINEGUN));
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, true, 18.0f / 70.0f));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, true, 18.0f / 70.0f, NULL));
     TEST_ASSERT_TRUE(state.firing);
     TEST_ASSERT_EQUAL_UINT8(1u, state.attack_frame);
 
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, true, six_tics));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, true, six_tics, NULL));
     TEST_ASSERT_EQUAL_UINT8(2u, state.attack_frame);
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, true, six_tics));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, true, six_tics, NULL));
     TEST_ASSERT_EQUAL_UINT8(1u, state.attack_frame);
 }
 
@@ -125,14 +125,14 @@ void test_weapon_chaingun_repeats_and_returns_to_ready_when_released(void)
 
     wolf_weapon_state_initialize(&state);
     TEST_ASSERT_TRUE(wolf_weapon_state_select(&state, WOLF_WEAPON_CHAINGUN));
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, true, 18.0f / 70.0f));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, true, 18.0f / 70.0f, NULL));
     TEST_ASSERT_TRUE(state.firing);
     TEST_ASSERT_EQUAL_UINT8(1u, state.attack_frame);
 
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, false, six_tics));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, false, six_tics, NULL));
     TEST_ASSERT_EQUAL_UINT8(2u, state.attack_frame);
     TEST_ASSERT_TRUE(state.firing);
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, false, 12.0f / 70.0f));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, false, 12.0f / 70.0f, NULL));
     TEST_ASSERT_FALSE(state.firing);
     TEST_ASSERT_EQUAL_UINT8(0u, state.attack_frame);
 }
@@ -142,7 +142,7 @@ void test_weapon_selection_resets_animation_and_rejects_invalid_values(void)
     WolfWeaponState state;
 
     wolf_weapon_state_initialize(&state);
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, true, 12.0f / 70.0f));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, true, 12.0f / 70.0f, NULL));
     TEST_ASSERT_TRUE(state.firing);
     TEST_ASSERT_TRUE(wolf_weapon_state_select(&state, WOLF_WEAPON_CHAINGUN));
     TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_CHAINGUN, state.selected);
@@ -150,9 +150,9 @@ void test_weapon_selection_resets_animation_and_rejects_invalid_values(void)
     TEST_ASSERT_EQUAL_UINT8(0u, state.attack_frame);
     TEST_ASSERT_FALSE(wolf_weapon_state_select(&state, WOLF_WEAPON_COUNT));
     TEST_ASSERT_FALSE(wolf_weapon_state_select(NULL, WOLF_WEAPON_PISTOL));
-    TEST_ASSERT_FALSE(wolf_weapon_state_update(NULL, false, 0.0f));
-    TEST_ASSERT_FALSE(wolf_weapon_state_update(&state, false, -0.1f));
-    TEST_ASSERT_FALSE(wolf_weapon_state_update(&state, false, NAN));
+    TEST_ASSERT_FALSE(wolf_weapon_state_update(NULL, NULL, false, 0.0f, NULL));
+    TEST_ASSERT_FALSE(wolf_weapon_state_update(&state, NULL, false, -0.1f, NULL));
+    TEST_ASSERT_FALSE(wolf_weapon_state_update(&state, NULL, false, NAN, NULL));
 }
 
 void test_weapon_scene_selects_ready_and_attack_poses(void)
@@ -174,7 +174,7 @@ void test_weapon_scene_selects_ready_and_attack_poses(void)
     TEST_ASSERT_EQUAL_UINT32(10u, pose->first_quad);
     TEST_ASSERT_EQUAL_UINT32(2u, pose->quad_count);
 
-    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, true, 0.0f));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, NULL, true, 0.0f, NULL));
     pose = wolf_weapon_scene_current_pose(&scene, &state);
     TEST_ASSERT_NOT_NULL(pose);
     TEST_ASSERT_EQUAL_UINT32(12u, pose->first_quad);
@@ -311,4 +311,139 @@ void test_weapon_scene_loader_rejects_invalid_arguments(void)
     TEST_ASSERT_FALSE(wolf_weapon_scene_load(&scene, ""));
     wolf_weapon_scene_destroy(&scene);
     wolf_weapon_scene_destroy(NULL);
+}
+
+/* A frame time of a whole number of 70 Hz tics, nudged so rounding never drops the last tic. */
+static float tics(float count)
+{
+    return (count + 0.01f) / 70.0f;
+}
+
+/* Start an attack with a fresh press, as the player would, using the given weapon and bullets. */
+static void start_attack(
+    WolfWeaponState *state,
+    WolfPlayerState *player,
+    WolfWeaponType weapon,
+    int32_t ammo,
+    WolfWeaponAttackEvents *events)
+{
+    wolf_player_state_new_game(player, 0u);
+    player->ammo = ammo;
+    player->best_weapon = WOLF_WEAPON_CHAINGUN;
+    TEST_ASSERT_TRUE(wolf_player_state_select_weapon(player, weapon));
+    wolf_weapon_state_initialize(state);
+    TEST_ASSERT_TRUE(wolf_weapon_state_select(state, weapon));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(state, player, true, 0.0f, events));
+    TEST_ASSERT_TRUE(state->firing);
+}
+
+void test_weapon_pistol_shot_uses_one_bullet_on_its_second_frame(void)
+{
+    WolfWeaponState state;
+    WolfPlayerState player;
+    WolfWeaponAttackEvents events;
+
+    start_attack(&state, &player, WOLF_WEAPON_PISTOL, 8, &events);
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, &player, true, tics(6.0f), &events));
+    TEST_ASSERT_EQUAL_UINT32(0u, events.gun_shots);
+    TEST_ASSERT_EQUAL_INT32(8, player.ammo);
+
+    /* The shot happens as the muzzle-flash frame appears. */
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, &player, true, tics(6.0f), &events));
+    TEST_ASSERT_EQUAL_UINT32(1u, events.gun_shots);
+    TEST_ASSERT_EQUAL_INT32(7, player.ammo);
+    TEST_ASSERT_EQUAL_UINT8(2u, state.attack_frame);
+}
+
+void test_weapon_pistol_and_knife_need_a_fresh_press_for_each_attack(void)
+{
+    WolfWeaponState state;
+    WolfPlayerState player;
+    WolfWeaponAttackEvents events;
+
+    /* Holding fire through a whole pistol attack and beyond fires once. */
+    start_attack(&state, &player, WOLF_WEAPON_PISTOL, 8, &events);
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, &player, true, tics(60.0f), &events));
+    TEST_ASSERT_EQUAL_UINT32(1u, events.gun_shots);
+    TEST_ASSERT_FALSE(state.firing);
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, &player, true, tics(30.0f), &events));
+    TEST_ASSERT_FALSE(state.firing);
+    TEST_ASSERT_EQUAL_INT32(7, player.ammo);
+
+    /* Releasing and pressing again starts the next one. */
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, &player, false, tics(1.0f), &events));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, &player, true, tics(12.0f), &events));
+    TEST_ASSERT_EQUAL_UINT32(1u, events.gun_shots);
+    TEST_ASSERT_EQUAL_INT32(6, player.ammo);
+
+    /* The knife strikes on its second frame and uses no bullets. */
+    start_attack(&state, &player, WOLF_WEAPON_KNIFE, 8, &events);
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, &player, true, tics(24.0f), &events));
+    TEST_ASSERT_EQUAL_UINT32(1u, events.knife_attacks);
+    TEST_ASSERT_EQUAL_UINT32(0u, events.gun_shots);
+    TEST_ASSERT_EQUAL_INT32(8, player.ammo);
+    TEST_ASSERT_FALSE(state.firing);
+}
+
+void test_weapon_machinegun_fires_every_twelve_tics_while_held(void)
+{
+    WolfWeaponState state;
+    WolfPlayerState player;
+    WolfWeaponAttackEvents events;
+
+    start_attack(&state, &player, WOLF_WEAPON_MACHINEGUN, 20, &events);
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, &player, true, tics(48.0f), &events));
+    TEST_ASSERT_EQUAL_UINT32(4u, events.gun_shots);
+    TEST_ASSERT_EQUAL_INT32(16, player.ammo);
+    TEST_ASSERT_TRUE(state.firing);
+}
+
+void test_weapon_chaingun_fires_every_six_tics_and_twice_per_tap(void)
+{
+    WolfWeaponState state;
+    WolfPlayerState player;
+    WolfWeaponAttackEvents events;
+
+    start_attack(&state, &player, WOLF_WEAPON_CHAINGUN, 20, &events);
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, &player, true, tics(48.0f), &events));
+    TEST_ASSERT_EQUAL_UINT32(7u, events.gun_shots);
+    TEST_ASSERT_EQUAL_INT32(13, player.ammo);
+
+    /* A single tap still fires on both shot frames, as T_Attack's chaingun case does. */
+    start_attack(&state, &player, WOLF_WEAPON_CHAINGUN, 20, &events);
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, &player, false, tics(30.0f), &events));
+    TEST_ASSERT_EQUAL_UINT32(2u, events.gun_shots);
+    TEST_ASSERT_FALSE(state.firing);
+}
+
+void test_weapon_switches_to_the_knife_when_the_bullets_run_out(void)
+{
+    WolfWeaponState state;
+    WolfPlayerState player;
+    WolfWeaponAttackEvents events;
+
+    /* The last bullet ends the machine gun burst and the knife comes out. */
+    start_attack(&state, &player, WOLF_WEAPON_MACHINEGUN, 1, &events);
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, &player, true, tics(60.0f), &events));
+    TEST_ASSERT_EQUAL_UINT32(1u, events.gun_shots);
+    TEST_ASSERT_EQUAL_INT32(0, player.ammo);
+    TEST_ASSERT_FALSE(state.firing);
+    TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_KNIFE, player.weapon);
+    TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_KNIFE, state.selected);
+    TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_MACHINEGUN, player.chosen_weapon);
+
+    /* With no bullets the knife still works, and picking up ammunition brings the gun back. */
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, &player, false, tics(1.0f), &events));
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, &player, true, tics(24.0f), &events));
+    TEST_ASSERT_EQUAL_UINT32(1u, events.knife_attacks);
+    wolf_player_state_give_ammo(&player, 8);
+    TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_MACHINEGUN, player.weapon);
+
+    /* The chaingun running dry mid-burst skips its remaining shot frame. */
+    start_attack(&state, &player, WOLF_WEAPON_CHAINGUN, 2, &events);
+    TEST_ASSERT_TRUE(wolf_weapon_state_update(&state, &player, true, tics(60.0f), &events));
+    TEST_ASSERT_EQUAL_UINT32(2u, events.gun_shots);
+    TEST_ASSERT_EQUAL_INT32(0, player.ammo);
+    TEST_ASSERT_FALSE(state.firing);
+    TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_KNIFE, player.weapon);
 }
