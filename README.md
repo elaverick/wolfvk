@@ -23,7 +23,7 @@ Every actor and static object that the original `ScanInfoPlane` would spawn is d
 - **Rendering:** each distinct pose a level uses is meshed once. Only faces between a voxel and empty space are kept, and same-coloured neighbours are merged into larger rectangles. Faces on the floor or against the ceiling can never be seen, so they are dropped. Colours come straight from the original palette, converted to linear space for the sRGB swapchain, with a fixed brightness per face direction so shapes read clearly without lighting. The meshes live in their own vertex buffer. Each placed model is one indexed draw with its own model-view-projection push constant, so the shaders are unchanged and door animation never re-copies model vertices. Later animation only has to point an instance at a different pose. Level 1 places 142 objects at the default difficulty, using 31 poses and about 42,000 quads.
 - **First-person weapons:** `knife.vox`, `pistol.vox`, `machinegun.vox` and `chain.vox` contain the voxeliser's `<subject>_ready` and `<subject>_atk` scene objects (for example, `knife_ready` and `knife_atk`). Each weapon's ready pose and four attack poses are loaded from those objects. The separate `player_*` names in the voxeliser manifest describe the original game's timed state sequences, not VOX scene objects. The weapon model is transformed relative to camera position, yaw and pitch, then drawn after the world models using a cleared depth buffer: nearby walls cannot hide it, while its own near-side voxels correctly occlude the far-side geometry. Missing weapon poses are reported but do not prevent the rest of the game from running.
 - **Firing:** the original four six-tic attack states run at 70 tics per second. The pistol and knife return to ready after one attack; the automatic weapons repeat their original attack loop while fire is held. A firing kick is applied to the view model. Hit detection, projectiles, damage, ammunition and weapon pickups are deliberately not implemented yet.
-- **Collected keys** disappear because the placed models are rebuilt from the info plane when a key is picked up. Other pickups cannot be collected yet. Static objects use the original WL6 `statinfo[]` block flags for movement collision: tables, barrels, armour and other `block` entries stop the player, while puddles, floor skeletons, the dead guard and pickups remain passable. Living actors do not yet participate in movement collision.
+- **Pickups** follow the original `GetBonus` (see [Pickups](#pickups)); a picked-up item disappears because the placed models are rebuilt from the info plane. Static objects use the original WL6 `statinfo[]` block flags for movement collision: tables, barrels, armour and other `block` entries stop the player, while puddles, floor skeletons, the dead guard and pickups remain passable. Living actors do not yet participate in movement collision.
 
 All 60 retail WL6 levels were loaded at the hardest difficulty, which places every enemy tier, and every pose they need was available.
 
@@ -32,14 +32,32 @@ All 60 retail WL6 levels were loaded at the hardest difficulty, which places eve
 The original status bar is drawn along the bottom of the window from the game's own pictures in `VGAGRAPH.WL6`, using `VGAHEAD.WL6` for the chunk offsets and `VGADICT.WL6` for the Huffman tree. The pictures are decompressed and reordered from the original four-plane Mode X layout at startup.
 
 - **Contents:** the bar is composed exactly as `DrawPlayScreen` and the `Draw*` routines in `WL_AGENT.C` place it: floor, score, lives, BJ's face, health, ammunition, gold and silver key slots and the current weapon, with numbers right-aligned and blank-padded as `LatchNumber` does. The face shows one of seven damage levels, chosen from health as in `DrawFace`, and glances left and right at random intervals like `UpdateFace`.
-- **Real values:** the numbers come from a player state (`include/wolfvk/player_state.h`) modelled on the original `gamestate`. A new game starts as `NewGame` does, with 100 health, 8 bullets, 3 lives and the pistol, and the floor shown is the map within its episode. Health, ammunition, weapons, points and extra lives each go through one function that applies the original limits. Keys are held there too, so the key the player picks up is the one door locks check and the one the bar shows. Pickups other than keys, and damage, arrive with the later pickup and AI work and will change the bar through these functions.
+- **Real values:** the numbers come from a player state (`include/wolfvk/player_state.h`) modelled on the original `gamestate`. A new game starts as `NewGame` does, with 100 health, 8 bullets, 3 lives and the pistol, and the floor shown is the map within its episode. Health, ammunition, weapons, points and extra lives each go through one function that applies the original limits. Keys are held there too, so the key the player picks up is the one door locks check and the one the bar shows. Pickups change these values, and so the bar, as they are collected. Damage arrives with enemy AI and will change the bar through the same functions.
 - **Integer scaling:** the bar is drawn at the largest whole-number scale at which a full 320×200 screen would fit the window (3× in the default 1280×720 window), with nearest-neighbour sampling, so every original pixel becomes an exact square block. It is centred, and the rest of its strip is filled with the original play-screen border colour (palette index 127).
 - **View placement:** the 3D view is drawn only in the area above the bar, using that area's aspect ratio, so the bar never hides any of the scene.
 - **Updates:** the bar is redrawn each frame on the CPU and sent to the GPU only when something on it has changed.
 
 If the three VGA files are not beside the map files, the game says so and runs without a bar, with the view filling the window.
 
-The player can move with **WASD** and look with the mouse. Movement is relative to camera yaw, diagonal movement is normalised, and the player is kept out of wall tiles with sliding collision resolution. Use **1**, **2**, **3** or **4** to select the knife, pistol, machine gun or chaingun. Hold the **left mouse button** or **Left Ctrl** to fire; a gamepad's **right shoulder** or **right trigger** also fires. Relative mouse capture is released when the window loses focus and restored when it regains focus. Press **Escape** to quit.
+### Pickups
+
+Every bonus object in the WL6 `statinfo` table can be picked up (`src/bonus_items.c`), with the effects of the original `GetBonus`:
+
+| Item | Effect |
+|---|---|
+| Gold and silver keys | Open the matching locked doors |
+| First aid, dinner, dog food | 25, 10 and 4 health; left on the floor at full health |
+| Blood and bones (gibs) | 1 health, but only when health is 10 or less |
+| Ammunition clip / a guard's dropped clip | 8 and 4 bullets, up to 99; left on the floor at 99 |
+| Machine gun, chaingun | 6 bullets, and switches to the new weapon if it is better; the chaingun makes BJ grin on the status bar |
+| Cross, chalice, bible, crown | 100, 500, 1,000 and 5,000 points, counted as treasure |
+| One-up | Full health, 25 bullets and an extra life, counted as treasure |
+
+Points award an extra life at every 40,000, up to nine lives. Items are grabbed as in the original's `TransformTile` test: when the item's tile centre is just ahead of the player (less than about two thirds of a tile) and within half a tile to either side, so the player picks things up by walking towards them, not by backing over them.
+
+A new game starts with only the knife and the pistol and the original 8 bullets. Keys **1**–**4** choose only among weapons already picked up, and with no bullets the weapon cannot be changed, as in `CheckWeaponChange`. Firing does not use ammunition yet.
+
+The player can move with **WASD** and look with the mouse. Movement is relative to camera yaw, diagonal movement is normalised, and the player is kept out of wall tiles with sliding collision resolution. Use **1**, **2**, **3** or **4** to select the knife, pistol, machine gun or chaingun once they have been picked up; a new game has the knife and pistol. Hold the **left mouse button** or **Left Ctrl** to fire; a gamepad's **right shoulder** or **right trigger** also fires. Relative mouse capture is released when the window loses focus and restored when it regains focus. Press **Escape** to quit.
 
 The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the working directory. Those original game files are not included in this repository or demo package; copy them from your own WL6 installation. The user-supplied retail map files were inspected: all 60 playable maps decode as 64×64 maps, each with exactly one valid player-start marker on a floor cell. Level 1 starts at tile (29, 57), facing east.
 
@@ -47,7 +65,7 @@ The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the wor
 
 ## Automated tests
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It currently registers 163 Unity test cases (including the SwiftShader-backed renderer integration tests). The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite, and the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases:
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It currently registers 169 Unity test cases (including the SwiftShader-backed renderer integration tests). The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, and pickups add six:
 
 - 3 SDL3 window and event tests
 - 4 camera projection tests
@@ -63,6 +81,7 @@ The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedica
 - 5 keyboard, mouse and gamepad input tests, including held mouse-button state
 - 5 VGAGRAPH decoder tests: Huffman expansion, Mode X plane order, sparse chunks and malformed files
 - 6 player-state tests: the original new-game values and the health, ammunition, weapon, key and extra-life rules
+- 6 pickup tests: the statinfo bonus table, the original grab range, every item's effect, items left on the floor when not needed, and weapon choice limited to weapons picked up
 - 6 status bar tests: every number, key, face and weapon position, the face for each damage level, palette expansion and the integer-scale layout
 - 18 world-state tests for doors, keys, secret pushwalls and their original timing/material behaviour
 - 18 Vulkan selection and renderer tests, including the SwiftShader-backed frame submission test, the model transform, a frame that draws placed model instances, and frames that draw and re-upload the status bar
@@ -81,11 +100,11 @@ CTest runs the suite in Windows CI. The world-state tests cover original door or
 | Original wall textures on exposed faces | Implemented; horizontal/vertical page pairing and directional UV mapping tested |
 | WASD movement and mouse-look | Implemented; movement uses swept boundary resolution and wall sliding |
 | Sliding doors, keys and secret pushwalls | Implemented; original WL6 tile/marker mappings and timings have regression coverage |
-| Voxel actors and static objects | Implemented: placed by the original info-plane and difficulty rules, standing in their spawn pose. Verified locally on all 60 retail levels and passed in [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985). Animation, AI, pickups and object collision come later |
+| Voxel actors and static objects | Implemented: placed by the original info-plane and difficulty rules, standing in their spawn pose. Verified locally on all 60 retail levels and passed in [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985). Pickups are implemented; animation and AI come later |
 | Player voxel weapons | Implemented: knife, pistol, machine gun and chaingun, camera-anchored overlay, original attack timing, keyboard/mouse/gamepad firing. Eleven weapon tests added; current CI result pending. No projectile interaction yet |
 | Sprite voxelizer | Builds and passes its tests on Windows and Linux in [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985) |
 | Windows demo | Packaged with the game, the voxelizer and the shaders by [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985) |
-| Original status bar | Implemented: decoded from VGAGRAPH, drawn at an integer scale below the view and driven by the player state; 163 Unity tests pass locally |
+| Original status bar | Implemented: decoded from VGAGRAPH, drawn at an integer scale below the view and driven by the player state; 169 Unity tests pass locally |
 | Integer texture scaling | Next milestone; not implemented for the 3D scene (the status bar already uses integer scaling) |
 
 [![Windows build and tests](https://github.com/elaverick/WolfVK/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/elaverick/WolfVK/actions/workflows/build.yml)
