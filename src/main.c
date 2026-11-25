@@ -634,6 +634,8 @@ int main(int argc, char *argv[])
             } else if (wolf_input_key_down(input, SDL_SCANCODE_4)) {
                 (void)wolf_weapon_state_select(&weapon_state, WOLF_WEAPON_CHAINGUN);
             }
+            /* The player state records the weapon in hand so the status bar shows it. */
+            wolf_player_state_select_weapon(&world.player, weapon_state.selected);
             if (!wolf_weapon_state_update(&weapon_state, fire_down, delta_seconds)) {
                 fprintf(stderr, "Weapon animation state update failed.\n");
                 running = 0;

@@ -107,7 +107,7 @@ void test_status_bar_reflects_changed_player_values(void)
 
     wolf_player_state_new_game(&player, 0u);
     wolf_player_state_take_damage(&player, 43);
-    wolf_player_state_give_weapon(&player, WOLF_WEAPON_MACHINE_GUN);
+    wolf_player_state_give_weapon(&player, WOLF_WEAPON_MACHINEGUN);
     wolf_player_state_give_key(&player, WOLF_PLAYER_SILVER_KEY);
     TEST_ASSERT_TRUE(wolf_status_bar_compose(&graphics, &player, bar));
 

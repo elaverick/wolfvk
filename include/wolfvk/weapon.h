@@ -2,18 +2,11 @@
 #define WOLFVK_WEAPON_H
 
 #include "wolfvk/camera.h"
+#include "wolfvk/player_state.h"
 #include "wolfvk/vulkan_renderer.h"
 
 #include <stdbool.h>
 #include <stdint.h>
-
-typedef enum WolfWeaponType {
-    WOLF_WEAPON_KNIFE = 0,
-    WOLF_WEAPON_PISTOL,
-    WOLF_WEAPON_MACHINEGUN,
-    WOLF_WEAPON_CHAINGUN,
-    WOLF_WEAPON_COUNT
-} WolfWeaponType;
 
 #define WOLF_WEAPON_TIC_SECONDS (1.0f / 70.0f)
 #define WOLF_WEAPON_ATTACK_TICS 6u

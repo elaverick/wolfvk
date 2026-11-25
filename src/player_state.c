@@ -79,9 +79,9 @@ void wolf_player_state_give_ammo(WolfPlayerState *player, int32_t ammo)
     }
 }
 
-void wolf_player_state_give_weapon(WolfPlayerState *player, WolfWeapon weapon)
+void wolf_player_state_give_weapon(WolfPlayerState *player, WolfWeaponType weapon)
 {
-    if (player == NULL || weapon < WOLF_WEAPON_KNIFE || weapon > WOLF_WEAPON_CHAIN_GUN) {
+    if (player == NULL || weapon < WOLF_WEAPON_KNIFE || weapon > WOLF_WEAPON_CHAINGUN) {
         return;
     }
     wolf_player_state_give_ammo(player, WOLF_WEAPON_PICKUP_AMMO);
@@ -90,6 +90,15 @@ void wolf_player_state_give_weapon(WolfPlayerState *player, WolfWeapon weapon)
         player->weapon = weapon;
         player->chosen_weapon = weapon;
     }
+}
+
+void wolf_player_state_select_weapon(WolfPlayerState *player, WolfWeaponType weapon)
+{
+    if (player == NULL || weapon < WOLF_WEAPON_KNIFE || weapon > WOLF_WEAPON_CHAINGUN) {
+        return;
+    }
+    player->weapon = weapon;
+    player->chosen_weapon = weapon;
 }
 
 void wolf_player_state_give_key(WolfPlayerState *player, uint8_t key)

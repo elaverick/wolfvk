@@ -22,12 +22,14 @@
 /* UpdateFace in the original changes the face after a random wait of up to 255 tics. */
 #define WOLF_PLAYER_FACE_TICKS_PER_SECOND 70.0f
 
-typedef enum WolfWeapon {
+/* The four weapons in the original order: KNIFEPIC + weapon picks the status bar picture. */
+typedef enum WolfWeaponType {
     WOLF_WEAPON_KNIFE = 0,
     WOLF_WEAPON_PISTOL,
-    WOLF_WEAPON_MACHINE_GUN,
-    WOLF_WEAPON_CHAIN_GUN
-} WolfWeapon;
+    WOLF_WEAPON_MACHINEGUN,
+    WOLF_WEAPON_CHAINGUN,
+    WOLF_WEAPON_COUNT
+} WolfWeaponType;
 
 typedef struct WolfPlayerState {
     int32_t health;
@@ -37,9 +39,9 @@ typedef struct WolfPlayerState {
     int32_t next_extra_life;
     /* Bit 0 is the gold key and bit 1 the silver key, as in the original `keys`. */
     uint8_t keys;
-    WolfWeapon weapon;
-    WolfWeapon best_weapon;
-    WolfWeapon chosen_weapon;
+    WolfWeaponType weapon;
+    WolfWeaponType best_weapon;
+    WolfWeaponType chosen_weapon;
     /* Zero-based map within the episode; the status bar shows it plus one as the floor. */
     uint32_t map_number;
     /* 0-2 picks the look-ahead, look-left or look-right version of the face. */
@@ -61,7 +63,13 @@ bool wolf_player_state_take_damage(WolfPlayerState *player, int32_t points);
 void wolf_player_state_give_ammo(WolfPlayerState *player, int32_t ammo);
 
 /* Pick up a weapon: 6 bullets, and switch to it if it is better than anything carried. */
-void wolf_player_state_give_weapon(WolfPlayerState *player, WolfWeapon weapon);
+void wolf_player_state_give_weapon(WolfPlayerState *player, WolfWeaponType weapon);
+
+/*
+ * Change the weapon in hand, as the original CheckWeaponChange does for keys
+ * 1-4. Weapon pickups and ammunition do not limit the choice yet.
+ */
+void wolf_player_state_select_weapon(WolfPlayerState *player, WolfWeaponType weapon);
 
 /* Add a key bit (WOLF_PLAYER_GOLD_KEY or WOLF_PLAYER_SILVER_KEY). */
 void wolf_player_state_give_key(WolfPlayerState *player, uint8_t key);

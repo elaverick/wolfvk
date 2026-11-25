@@ -61,14 +61,21 @@ void test_player_state_weapon_pickups_add_ammo_and_only_upgrade(void)
     WolfPlayerState player;
 
     wolf_player_state_new_game(&player, 0u);
-    wolf_player_state_give_weapon(&player, WOLF_WEAPON_CHAIN_GUN);
+    wolf_player_state_give_weapon(&player, WOLF_WEAPON_CHAINGUN);
     TEST_ASSERT_EQUAL_INT32(14, player.ammo);
-    TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_CHAIN_GUN, player.weapon);
-    TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_CHAIN_GUN, player.best_weapon);
+    TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_CHAINGUN, player.weapon);
+    TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_CHAINGUN, player.best_weapon);
 
-    wolf_player_state_give_weapon(&player, WOLF_WEAPON_MACHINE_GUN);
+    wolf_player_state_give_weapon(&player, WOLF_WEAPON_MACHINEGUN);
     TEST_ASSERT_EQUAL_INT32(20, player.ammo);
-    TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_CHAIN_GUN, player.weapon);
+    TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_CHAINGUN, player.weapon);
+
+    /* Choosing a weapon changes the one in hand and the one restored when ammo returns. */
+    wolf_player_state_select_weapon(&player, WOLF_WEAPON_KNIFE);
+    TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_KNIFE, player.weapon);
+    TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_KNIFE, player.chosen_weapon);
+    wolf_player_state_select_weapon(&player, WOLF_WEAPON_COUNT);
+    TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_KNIFE, player.weapon);
 }
 
 void test_player_state_keys_and_extra_lives(void)
