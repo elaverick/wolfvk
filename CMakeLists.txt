@@ -51,6 +51,7 @@ add_executable(wolfvk
     src/vulkan_renderer.c
     src/vulkan_renderer_frame.c
     src/vulkan_renderer_models.c
+    src/vulkan_renderer_status_bar.c
     src/vox_file.c
     src/voxel_mesh.c
     src/level_objects.c
@@ -159,6 +160,7 @@ if(BUILD_TESTING)
         src/vulkan_renderer.c
         src/vulkan_renderer_frame.c
         src/vulkan_renderer_models.c
+        src/vulkan_renderer_status_bar.c
         src/vox_file.c
         src/voxel_mesh.c
         src/level_objects.c

@@ -6,33 +6,57 @@
 #include "wolfvk/level_geometry.h"
 #include "wolfvk/level_objects.h"
 #include "wolfvk/player_controller.h"
+#include "wolfvk/screen_layout.h"
+#include "wolfvk/status_bar.h"
+#include "wolfvk/vga_graphics.h"
 #include "wolfvk/voxel_scene.h"
 #include "wolfvk/vulkan_renderer.h"
 #include "wolfvk/world.h"
 #include "wolfvk/wall_textures.h"
 #include "wolfvk/weapon.h"
 
+#include "game_palette.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-/* Use framebuffer pixels for the aspect ratio so high-DPI windows keep a correct projection. */
+/*
+ * The status bar as last sent to the renderer, so it is only re-sent when
+ * something it shows has changed.
+ */
+typedef struct StatusBarDisplay {
+    bool available;
+    WolfStatusBarGraphics graphics;
+    uint8_t shown_pixels[WOLF_STATUS_BAR_PIXEL_COUNT];
+    bool has_shown_pixels;
+} StatusBarDisplay;
+
+/*
+ * Use the framebuffer pixels of the 3D view for the aspect ratio, so the
+ * scene above the status bar is not stretched and high-DPI windows keep a
+ * correct projection.
+ */
 static bool update_camera_projection(
     SDL_Window *window,
     VulkanRenderer *renderer,
-    const WolfCamera *camera)
+    const WolfCamera *camera,
+    bool show_status_bar)
 {
     int drawable_width = 0;
     int drawable_height = 0;
+    WolfScreenLayout layout;
     float view_projection[16];
 
     SDL_GetWindowSizeInPixels(window, &drawable_width, &drawable_height);
-    if (drawable_width <= 0 || drawable_height <= 0) {
+    if (drawable_width <= 0 || drawable_height <= 0 ||
+        !wolf_screen_layout_compute(
+            (uint32_t)drawable_width, (uint32_t)drawable_height, show_status_bar, &layout)) {
         return true;
     }
 
     if (!wolf_camera_build_view_projection(
-            camera, (float)drawable_width / (float)drawable_height, view_projection)) {
+            camera, (float)layout.view.width / (float)layout.view.height, view_projection)) {
         return false;
     }
 
@@ -47,6 +71,7 @@ static void print_usage(const char *program_name)
     printf("Difficulty follows the original menu: 1 Can I play, Daddy?, 2 Don't hurt me.,\n");
     printf("3 Bring 'em on! (the default), 4 I am Death incarnate!\n");
     printf("Place MAPHEAD.WL6, GAMEMAPS.WL6 and VSWAP.WL6 in the working directory.\n");
+    printf("VGAHEAD.WL6, VGADICT.WL6 and VGAGRAPH.WL6 there provide the status bar.\n");
     printf("Voxel sprites are read from %s beside them, or beside the executable.\n",
         WOLF_VOXEL_ASSET_DIRECTORY);
 }
@@ -124,6 +149,62 @@ static bool load_voxel_scene(
         fprintf(stderr, "%u voxel poses are unavailable and will not be drawn (first: %s).\n",
             (unsigned int)scene->unavailable_pose_count, scene->first_problem);
     }
+    return true;
+}
+
+/*
+ * Decode the status bar pictures from the original VGAGRAPH files. They are
+ * optional: without them the game runs with the 3D view filling the window.
+ */
+static void load_status_bar_graphics(StatusBarDisplay *display)
+{
+    WolfVgaGraphics graphics = {0};
+    char error_message[256];
+
+    memset(display, 0, sizeof(*display));
+    if (!wolf_vga_graphics_load(
+            "VGAHEAD.WL6", "VGADICT.WL6", "VGAGRAPH.WL6",
+            &graphics, error_message, sizeof(error_message))) {
+        fprintf(stderr, "No status bar will be shown: %s\n"
+            "Copy VGAHEAD.WL6, VGADICT.WL6 and VGAGRAPH.WL6 beside the map files to show it.\n",
+            error_message);
+        return;
+    }
+    display->available = wolf_status_bar_graphics_load(&graphics, &display->graphics);
+    if (!display->available) {
+        fprintf(stderr, "The status bar pictures in VGAGRAPH.WL6 could not be decoded.\n");
+    }
+    wolf_vga_graphics_destroy(&graphics);
+}
+
+/* Redraw the bar from the player's current values and send it to the renderer if it changed. */
+static bool refresh_status_bar(
+    VulkanRenderer *renderer,
+    StatusBarDisplay *display,
+    const WolfPlayerState *player)
+{
+    uint8_t indexed_pixels[WOLF_STATUS_BAR_PIXEL_COUNT];
+    static uint8_t rgba_pixels[WOLF_STATUS_BAR_PIXEL_COUNT * 4u];
+    const uint8_t *border_rgba =
+        wolf_game_palette_rgba + (size_t)WOLF_STATUS_BAR_BORDER_COLOUR * 4u;
+
+    if (!display->available) {
+        return true;
+    }
+    if (!wolf_status_bar_compose(&display->graphics, player, indexed_pixels)) {
+        return false;
+    }
+    if (display->has_shown_pixels &&
+        memcmp(indexed_pixels, display->shown_pixels, sizeof(indexed_pixels)) == 0) {
+        return true;
+    }
+
+    wolf_status_bar_expand_rgba(indexed_pixels, WOLF_STATUS_BAR_PIXEL_COUNT, rgba_pixels);
+    if (!vulkan_renderer_set_status_bar(renderer, rgba_pixels, border_rgba)) {
+        return false;
+    }
+    memcpy(display->shown_pixels, indexed_pixels, sizeof(indexed_pixels));
+    display->has_shown_pixels = true;
     return true;
 }
 
@@ -298,6 +379,7 @@ int main(int argc, char *argv[])
     WolfVoxelScene voxel_scene = {0};
     WolfWeaponScene weapon_scene = {0};
     WolfWeaponState weapon_state;
+    StatusBarDisplay status_bar = {0};
     char error_message[256];
     char window_title[128];
     Uint64 performance_frequency;
@@ -338,6 +420,8 @@ int main(int argc, char *argv[])
         wolf_wall_textures_destroy(&wall_textures);
         return 1;
     }
+    /* A new game on the chosen level: full health, a pistol with 8 bullets, 3 lives, no keys. */
+    wolf_player_state_new_game(&world.player, options.level_index);
 
     if (!build_scene_geometry(
             &world, environment_quads, &scene_quads, &scene_quad_count,
@@ -392,6 +476,17 @@ int main(int argc, char *argv[])
     }
     wolf_wall_textures_destroy(&wall_textures);
 
+    load_status_bar_graphics(&status_bar);
+    if (!refresh_status_bar(renderer, &status_bar, &world.player)) {
+        fprintf(stderr, "Could not show the status bar.\n");
+        wolf_status_bar_graphics_destroy(&status_bar.graphics);
+        free(scene_quads);
+        vulkan_renderer_destroy(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
     wolf_camera_initialize(&camera);
     camera.position[0] =
         -((float)level.width * WOLF_WORLD_TILE_SIZE) * 0.5f +
@@ -400,7 +495,7 @@ int main(int argc, char *argv[])
         -((float)level.height * WOLF_WORLD_TILE_SIZE) * 0.5f +
         ((float)player_start.tile_y + 0.5f) * WOLF_WORLD_TILE_SIZE;
     camera.yaw_radians = player_start.yaw_radians;
-    if (!update_camera_projection(window, renderer, &camera)) {
+    if (!update_camera_projection(window, renderer, &camera, status_bar.available)) {
         fprintf(stderr, "Could not initialise the camera projection.\n");
         free(scene_quads);
         vulkan_renderer_destroy(renderer);
@@ -492,7 +587,7 @@ int main(int argc, char *argv[])
                 (void)SDL_SetWindowRelativeMouseMode(window, true);
             } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
                 vulkan_renderer_notify_resize(renderer);
-                if (!update_camera_projection(window, renderer, &camera)) {
+                if (!update_camera_projection(window, renderer, &camera, status_bar.available)) {
                     fprintf(stderr, "Could not update the camera projection after resize.\n");
                     running = 0;
                 }
@@ -549,11 +644,16 @@ int main(int argc, char *argv[])
                     : NULL;
                 int drawable_width = 0;
                 int drawable_height = 0;
+                WolfScreenLayout layout;
                 float weapon_matrix[16];
                 float attack_offset = weapon_state.firing ? 0.12f : 0.0f;
                 SDL_GetWindowSizeInPixels(window, &drawable_width, &drawable_height);
-                if (drawable_width > 0 && drawable_height > 0) {
-                    drawable_aspect_ratio = (float)drawable_width / (float)drawable_height;
+                /* The weapon is drawn in the 3D view above the status bar, so it uses the view's shape. */
+                if (drawable_width > 0 && drawable_height > 0 &&
+                    wolf_screen_layout_compute(
+                        (uint32_t)drawable_width, (uint32_t)drawable_height,
+                        status_bar.available, &layout)) {
+                    drawable_aspect_ratio = (float)layout.view.width / (float)layout.view.height;
                 }
                 if (pose != NULL && wolf_weapon_build_view_projection(
                         &camera, drawable_aspect_ratio, attack_offset, weapon_matrix)) {
@@ -578,7 +678,13 @@ int main(int argc, char *argv[])
             }
             use_was_down = use_down;
 
-            if (!update_camera_projection(window, renderer, &camera)) {
+            (void)wolf_player_state_update_face(&world.player, delta_seconds);
+            if (running && !refresh_status_bar(renderer, &status_bar, &world.player)) {
+                fprintf(stderr, "Could not update the status bar.\n");
+                running = 0;
+            }
+
+            if (!update_camera_projection(window, renderer, &camera, status_bar.available)) {
                 fprintf(stderr, "Could not update the camera projection.\n");
                 running = 0;
             }
@@ -620,6 +726,7 @@ int main(int argc, char *argv[])
     wolf_input_destroy(input);
     wolf_weapon_scene_destroy(&weapon_scene);
     wolf_voxel_scene_destroy(&voxel_scene);
+    wolf_status_bar_graphics_destroy(&status_bar.graphics);
     free(scene_quads);
     vulkan_renderer_destroy(renderer);
     SDL_DestroyWindow(window);

@@ -579,6 +579,11 @@ static bool create_graphics_pipelines(VulkanRenderer *renderer)
     VkViewport viewport = {0};
     VkRect2D scissor = {0};
     VkPipelineViewportStateCreateInfo viewport_state = {0};
+    /* The 3D view and the status bar use different rectangles within one render pass. */
+    const VkDynamicState dynamic_states[2] = {
+        VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR
+    };
+    VkPipelineDynamicStateCreateInfo dynamic_state = {0};
     VkPipelineRasterizationStateCreateInfo rasterizer = {0};
     VkPipelineMultisampleStateCreateInfo multisampling = {0};
     VkPipelineColorBlendAttachmentState color_blend_attachment = {0};
@@ -664,6 +669,10 @@ static bool create_graphics_pipelines(VulkanRenderer *renderer)
     viewport_state.scissorCount = 1;
     viewport_state.pScissors = &scissor;
 
+    dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamic_state.dynamicStateCount = 2u;
+    dynamic_state.pDynamicStates = dynamic_states;
+
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
@@ -722,6 +731,7 @@ static bool create_graphics_pipelines(VulkanRenderer *renderer)
     pipeline_info.pMultisampleState = &multisampling;
     pipeline_info.pDepthStencilState = &depth_stencil;
     pipeline_info.pColorBlendState = &color_blending;
+    pipeline_info.pDynamicState = &dynamic_state;
     pipeline_info.layout = renderer->pipeline_layout;
     pipeline_info.renderPass = renderer->render_pass;
     pipeline_info.subpass = 0;
@@ -1061,6 +1071,9 @@ static bool record_command_buffer(
     VkClearValue clear_values[2] = {0};
     VkRenderPassBeginInfo render_pass_info = {0};
     VkDeviceSize vertex_buffer_offset = 0;
+    WolfScreenLayout layout;
+    VkViewport view_viewport = {0};
+    VkRect2D view_scissor = {0};
     VkResult result;
 
     if (renderer->wall_texture_descriptor_set == VK_NULL_HANDLE) {
@@ -1074,6 +1087,14 @@ static bool record_command_buffer(
         fprintf(stderr, "Vulkan command buffer begin failed (%d).\n", result);
         return false;
     }
+
+    if (!wolf_screen_layout_compute(
+            renderer->swapchain_extent.width, renderer->swapchain_extent.height,
+            vulkan_renderer_status_bar_is_shown(renderer), &layout)) {
+        fprintf(stderr, "The swapchain has no drawable area.\n");
+        return false;
+    }
+    vulkan_renderer_status_bar_record_upload(renderer, command_buffer);
 
     render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     render_pass_info.renderPass = renderer->render_pass;
@@ -1093,6 +1114,18 @@ static bool record_command_buffer(
 
     vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->graphics_pipeline);
+
+    /* The scene is confined to the area above the status bar so the bar never hides any of it. */
+    view_viewport.x = (float)layout.view.x;
+    view_viewport.y = (float)layout.view.y;
+    view_viewport.width = (float)layout.view.width;
+    view_viewport.height = (float)layout.view.height;
+    view_viewport.minDepth = 0.0f;
+    view_viewport.maxDepth = 1.0f;
+    view_scissor.offset = (VkOffset2D){(int32_t)layout.view.x, (int32_t)layout.view.y};
+    view_scissor.extent = (VkExtent2D){layout.view.width, layout.view.height};
+    vkCmdSetViewport(command_buffer, 0u, 1u, &view_viewport);
+    vkCmdSetScissor(command_buffer, 0u, 1u, &view_scissor);
     vkCmdBindDescriptorSets(
         command_buffer,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -1129,6 +1162,7 @@ static bool record_command_buffer(
         vkCmdClearAttachments(command_buffer, 1u, &clear_depth, 1u, &clear_rect);
         vulkan_renderer_weapon_record(renderer, command_buffer);
     }
+    vulkan_renderer_status_bar_record_draw(renderer, command_buffer, &layout);
     vkCmdEndRenderPass(command_buffer);
 
     result = vkEndCommandBuffer(command_buffer);

@@ -1,6 +1,7 @@
 #ifndef WOLFVK_VULKAN_RENDERER_INTERNAL_H
 #define WOLFVK_VULKAN_RENDERER_INTERNAL_H
 
+#include "wolfvk/screen_layout.h"
 #include "wolfvk/vulkan_renderer.h"
 
 struct VulkanRenderer {
@@ -68,6 +69,27 @@ struct VulkanRenderer {
     uint32_t weapon_first_quad;
     uint32_t weapon_draw_quad_count;
     float weapon_view_projection[16];
+    /*
+     * The status bar is a 320x40 picture drawn at an integer scale below the
+     * 3D view. Its pixels are kept on the CPU and copied to the GPU at the
+     * start of the next frame, once the previous frame has finished with them.
+     */
+    VkImage status_bar_image;
+    VkDeviceMemory status_bar_image_memory;
+    VkImageView status_bar_image_view;
+    VkSampler status_bar_sampler;
+    VkDescriptorPool status_bar_descriptor_pool;
+    VkDescriptorSet status_bar_descriptor_set;
+    VkBuffer status_bar_staging_buffer;
+    VkDeviceMemory status_bar_staging_memory;
+    VkBuffer status_bar_vertex_buffer;
+    VkDeviceMemory status_bar_vertex_memory;
+    VkBuffer status_bar_index_buffer;
+    VkDeviceMemory status_bar_index_memory;
+    uint8_t *status_bar_pixels;
+    float status_bar_border_colour[4];
+    bool status_bar_needs_upload;
+    bool status_bar_uploaded_once;
 
     VkCommandPool command_pool;
     VkCommandBuffer *command_buffers;
@@ -135,6 +157,33 @@ bool vulkan_renderer_weapon_set_pose(
     const float view_projection[16]);
 void vulkan_renderer_weapon_record(VulkanRenderer *renderer, VkCommandBuffer command_buffer);
 void vulkan_renderer_weapon_destroy(VulkanRenderer *renderer);
+bool vulkan_renderer_geometry_create_host_buffer(
+    VulkanRenderer *renderer,
+    const void *data,
+    VkDeviceSize size,
+    VkBufferUsageFlags usage,
+    VkBuffer *buffer,
+    VkDeviceMemory *memory);
+bool vulkan_renderer_find_memory_type(
+    VulkanRenderer *renderer,
+    uint32_t type_filter,
+    VkMemoryPropertyFlags required_properties,
+    uint32_t *memory_type_index);
+
+bool vulkan_renderer_status_bar_set(
+    VulkanRenderer *renderer,
+    const uint8_t *rgba_pixels,
+    const uint8_t border_rgba[4]);
+/* True once a status bar picture has been supplied, so the view must leave room for it. */
+bool vulkan_renderer_status_bar_is_shown(const VulkanRenderer *renderer);
+/* Copy changed status bar pixels to the GPU; recorded before the render pass begins. */
+void vulkan_renderer_status_bar_record_upload(VulkanRenderer *renderer, VkCommandBuffer command_buffer);
+/* Fill the strip below the view with the border colour and draw the bar over it at its integer scale. */
+void vulkan_renderer_status_bar_record_draw(
+    VulkanRenderer *renderer,
+    VkCommandBuffer command_buffer,
+    const WolfScreenLayout *layout);
+void vulkan_renderer_status_bar_destroy(VulkanRenderer *renderer);
 
 bool vulkan_renderer_texture_layout_create(VulkanRenderer *renderer);
 bool vulkan_renderer_texture_set(

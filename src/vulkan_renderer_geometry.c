@@ -112,6 +112,26 @@ static bool create_host_buffer(
     return true;
 }
 
+bool vulkan_renderer_geometry_create_host_buffer(
+    VulkanRenderer *renderer,
+    const void *data,
+    VkDeviceSize size,
+    VkBufferUsageFlags usage,
+    VkBuffer *buffer,
+    VkDeviceMemory *memory)
+{
+    return create_host_buffer(renderer, data, size, usage, buffer, memory);
+}
+
+bool vulkan_renderer_find_memory_type(
+    VulkanRenderer *renderer,
+    uint32_t type_filter,
+    VkMemoryPropertyFlags required_properties,
+    uint32_t *memory_type_index)
+{
+    return find_memory_type(renderer, type_filter, required_properties, memory_type_index);
+}
+
 void vulkan_renderer_geometry_destroy_buffer(
     VulkanRenderer *renderer,
     VkBuffer *buffer,

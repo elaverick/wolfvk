@@ -321,6 +321,7 @@ void vulkan_renderer_destroy(VulkanRenderer *renderer)
         vulkan_renderer_geometry_destroy(renderer);
         vulkan_renderer_weapon_destroy(renderer);
         vulkan_renderer_models_destroy(renderer);
+        vulkan_renderer_status_bar_destroy(renderer);
         vulkan_renderer_texture_destroy(renderer);
         vkDestroyDevice(renderer->device, NULL);
     }
@@ -396,6 +397,14 @@ bool vulkan_renderer_set_wall_textures(
     uint32_t page_count)
 {
     return vulkan_renderer_texture_set(renderer, rgba_pages, page_count);
+}
+
+bool vulkan_renderer_set_status_bar(
+    VulkanRenderer *renderer,
+    const uint8_t *rgba_pixels,
+    const uint8_t border_rgba[4])
+{
+    return vulkan_renderer_status_bar_set(renderer, rgba_pixels, border_rgba);
 }
 
 /* Store the latest camera matrix for the next submitted frame without rebuilding the pipeline. */

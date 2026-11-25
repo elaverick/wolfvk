@@ -102,6 +102,17 @@ bool vulkan_renderer_set_wall_textures(
     const uint8_t *rgba_pages,
     uint32_t page_count);
 
+/*
+ * Show the 320x40 status bar (RGBA, row-major) below the 3D view at the
+ * integer scale wolf_screen_layout_compute chooses, with border_rgba filling
+ * the rest of its strip. The first call makes room for the bar; later calls
+ * replace its pixels, which reach the screen with the next frame.
+ */
+bool vulkan_renderer_set_status_bar(
+    VulkanRenderer *renderer,
+    const uint8_t *rgba_pixels,
+    const uint8_t border_rgba[4]);
+
 /* Set a column-major 4x4 view-projection matrix used by the vertex shader. */
 bool vulkan_renderer_set_view_projection(
     VulkanRenderer *renderer,
