@@ -126,10 +126,10 @@ static void collect_key_at_tile(WolfWorldState *world, int tile_x, int tile_y)
     index = tile_index((uint16_t)tile_x, (uint16_t)tile_y);
     marker = world->level.object_tiles[index];
     if (marker == WOLF_INFO_KEY1) {
-        world->key_mask |= 1u;
+        wolf_player_state_give_key(&world->player, WOLF_PLAYER_GOLD_KEY);
         world->level.object_tiles[index] = 0u;
     } else if (marker == WOLF_INFO_KEY2) {
-        world->key_mask |= 2u;
+        wolf_player_state_give_key(&world->player, WOLF_PLAYER_SILVER_KEY);
         world->level.object_tiles[index] = 0u;
     }
 }
@@ -185,6 +185,7 @@ bool wolf_world_state_init(
     }
     world->texture_page_count = texture_page_count;
     memset(world->door_at, UINT8_MAX, sizeof(world->door_at));
+    wolf_player_state_new_game(&world->player, 0u);
     world->geometry_revision = 1u;
 
     for (uint16_t y = 0u; y < level->height; ++y) {
@@ -403,7 +404,8 @@ bool wolf_world_state_use(
         WolfDoor *door = &world->doors[door_index];
 
         if (door->lock_type >= 1u && door->lock_type <= 4u &&
-            (world->key_mask & (uint8_t)(1u << (door->lock_type - 1u))) == 0u) {
+            !wolf_player_state_has_key(
+                &world->player, (uint8_t)(1u << (door->lock_type - 1u)))) {
             return false;
         }
 
@@ -647,12 +649,12 @@ bool wolf_world_state_collect_key(
         return false;
     }
 
-    previous_keys = world->key_mask;
+    previous_keys = world->player.keys;
     collect_key_at_tile(
         world,
         (int)floorf(map_coordinate(player_world_x, world->level.width)),
         (int)floorf(map_coordinate(player_world_z, world->level.height)));
-    return previous_keys != world->key_mask;
+    return previous_keys != world->player.keys;
 }
 
 static void set_vertex(

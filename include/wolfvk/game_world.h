@@ -2,6 +2,7 @@
 #define WOLFVK_GAME_WORLD_H
 
 #include "wolfvk/level.h"
+#include "wolfvk/player_state.h"
 #include "wolfvk/vulkan_renderer.h"
 
 #include <stdbool.h>
@@ -49,7 +50,8 @@ typedef struct WolfWorldState {
     uint8_t door_at[WOLF_LEVEL_PLANE_WORDS];
     uint16_t door_count;
     uint16_t texture_page_count;
-    uint8_t key_mask;
+    /* Health, ammunition, keys and score; door locks check these keys. */
+    WolfPlayerState player;
     bool has_secret_walls;
     WolfPushWall pushwall;
     uint32_t geometry_revision;

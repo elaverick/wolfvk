@@ -57,6 +57,10 @@ add_executable(wolfvk
     src/voxel_scene.c
     src/weapon.c
     src/vulkan_renderer_weapon.c
+    src/player_state.c
+    src/screen_layout.c
+    src/vga_graphics.c
+    src/status_bar.c
 )
 target_include_directories(wolfvk PRIVATE include)
 target_link_libraries(wolfvk PRIVATE SDL3::SDL3 Vulkan::Vulkan)
@@ -161,6 +165,10 @@ if(BUILD_TESTING)
         src/voxel_scene.c
         src/weapon.c
         src/vulkan_renderer_weapon.c
+        src/player_state.c
+        src/screen_layout.c
+        src/vga_graphics.c
+        src/status_bar.c
     )
     add_dependencies(wolfvk_tests wolfvk_shaders)
     target_include_directories(wolfvk_tests PRIVATE include src)

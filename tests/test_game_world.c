@@ -192,7 +192,7 @@ void test_world_state_locked_door_requires_and_collects_original_key_marker(void
     TEST_ASSERT_EQUAL_UINT8(WOLF_DOOR_CLOSED, world.doors[0].action);
 
     TEST_ASSERT_TRUE(wolf_world_state_collect_key(&world, player_x, player_z));
-    TEST_ASSERT_EQUAL_UINT8(1u, world.key_mask);
+    TEST_ASSERT_EQUAL_UINT8(1u, world.player.keys);
     TEST_ASSERT_EQUAL_UINT16(
         0u, world.level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 1u]);
 
@@ -461,7 +461,7 @@ void test_world_state_collects_original_yellow_key_marker(void)
     level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 44u;
     TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 98u));
     TEST_ASSERT_TRUE(wolf_world_state_collect_key(&world, player_x, player_z));
-    TEST_ASSERT_EQUAL_UINT8(2u, world.key_mask);
+    TEST_ASSERT_EQUAL_UINT8(2u, world.player.keys);
 }
 
 
