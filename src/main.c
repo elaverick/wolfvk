@@ -614,10 +614,10 @@ int main(int argc, char *argv[])
                 running = 0;
             }
 
-            if (wolf_world_state_collect_key(
-                    &world, camera.position[0], camera.position[2]) &&
+            if (wolf_world_state_collect_bonuses(
+                    &world, camera.position[0], camera.position[2], camera.yaw_radians) &&
                 !update_model_instances(renderer, &world, options.difficulty, &voxel_scene)) {
-                fprintf(stderr, "Could not remove the collected key's model.\n");
+                fprintf(stderr, "Could not remove a picked-up item's model.\n");
                 running = 0;
             }
 
@@ -625,17 +625,20 @@ int main(int argc, char *argv[])
                 wolf_input_key_down(input, SDL_SCANCODE_LCTRL) ||
                 wolf_input_gamepad_button_down(input, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER) ||
                 wolf_input_gamepad_axis(input, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) > 0.35f;
-            if (wolf_input_key_down(input, SDL_SCANCODE_1)) {
-                (void)wolf_weapon_state_select(&weapon_state, WOLF_WEAPON_KNIFE);
-            } else if (wolf_input_key_down(input, SDL_SCANCODE_2)) {
-                (void)wolf_weapon_state_select(&weapon_state, WOLF_WEAPON_PISTOL);
-            } else if (wolf_input_key_down(input, SDL_SCANCODE_3)) {
-                (void)wolf_weapon_state_select(&weapon_state, WOLF_WEAPON_MACHINEGUN);
-            } else if (wolf_input_key_down(input, SDL_SCANCODE_4)) {
-                (void)wolf_weapon_state_select(&weapon_state, WOLF_WEAPON_CHAINGUN);
+            /* Keys 1-4 choose among the weapons picked up so far, as CheckWeaponChange does. */
+            for (int weapon = WOLF_WEAPON_KNIFE; weapon <= WOLF_WEAPON_CHAINGUN; ++weapon) {
+                if (wolf_input_key_down(input, (SDL_Scancode)(SDL_SCANCODE_1 + weapon))) {
+                    (void)wolf_player_state_select_weapon(&world.player, (WolfWeaponType)weapon);
+                    break;
+                }
             }
-            /* The player state records the weapon in hand so the status bar shows it. */
-            wolf_player_state_select_weapon(&world.player, weapon_state.selected);
+            /*
+             * The player state owns the weapon in hand; picking up a better gun
+             * also switches to it. The view model follows whichever is held.
+             */
+            if (weapon_state.selected != world.player.weapon) {
+                (void)wolf_weapon_state_select(&weapon_state, world.player.weapon);
+            }
             if (!wolf_weapon_state_update(&weapon_state, fire_down, delta_seconds)) {
                 fprintf(stderr, "Weapon animation state update failed.\n");
                 running = 0;

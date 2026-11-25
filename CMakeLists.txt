@@ -62,6 +62,7 @@ add_executable(wolfvk
     src/screen_layout.c
     src/vga_graphics.c
     src/status_bar.c
+    src/bonus_items.c
 )
 target_include_directories(wolfvk PRIVATE include)
 target_link_libraries(wolfvk PRIVATE SDL3::SDL3 Vulkan::Vulkan)
@@ -149,6 +150,7 @@ if(BUILD_TESTING)
         tests/test_vga_graphics.c
         tests/test_player_state.c
         tests/test_status_bar.c
+        tests/test_bonus_items.c
         src/camera.c
         src/player_controller.c
         src/game_world.c
@@ -174,6 +176,7 @@ if(BUILD_TESTING)
         src/screen_layout.c
         src/vga_graphics.c
         src/status_bar.c
+        src/bonus_items.c
     )
     add_dependencies(wolfvk_tests wolfvk_shaders)
     target_include_directories(wolfvk_tests PRIVATE include src)

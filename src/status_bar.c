@@ -128,6 +128,9 @@ uint32_t wolf_status_bar_face_picture(const WolfPlayerState *player)
     if (player == NULL || player->health <= 0) {
         return WOLF_VGA_FACE8APIC;
     }
+    if (player->got_gatling_face) {
+        return WOLF_VGA_GOTGATLINGPIC;
+    }
     health = player->health > WOLF_PLAYER_MAX_HEALTH ? WOLF_PLAYER_MAX_HEALTH : player->health;
     frame = player->face_frame < FACE_FRAMES_PER_LEVEL ? player->face_frame : 0u;
     return WOLF_VGA_FACE1APIC +

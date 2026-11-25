@@ -191,7 +191,9 @@ void test_world_state_locked_door_requires_and_collects_original_key_marker(void
         &world, player_x, player_z, 1.57079632679f));
     TEST_ASSERT_EQUAL_UINT8(WOLF_DOOR_CLOSED, world.doors[0].action);
 
-    TEST_ASSERT_TRUE(wolf_world_state_collect_key(&world, player_x, player_z));
+    /* As in the original, the key is grabbed while walking up to it, not on reaching its centre. */
+    TEST_ASSERT_TRUE(wolf_world_state_collect_bonuses(
+        &world, player_x - 0.4f * WOLF_WORLD_TILE_SIZE, player_z, 1.57079632679f));
     TEST_ASSERT_EQUAL_UINT8(1u, world.player.keys);
     TEST_ASSERT_EQUAL_UINT16(
         0u, world.level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 1u]);
@@ -460,7 +462,9 @@ void test_world_state_collects_original_yellow_key_marker(void)
 
     level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 44u;
     TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 98u));
-    TEST_ASSERT_TRUE(wolf_world_state_collect_key(&world, player_x, player_z));
+    /* As in the original, the key is grabbed while walking up to it, not on reaching its centre. */
+    TEST_ASSERT_TRUE(wolf_world_state_collect_bonuses(
+        &world, player_x - 0.4f * WOLF_WORLD_TILE_SIZE, player_z, 1.57079632679f));
     TEST_ASSERT_EQUAL_UINT8(2u, world.player.keys);
 }
 

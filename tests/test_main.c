@@ -151,6 +151,12 @@ void test_status_bar_expands_through_the_original_palette(void);
 void test_screen_layout_uses_whole_number_scales_and_keeps_the_view_above_the_bar(void);
 void test_screen_layout_handles_small_windows_and_no_bar(void);
 void test_renderer_draws_status_bar_below_the_view(void);
+void test_bonus_markers_follow_the_original_statinfo_table(void);
+void test_bonus_grab_range_matches_the_original_view_test(void);
+void test_bonus_health_items_heal_only_when_useful(void);
+void test_bonus_ammunition_weapons_and_treasure(void);
+void test_world_removes_picked_up_items_and_leaves_unneeded_ones(void);
+void test_new_game_holds_only_the_knife_and_pistol(void);
 
 
 void test_weapon_starts_with_ready_pistol(void);
@@ -333,5 +339,11 @@ int main(void)
     RUN_TEST(test_screen_layout_uses_whole_number_scales_and_keeps_the_view_above_the_bar);
     RUN_TEST(test_screen_layout_handles_small_windows_and_no_bar);
     RUN_TEST(test_renderer_draws_status_bar_below_the_view);
+    RUN_TEST(test_bonus_markers_follow_the_original_statinfo_table);
+    RUN_TEST(test_bonus_grab_range_matches_the_original_view_test);
+    RUN_TEST(test_bonus_health_items_heal_only_when_useful);
+    RUN_TEST(test_bonus_ammunition_weapons_and_treasure);
+    RUN_TEST(test_world_removes_picked_up_items_and_leaves_unneeded_ones);
+    RUN_TEST(test_new_game_holds_only_the_knife_and_pistol);
     return UNITY_END();
 }

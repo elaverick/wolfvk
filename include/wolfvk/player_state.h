@@ -44,13 +44,20 @@ typedef struct WolfPlayerState {
     WolfWeaponType chosen_weapon;
     /* Zero-based map within the episode; the status bar shows it plus one as the floor. */
     uint32_t map_number;
+    /* Treasure picked up on this floor, for the end-of-floor tally. */
+    uint32_t treasure_count;
     /* 0-2 picks the look-ahead, look-left or look-right version of the face. */
     uint8_t face_frame;
     float face_ticks;
     uint32_t random_state;
+    /* Set by the chaingun pickup: BJ grins until the face next changes, as with gotgatgun. */
+    bool got_gatling_face;
 } WolfPlayerState;
 
-/* Start a new game as the original NewGame does: full health, 8 bullets, 3 lives, the pistol. */
+/*
+ * Start a new game as the original NewGame does: full health, 8 bullets,
+ * 3 lives, and only the knife and pistol, with the pistol in hand.
+ */
 void wolf_player_state_new_game(WolfPlayerState *player, uint32_t level_index);
 
 /* Add health, capped at 100. Returns false if the player was already at full health. */
@@ -67,9 +74,10 @@ void wolf_player_state_give_weapon(WolfPlayerState *player, WolfWeaponType weapo
 
 /*
  * Change the weapon in hand, as the original CheckWeaponChange does for keys
- * 1-4. Weapon pickups and ammunition do not limit the choice yet.
+ * 1-4: only weapons already picked up can be chosen, and with no ammunition
+ * the knife stays in hand. Returns false when the choice is not allowed.
  */
-void wolf_player_state_select_weapon(WolfPlayerState *player, WolfWeaponType weapon);
+bool wolf_player_state_select_weapon(WolfPlayerState *player, WolfWeaponType weapon);
 
 /* Add a key bit (WOLF_PLAYER_GOLD_KEY or WOLF_PLAYER_SILVER_KEY). */
 void wolf_player_state_give_key(WolfPlayerState *player, uint8_t key);

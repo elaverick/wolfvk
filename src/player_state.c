@@ -46,6 +46,7 @@ bool wolf_player_state_heal(WolfPlayerState *player, int32_t points)
         return false;
     }
     player->health += points;
+    player->got_gatling_face = false;
     if (player->health > WOLF_PLAYER_MAX_HEALTH) {
         player->health = WOLF_PLAYER_MAX_HEALTH;
     }
@@ -58,6 +59,7 @@ bool wolf_player_state_take_damage(WolfPlayerState *player, int32_t points)
         return false;
     }
     player->health -= points;
+    player->got_gatling_face = false;
     if (player->health <= 0) {
         player->health = 0;
         return true;
@@ -92,13 +94,15 @@ void wolf_player_state_give_weapon(WolfPlayerState *player, WolfWeaponType weapo
     }
 }
 
-void wolf_player_state_select_weapon(WolfPlayerState *player, WolfWeaponType weapon)
+bool wolf_player_state_select_weapon(WolfPlayerState *player, WolfWeaponType weapon)
 {
-    if (player == NULL || weapon < WOLF_WEAPON_KNIFE || weapon > WOLF_WEAPON_CHAINGUN) {
-        return;
+    if (player == NULL || weapon < WOLF_WEAPON_KNIFE || weapon > player->best_weapon ||
+        player->ammo <= 0) {
+        return false;
     }
     player->weapon = weapon;
     player->chosen_weapon = weapon;
+    return true;
 }
 
 void wolf_player_state_give_key(WolfPlayerState *player, uint8_t key)
@@ -142,6 +146,7 @@ bool wolf_player_state_update_face(WolfPlayerState *player, float delta_seconds)
     }
 
     previous_frame = player->face_frame;
+    player->got_gatling_face = false;
     player->face_frame = (uint8_t)(next_random_byte(player) >> 6);
     if (player->face_frame == 3u) {
         player->face_frame = 1u;

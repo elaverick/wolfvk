@@ -1,5 +1,7 @@
 #include "wolfvk/game_world.h"
 
+#include "wolfvk/bonus_items.h"
+
 #include "wolfvk/level_objects.h"
 #include "wolfvk/wall_textures.h"
 #include "wolfvk/world.h"
@@ -8,8 +10,6 @@
 #include <string.h>
 
 #define WOLF_DOOR_TEXTURE_PAGE_COUNT 8u
-#define WOLF_INFO_KEY1 43u
-#define WOLF_INFO_KEY2 44u
 #define WOLF_TWO_PI 6.28318530717958647692f
 #define WOLF_PI_OVER_FOUR 0.78539816339744830962f
 #define WOLF_HALF_PI 1.57079632679489661923f
@@ -110,28 +110,6 @@ static bool pushwall_occupies_cell(
     return (tile_x == current_x && tile_y == current_y) ||
         (tile_x == current_x + world->pushwall.direction_x &&
          tile_y == current_y + world->pushwall.direction_y);
-}
-
-/* The original four key statics occupy info-plane markers 43 and 44 in WL6. */
-static void collect_key_at_tile(WolfWorldState *world, int tile_x, int tile_y)
-{
-    size_t index;
-    uint16_t marker;
-
-    if (tile_x < 0 || tile_y < 0 ||
-        tile_x >= world->level.width || tile_y >= world->level.height) {
-        return;
-    }
-
-    index = tile_index((uint16_t)tile_x, (uint16_t)tile_y);
-    marker = world->level.object_tiles[index];
-    if (marker == WOLF_INFO_KEY1) {
-        wolf_player_state_give_key(&world->player, WOLF_PLAYER_GOLD_KEY);
-        world->level.object_tiles[index] = 0u;
-    } else if (marker == WOLF_INFO_KEY2) {
-        wolf_player_state_give_key(&world->player, WOLF_PLAYER_SILVER_KEY);
-        world->level.object_tiles[index] = 0u;
-    }
 }
 
 /* Refuse a closure when the player's original collision radius still overlaps the doorway. */
@@ -637,24 +615,54 @@ bool wolf_world_state_position_overlaps_solid(
     return false;
 }
 
-/* Keys are collected on entry to their original info-plane cell, then removed from the map. */
-bool wolf_world_state_collect_key(
+/*
+ * Pick up every bonus in the original grab range, as the original does while
+ * drawing the statics it can see. Only the tiles around the player can be in
+ * range. A bonus the player cannot use yet (full health, full ammunition)
+ * stays on the floor; one that is taken is removed from the info plane.
+ */
+bool wolf_world_state_collect_bonuses(
     WolfWorldState *world,
     float player_world_x,
-    float player_world_z)
+    float player_world_z,
+    float player_yaw_radians)
 {
-    uint8_t previous_keys;
+    float map_x;
+    float map_y;
+    int player_tile_x;
+    int player_tile_y;
+    bool collected = false;
 
-    if (world == NULL || !isfinite(player_world_x) || !isfinite(player_world_z)) {
+    if (world == NULL || !isfinite(player_world_x) || !isfinite(player_world_z) ||
+        !isfinite(player_yaw_radians)) {
         return false;
     }
 
-    previous_keys = world->player.keys;
-    collect_key_at_tile(
-        world,
-        (int)floorf(map_coordinate(player_world_x, world->level.width)),
-        (int)floorf(map_coordinate(player_world_z, world->level.height)));
-    return previous_keys != world->player.keys;
+    map_x = map_coordinate(player_world_x, world->level.width);
+    map_y = map_coordinate(player_world_z, world->level.height);
+    player_tile_x = (int)floorf(map_x);
+    player_tile_y = (int)floorf(map_y);
+    for (int tile_y = player_tile_y - 1; tile_y <= player_tile_y + 1; ++tile_y) {
+        for (int tile_x = player_tile_x - 1; tile_x <= player_tile_x + 1; ++tile_x) {
+            size_t index;
+            WolfBonusType bonus;
+
+            if (tile_x < 0 || tile_y < 0 ||
+                tile_x >= world->level.width || tile_y >= world->level.height) {
+                continue;
+            }
+            index = tile_index((uint16_t)tile_x, (uint16_t)tile_y);
+            bonus = wolf_bonus_type_for_marker(world->level.object_tiles[index]);
+            if (bonus == WOLF_BONUS_NONE ||
+                !wolf_bonus_in_grab_range(map_x, map_y, player_yaw_radians, tile_x, tile_y) ||
+                !wolf_bonus_apply(&world->player, bonus)) {
+                continue;
+            }
+            world->level.object_tiles[index] = 0u;
+            collected = true;
+        }
+    }
+    return collected;
 }
 
 static void set_vertex(

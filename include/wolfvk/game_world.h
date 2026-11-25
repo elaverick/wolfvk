@@ -92,11 +92,16 @@ bool wolf_world_state_position_overlaps_solid(
     float player_world_z,
     float player_radius_tiles);
 
-/* Collect an original red or yellow key when the player enters its map cell. */
-bool wolf_world_state_collect_key(
+/*
+ * Pick up keys, health, ammunition, weapons and treasure in the original grab
+ * range just ahead of the player, applying them to world->player and removing
+ * them from the map. Returns true if anything was picked up.
+ */
+bool wolf_world_state_collect_bonuses(
     WolfWorldState *world,
     float player_world_x,
-    float player_world_z);
+    float player_world_z,
+    float player_yaw_radians);
 
 /* Dynamic geometry reserves one two-sided quad per door and four for a map with pushwalls. */
 uint32_t wolf_world_state_dynamic_quad_count(const WolfWorldState *world);
