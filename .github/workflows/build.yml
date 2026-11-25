@@ -65,11 +65,12 @@ jobs:
           Requirements
           - 64-bit Windows
           - A Vulkan-capable graphics device and current graphics driver
-          - Original Wolfenstein 3D WL6 map and wall data (not included)
+          - Original Wolfenstein 3D WL6 map, wall and VGA graphics data (not included)
 
           Setup
           1. Copy MAPHEAD.WL6, GAMEMAPS.WL6 and VSWAP.WL6 from your own WL6
-             installation into this folder, beside wolfvk.exe.
+             installation into this folder, beside wolfvk.exe. Copy VGAHEAD.WL6,
+             VGADICT.WL6 and VGAGRAPH.WL6 as well to show the status bar.
           2. Keep the shaders folder beside wolfvk.exe.
           3. Build the voxel actors and objects from your VSWAP.WL6 (about 25 s):
                wolf_sprite_voxelizer.exe --vswap VSWAP.WL6 --output voxelizer-output --assets assets\voxels
@@ -92,6 +93,8 @@ jobs:
           six-tic attack animation timing. Firing is currently visual only: hit detection,
           damage, ammunition and weapon pickups are not implemented yet. Actors and
           objects remain in their spawn poses; enemy AI and most pickups are follow-on work.
+          The original status bar is drawn at a whole-number scale below the view;
+          integer scaling of the 3D scene remains a follow-on step.
           '@
           Set-Content -LiteralPath (Join-Path $packageDir "README.txt") -Value $instructions -Encoding utf8
           Compress-Archive -Path (Join-Path $packageDir "*") -DestinationPath "build\WolfVK-textured-demo-windows-x64.zip" -Force
