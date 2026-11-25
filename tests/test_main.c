@@ -133,6 +133,24 @@ void test_voxel_scene_places_models_on_their_tiles(void);
 void test_voxel_scene_rejects_invalid_arguments(void);
 void test_model_matrix_turns_north_facing_models_to_their_yaw(void);
 void test_renderer_draws_placed_model_instances(void);
+void test_vga_huffman_reads_bits_least_significant_first_from_node_254(void);
+void test_vga_huffman_rejects_truncated_input_and_invalid_nodes(void);
+void test_vga_deplanarize_interleaves_the_four_mode_x_planes(void);
+void test_vga_graphics_decodes_size_table_and_skips_sparse_chunks(void);
+void test_vga_graphics_rejects_malformed_files(void);
+void test_player_state_new_game_matches_the_original_defaults(void);
+void test_player_state_health_is_kept_between_zero_and_one_hundred(void);
+void test_player_state_ammo_caps_at_99_and_restores_the_gun(void);
+void test_player_state_weapon_pickups_add_ammo_and_only_upgrade(void);
+void test_player_state_keys_and_extra_lives(void);
+void test_player_state_face_glances_only_ahead_left_or_right(void);
+void test_status_bar_face_tracks_health_and_glance(void);
+void test_status_bar_places_numbers_keys_face_and_weapon_like_the_original(void);
+void test_status_bar_reflects_changed_player_values(void);
+void test_status_bar_expands_through_the_original_palette(void);
+void test_screen_layout_uses_whole_number_scales_and_keeps_the_view_above_the_bar(void);
+void test_screen_layout_handles_small_windows_and_no_bar(void);
+void test_renderer_draws_status_bar_below_the_view(void);
 
 
 void test_weapon_starts_with_ready_pistol(void);
@@ -297,5 +315,23 @@ int main(void)
     RUN_TEST(test_weapon_scene_loads_all_twenty_voxelizer_named_poses);
     RUN_TEST(test_weapon_scene_keeps_available_subjects_when_one_file_is_missing);
     RUN_TEST(test_weapon_scene_loader_rejects_invalid_arguments);
+    RUN_TEST(test_vga_huffman_reads_bits_least_significant_first_from_node_254);
+    RUN_TEST(test_vga_huffman_rejects_truncated_input_and_invalid_nodes);
+    RUN_TEST(test_vga_deplanarize_interleaves_the_four_mode_x_planes);
+    RUN_TEST(test_vga_graphics_decodes_size_table_and_skips_sparse_chunks);
+    RUN_TEST(test_vga_graphics_rejects_malformed_files);
+    RUN_TEST(test_player_state_new_game_matches_the_original_defaults);
+    RUN_TEST(test_player_state_health_is_kept_between_zero_and_one_hundred);
+    RUN_TEST(test_player_state_ammo_caps_at_99_and_restores_the_gun);
+    RUN_TEST(test_player_state_weapon_pickups_add_ammo_and_only_upgrade);
+    RUN_TEST(test_player_state_keys_and_extra_lives);
+    RUN_TEST(test_player_state_face_glances_only_ahead_left_or_right);
+    RUN_TEST(test_status_bar_face_tracks_health_and_glance);
+    RUN_TEST(test_status_bar_places_numbers_keys_face_and_weapon_like_the_original);
+    RUN_TEST(test_status_bar_reflects_changed_player_values);
+    RUN_TEST(test_status_bar_expands_through_the_original_palette);
+    RUN_TEST(test_screen_layout_uses_whole_number_scales_and_keeps_the_view_above_the_bar);
+    RUN_TEST(test_screen_layout_handles_small_windows_and_no_bar);
+    RUN_TEST(test_renderer_draws_status_bar_below_the_view);
     return UNITY_END();
 }

@@ -146,6 +146,9 @@ if(BUILD_TESTING)
         tests/test_level_objects.c
         tests/test_voxel_scene.c
         tests/test_weapon.c
+        tests/test_vga_graphics.c
+        tests/test_player_state.c
+        tests/test_status_bar.c
         src/camera.c
         src/player_controller.c
         src/game_world.c

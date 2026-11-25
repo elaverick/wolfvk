@@ -362,3 +362,78 @@ void test_device_scoring_prefers_discrete_gpus(void)
         vulkan_renderer_score_device_type(VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU) >
         vulkan_renderer_score_device_type(VK_PHYSICAL_DEVICE_TYPE_CPU));
 }
+
+void test_renderer_draws_status_bar_below_the_view(void)
+{
+    const VulkanQuad environment[] = {
+        {{
+            {{-0.8f, -0.7f, 0.7f}, {0.4f, 0.4f, 0.4f}},
+            {{0.8f, -0.7f, 0.7f}, {0.4f, 0.4f, 0.4f}},
+            {{0.8f, 0.7f, 0.7f}, {0.4f, 0.4f, 0.4f}},
+            {{-0.8f, 0.7f, 0.7f}, {0.4f, 0.4f, 0.4f}}
+        }}
+    };
+    const float identity[16] = {
+        1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f
+    };
+    const uint8_t border_rgba[4] = {0u, 64u, 64u, 255u};
+    static uint8_t bar_pixels[WOLF_STATUS_BAR_WIDTH * WOLF_STATUS_BAR_HEIGHT * 4u];
+    static uint8_t white_wall_page[WOLF_WALL_TEXTURE_RGBA_SIZE];
+    SDL_Window *window = SDL_CreateWindow(
+        "WolfVK Vulkan status bar test", 640, 480, SDL_WINDOW_HIDDEN | SDL_WINDOW_VULKAN);
+    VulkanRenderer *renderer = NULL;
+    bool renderer_created;
+    bool scene_ready = false;
+    bool hidden_before_set = false;
+    bool invalid_rejected = false;
+    bool bar_set = false;
+    bool frames_rendered = false;
+    bool upload_consumed = false;
+    bool bar_updated = false;
+
+    TEST_ASSERT_NOT_NULL_MESSAGE(window, SDL_GetError());
+    memset(white_wall_page, 255, sizeof(white_wall_page));
+    memset(bar_pixels, 128, sizeof(bar_pixels));
+
+    renderer_created = vulkan_renderer_create(window, &renderer);
+    if (renderer_created) {
+        scene_ready = vulkan_renderer_set_wall_textures(renderer, white_wall_page, 1u) &&
+            vulkan_renderer_set_quads(renderer, environment, 1u) &&
+            vulkan_renderer_set_view_projection(renderer, identity);
+    }
+    if (scene_ready) {
+        hidden_before_set = !vulkan_renderer_status_bar_is_shown(renderer) &&
+            vulkan_renderer_draw_frame(renderer);
+        invalid_rejected = !vulkan_renderer_set_status_bar(renderer, NULL, border_rgba) &&
+            !vulkan_renderer_set_status_bar(renderer, bar_pixels, NULL) &&
+            !vulkan_renderer_set_status_bar(NULL, bar_pixels, border_rgba);
+        bar_set = vulkan_renderer_set_status_bar(renderer, bar_pixels, border_rgba) &&
+            vulkan_renderer_status_bar_is_shown(renderer) &&
+            renderer->status_bar_needs_upload;
+    }
+    if (bar_set) {
+        frames_rendered = vulkan_renderer_draw_frame(renderer) && vulkan_renderer_draw_frame(renderer);
+        upload_consumed = renderer->status_bar_uploaded_once && !renderer->status_bar_needs_upload;
+    }
+    if (upload_consumed) {
+        /* A changed bar is re-uploaded into the existing image on the next frame. */
+        memset(bar_pixels, 32, sizeof(bar_pixels));
+        bar_updated = vulkan_renderer_set_status_bar(renderer, bar_pixels, border_rgba) &&
+            renderer->status_bar_needs_upload &&
+            vulkan_renderer_draw_frame(renderer) &&
+            !renderer->status_bar_needs_upload;
+    }
+
+    vulkan_renderer_destroy(renderer);
+    SDL_DestroyWindow(window);
+
+    TEST_ASSERT_TRUE_MESSAGE(renderer_created, "Vulkan renderer initialisation failed");
+    TEST_ASSERT_TRUE_MESSAGE(scene_ready, "Vulkan level scene setup failed");
+    TEST_ASSERT_TRUE_MESSAGE(hidden_before_set, "A status bar was shown before one was supplied");
+    TEST_ASSERT_TRUE_MESSAGE(invalid_rejected, "Invalid status bar arguments were accepted");
+    TEST_ASSERT_TRUE_MESSAGE(bar_set, "The status bar resources could not be created");
+    TEST_ASSERT_TRUE_MESSAGE(frames_rendered, "Frames with the status bar failed to render");
+    TEST_ASSERT_TRUE_MESSAGE(upload_consumed, "The status bar was not copied to the GPU");
+    TEST_ASSERT_TRUE_MESSAGE(bar_updated, "A changed status bar was not re-uploaded");
+}
