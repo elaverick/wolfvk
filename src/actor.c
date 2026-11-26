@@ -75,6 +75,7 @@ bool wolf_actor_initialize(
     actor->yaw_radians = yaw_radians;
     actor->health = health;
     actor->shootable = true;
+    actor->movement_follow_path_arrows = true;
     actor->state_id = WOLF_ACTOR_STATE_NONE;
 
     return wolf_actor_set_state(actor, states, state_count, initial_state, context);
