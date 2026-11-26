@@ -431,3 +431,89 @@ void test_officer_and_ss_deaths_award_original_points_and_drops(void)
     wolf_actor_collection_destroy(officer);
     wolf_actor_collection_destroy(ss);
 }
+
+
+void test_officer_and_ss_first_hits_alert_and_enter_their_pain_states(void)
+{
+    WolfWorldState officer_world = {0};
+    WolfWorldState ss_world = {0};
+    WolfActor *officer = NULL;
+    WolfActor *ss = NULL;
+    uint32_t officer_count = 0u;
+    uint32_t ss_count = 0u;
+    WolfEnemyAIEvents officer_events = {0};
+    WolfEnemyAIEvents ss_events = {0};
+    float player_x = tile_centre(2u, 8u);
+    float player_z = tile_centre(4u, 8u);
+
+    TEST_ASSERT_TRUE(create_guard_world(
+        &officer_world, &officer, &officer_count, 118u));
+    officer[0].health = 1000;
+    officer[0].ai_random_state = 12288u;
+    TEST_ASSERT_TRUE(wolf_enemy_ai_player_attack(
+        officer, officer_count, &officer_world, player_x, player_z,
+        1.57079632679f, WOLF_WEAPON_PISTOL, &officer_events));
+    TEST_ASSERT_TRUE(officer[0].attack_mode);
+    TEST_ASSERT_TRUE(officer[0].health < 1000);
+    TEST_ASSERT_TRUE(officer[0].state_id >= WOLF_OFFICER_STATE_PAIN_FIRST);
+    TEST_ASSERT_TRUE(officer[0].state_id <= WOLF_OFFICER_STATE_PAIN_LAST);
+    TEST_ASSERT_EQUAL_UINT32(1u, officer_events.officer_alerts);
+
+    TEST_ASSERT_TRUE(create_guard_world(&ss_world, &ss, &ss_count, 128u));
+    ss[0].health = 1000;
+    ss[0].ai_random_state = 12288u;
+    TEST_ASSERT_TRUE(wolf_enemy_ai_player_attack(
+        ss, ss_count, &ss_world, player_x, player_z,
+        1.57079632679f, WOLF_WEAPON_PISTOL, &ss_events));
+    TEST_ASSERT_TRUE(ss[0].attack_mode);
+    TEST_ASSERT_TRUE(ss[0].health < 1000);
+    TEST_ASSERT_TRUE(ss[0].state_id >= WOLF_SS_STATE_PAIN_FIRST);
+    TEST_ASSERT_TRUE(ss[0].state_id <= WOLF_SS_STATE_PAIN_LAST);
+    TEST_ASSERT_EQUAL_UINT32(1u, ss_events.ss_alerts);
+
+    wolf_actor_collection_destroy(officer);
+    wolf_actor_collection_destroy(ss);
+}
+
+void test_ss_attack_uses_original_two_thirds_effective_distance(void)
+{
+    WolfWorldState officer_world = {0};
+    WolfWorldState ss_world = {0};
+    WolfActor *officer = NULL;
+    WolfActor *ss = NULL;
+    uint32_t officer_count = 0u;
+    uint32_t ss_count = 0u;
+    WolfEnemyAIEvents officer_events = {0};
+    WolfEnemyAIEvents ss_events = {0};
+    float player_x = tile_centre(0u, 8u);
+    float player_z = tile_centre(4u, 8u);
+    float player_yaw = 1.57079632679f;
+
+    TEST_ASSERT_TRUE(create_guard_world(
+        &officer_world, &officer, &officer_count, 118u));
+    officer_world.player.health = 100;
+    officer[0].attack_mode = true;
+    officer[0].ai_random_state = 12288u;
+    TEST_ASSERT_TRUE(wolf_actor_collection_set_state(
+        &officer[0], WOLF_OFFICER_STATE_SHOOT_ACTION));
+    TEST_ASSERT_TRUE(wolf_enemy_ai_update_tic(
+        officer, officer_count, &officer_world, player_x, player_z,
+        player_yaw, WOLF_DIFFICULTY_HARD, false, false, &officer_events));
+    TEST_ASSERT_EQUAL_INT32(100, officer_world.player.health);
+    TEST_ASSERT_EQUAL_UINT32(1u, officer_events.officer_shots);
+
+    TEST_ASSERT_TRUE(create_guard_world(&ss_world, &ss, &ss_count, 128u));
+    ss_world.player.health = 100;
+    ss[0].attack_mode = true;
+    ss[0].ai_random_state = 12288u;
+    TEST_ASSERT_TRUE(wolf_actor_collection_set_state(
+        &ss[0], WOLF_SS_STATE_SHOOT_ACTION_1));
+    TEST_ASSERT_TRUE(wolf_enemy_ai_update_tic(
+        ss, ss_count, &ss_world, player_x, player_z,
+        player_yaw, WOLF_DIFFICULTY_HARD, false, false, &ss_events));
+    TEST_ASSERT_EQUAL_INT32(68, ss_world.player.health);
+    TEST_ASSERT_EQUAL_UINT32(1u, ss_events.ss_shots);
+
+    wolf_actor_collection_destroy(officer);
+    wolf_actor_collection_destroy(ss);
+}
