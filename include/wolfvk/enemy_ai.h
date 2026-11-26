@@ -23,6 +23,8 @@ bool wolf_enemy_ai_update_tic(
     WolfActor *actors,
     uint32_t actor_count,
     WolfWorldState *world,
+    float player_world_x,
+    float player_world_z,
     float player_yaw_radians,
     WolfDifficulty difficulty,
     bool player_is_moving,
@@ -34,6 +36,8 @@ bool wolf_enemy_ai_player_attack(
     WolfActor *actors,
     uint32_t actor_count,
     WolfWorldState *world,
+    float player_world_x,
+    float player_world_z,
     float player_yaw_radians,
     WolfWeaponType weapon);
 
