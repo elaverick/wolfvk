@@ -476,6 +476,7 @@ int main(int argc, char *argv[])
     Uint64 previous_counter;
     int running = 1;
     bool use_was_down = false;
+    bool window_focused = true;
     bool weapon_assets_uploaded = false;
     float drawable_aspect_ratio = 16.0f / 9.0f;
 
@@ -692,8 +693,10 @@ int main(int argc, char *argv[])
                  event.key.scancode == SDL_SCANCODE_ESCAPE)) {
                 running = 0;
             } else if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) {
+                window_focused = false;
                 (void)SDL_SetWindowRelativeMouseMode(window, false);
             } else if (event.type == SDL_EVENT_WINDOW_FOCUS_GAINED) {
+                window_focused = true;
                 (void)SDL_SetWindowRelativeMouseMode(window, true);
             } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
                 vulkan_renderer_notify_resize(renderer);
@@ -709,6 +712,10 @@ int main(int argc, char *argv[])
                 (double)performance_frequency)
             : 0.0f;
         previous_counter = current_counter;
+        if (!window_focused) {
+            /* The original game pauses simulation while its window is inactive. */
+            delta_seconds = 0.0f;
+        }
 
         {
             bool dynamic_geometry_changed = false;
