@@ -93,6 +93,12 @@ bool wolf_world_state_position_overlaps_solid(
     float player_world_z,
     float player_radius_tiles);
 
+/* Enemy actors may open ordinary doors and wait until the panel is fully open. */
+bool wolf_world_state_actor_request_door_open(
+    WolfWorldState *world, uint16_t tile_x, uint16_t tile_y);
+bool wolf_world_state_actor_door_is_open(
+    const WolfWorldState *world, uint16_t tile_x, uint16_t tile_y);
+
 /*
  * Pick up keys, health, ammunition, weapons and treasure in the original grab
  * range just ahead of the player, applying them to world->player and removing
