@@ -82,6 +82,8 @@ Each checkpoint is a commit boundary. Keep the changes small enough that a check
 
 ### Stage 1 — Actor animation and deterministic state timing
 
+**Progress (2026-11-26):** The reusable per-instance actor/state representation and bounded 70 Hz simulation-clock modules are committed with 14 regression tests. The clock is not yet wired into the application loop, and actors are not yet animated in the renderer; C1 remains in progress and must not be marked complete until those integration and acceptance requirements pass.
+
 - [ ] Extend the existing actor representation so an actor can hold a current animation/state, elapsed tic count and required per-instance state.
 - [ ] Implement deterministic state advancement at the original 70 Hz simulation rate, independent of display refresh rate.
 - [ ] Resolve named voxel poses/frames from the existing voxelizer output and manifest; handle missing poses without crashing or corrupting other actors.
