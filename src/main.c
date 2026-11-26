@@ -15,6 +15,7 @@
 #include "wolfvk/wall_textures.h"
 #include "wolfvk/weapon.h"
 #include "wolfvk/audio.h"
+#include "wolfvk/audio_events.h"
 
 #include "game_palette.h"
 
@@ -48,29 +49,89 @@ static void load_optional_sound(WolfAudio *audio, const char *sound_name)
     }
 }
 
-/* Load the original digitised weapon effects and pickup sounds when extracted. */
+/* Load every named effect currently exported by the VSWAP DigiMap extractor. */
 static void load_audio_assets(WolfAudio *audio)
 {
     static const char *const sound_names[] = {
-        "ATKPISTOLSND",
+        "HALTSND",
+        "DOGBARKSND",
+        "CLOSEDOORSND",
+        "OPENDOORSND",
         "ATKMACHINEGUNSND",
+        "ATKPISTOLSND",
         "ATKGATLINGSND",
-        "ATKKNIFESND",
-        "GETKEYSND",
-        "GETAMMOSND",
-        "GETMACHINESND",
-        "HEALTH1SND",
-        "HEALTH2SND",
-        "BONUS1SND",
-        "BONUS2SND",
-        "BONUS3SND",
-        "BONUS4SND",
+        "SCHUTZADSND",
+        "GUTENTAGSND",
+        "MUTTISND",
+        "BOSSFIRESND",
+        "SSFIRESND",
+        "DEATHSCREAM1SND",
+        "DEATHSCREAM2SND",
+        "DEATHSCREAM3SND",
+        "TAKEDAMAGESND",
+        "PUSHWALLSND",
+        "DOGDEATHSND",
+        "AHHHGSND",
+        "DIESND",
+        "EVASND",
+        "LEBENSND",
+        "NAZIFIRESND",
+        "SLURPIESND",
+        "TOT_HUNDSND",
+        "MEINGOTTSND",
+        "SCHABBSHASND",
+        "HITLERHASND",
+        "SPIONSND",
+        "NEINSOVASSND",
+        "DOGATTACKSND",
+        "LEVELDONESND",
+        "MECHSTEPSND",
         "YEAHSND",
-        "LEBENSND"
+        "SCHEISTSND",
+        "DEATHSCREAM4SND",
+        "DEATHSCREAM5SND",
+        "DONNERSND",
+        "EINESND",
+        "ERLAUBENSND",
+        "DEATHSCREAM6SND",
+        "DEATHSCREAM7SND",
+        "DEATHSCREAM8SND",
+        "DEATHSCREAM9SND",
+        "KEINSND",
+        "MEINSND",
+        "ROSESND"
     };
 
     for (size_t index = 0u; index < sizeof(sound_names) / sizeof(sound_names[0]); ++index) {
         load_optional_sound(audio, sound_names[index]);
+    }
+}
+
+/* Play sounds for doors and secret pushwalls when their world states transition. */
+static void play_world_audio_events(
+    WolfAudio *audio,
+    const WolfAudioWorldSnapshot *previous,
+    const WolfWorldState *world,
+    WolfAudioVector3 source_position)
+{
+    WolfAudioWorldSnapshot current;
+    WolfAudioWorldEvent events[WOLF_WORLD_MAX_DOORS + 1u];
+    size_t event_count;
+
+    if (audio == NULL || previous == NULL || world == NULL) {
+        return;
+    }
+
+    wolf_audio_world_snapshot_capture(world, &current);
+    event_count = wolf_audio_world_snapshot_diff(
+        previous, &current, events, sizeof(events) / sizeof(events[0]));
+
+    for (size_t index = 0u; index < event_count; ++index) {
+        const char *sound_name = wolf_audio_world_event_sound(events[index]);
+
+        if (sound_name != NULL) {
+            (void)wolf_audio_play(audio, sound_name, source_position);
+        }
     }
 }
 
@@ -639,7 +700,6 @@ int main(int argc, char *argv[])
                 running = 0;
             } else if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) {
                 (void)SDL_SetWindowRelativeMouseMode(window, false);
-    wolf_audio_shutdown(&audio);
             } else if (event.type == SDL_EVENT_WINDOW_FOCUS_GAINED) {
                 (void)SDL_SetWindowRelativeMouseMode(window, true);
             } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
@@ -662,7 +722,9 @@ int main(int argc, char *argv[])
             bool use_down;
             bool fire_down;
             bool geometry_changed = false;
+            WolfAudioWorldSnapshot audio_world_before;
 
+            wolf_audio_world_snapshot_capture(&world, &audio_world_before);
             if (!wolf_world_state_update(
                     &world, delta_seconds, camera.position[0], camera.position[2],
                     &dynamic_geometry_changed) ||
@@ -808,6 +870,12 @@ int main(int argc, char *argv[])
             }
             use_was_down = use_down;
 
+            if (audio_available) {
+                play_world_audio_events(
+                    &audio, &audio_world_before, &world,
+                    (WolfAudioVector3){camera.position[0], camera.position[1], camera.position[2]});
+            }
+
             (void)wolf_player_state_update_face(&world.player, delta_seconds);
             if (running && !refresh_status_bar(renderer, &status_bar, &world.player)) {
                 fprintf(stderr, "Could not update the status bar.\n");
@@ -860,6 +928,7 @@ int main(int argc, char *argv[])
     free(scene_quads);
     vulkan_renderer_destroy(renderer);
     SDL_DestroyWindow(window);
+    wolf_audio_shutdown(&audio);
     SDL_Quit();
     return 0;
 }

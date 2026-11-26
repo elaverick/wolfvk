@@ -5,6 +5,10 @@ void test_audio_source_to_east_of_north_facing_listener_is_right(void);
 void test_audio_listener_rotation_changes_relative_direction(void);
 void test_audio_relative_position_preserves_vertical_offset(void);
 void test_audio_relative_position_rejects_invalid_arguments(void);
+void test_audio_world_snapshot_detects_door_open_and_close_transitions(void);
+void test_audio_world_snapshot_detects_secret_wall_start_once(void);
+void test_audio_world_snapshot_ignores_door_animation_without_state_change(void);
+void test_audio_world_snapshot_handles_multiple_transitions_and_invalid_inputs(void);
 
 void test_window_creation(void);
 void test_window_is_resizable(void);
@@ -194,6 +198,10 @@ int main(void)
     RUN_TEST(test_audio_listener_rotation_changes_relative_direction);
     RUN_TEST(test_audio_relative_position_preserves_vertical_offset);
     RUN_TEST(test_audio_relative_position_rejects_invalid_arguments);
+    RUN_TEST(test_audio_world_snapshot_detects_door_open_and_close_transitions);
+    RUN_TEST(test_audio_world_snapshot_detects_secret_wall_start_once);
+    RUN_TEST(test_audio_world_snapshot_ignores_door_animation_without_state_change);
+    RUN_TEST(test_audio_world_snapshot_handles_multiple_transitions_and_invalid_inputs);
     RUN_TEST(test_window_creation);
     RUN_TEST(test_window_is_resizable);
     RUN_TEST(test_window_close_event_can_be_queued);

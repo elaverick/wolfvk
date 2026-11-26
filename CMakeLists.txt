@@ -96,6 +96,7 @@ add_executable(wolfvk
     src/bonus_items.c
     src/audio.c
     src/audio_spatial.c
+    src/audio_events.c
 )
 target_include_directories(wolfvk PRIVATE include)
 target_link_libraries(wolfvk PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer Vulkan::Vulkan)
@@ -185,6 +186,7 @@ if(BUILD_TESTING)
         tests/test_status_bar.c
         tests/test_bonus_items.c
         tests/test_audio_spatial.c
+        tests/test_audio_events.c
         src/camera.c
         src/player_controller.c
         src/game_world.c
@@ -212,6 +214,7 @@ if(BUILD_TESTING)
         src/status_bar.c
         src/bonus_items.c
         src/audio_spatial.c
+        src/audio_events.c
     )
     add_dependencies(wolfvk_tests wolfvk_shaders)
     target_include_directories(wolfvk_tests PRIVATE include src)
