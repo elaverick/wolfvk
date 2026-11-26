@@ -324,33 +324,36 @@ static int32_t guard_attack_damage(
 static void guard_shoot_player(
     WolfActor *actor,
     WolfWorldState *world,
+    float player_x,
+    float player_z,
     float player_yaw,
     WolfDifficulty difficulty,
     bool player_is_moving,
     WolfEnemyAIEvents *events)
 {
-    int distance;
-    float delta_x = actor->position_x - world->level.width; /* overwritten below; keeps no integer conversion hidden */
-    bool player_can_see_guard;
+    float dx = actor->position_x - player_x;
+    float dz = actor->position_z - player_z;
+    float angle_to_guard = atan2f(dx, -dz);
+    float angle_error = remainderf(angle_to_guard - player_yaw, WOLF_ENEMY_TWO_PI);
+    bool player_can_see_guard = fabsf(angle_error) < 0.65f;
+    int distance = chebyshev_tile_distance(actor, world, player_x, player_z);
     int32_t damage;
 
-    (void)delta_x;
-    distance = chebyshev_tile_distance(
-        actor, world, 0.0f, 0.0f);
-    {
-        /* The player world position is supplied through the camera coordinates at the call site. */
-        float player_x = 0.0f;
-        float player_z = 0.0f;
-        (void)player_x;
-        (void)player_z;
+    if (!has_line_of_sight(world, actor->position_x, actor->position_z, player_x, player_z)) {
+        return;
     }
-    (void)player_yaw;
-    (void)difficulty;
-    (void)player_is_moving;
-    (void)events;
-    (void)distance;
-    (void)player_can_see_guard;
-    (void)damage;
+    damage = guard_attack_damage(actor, distance, player_is_moving, player_can_see_guard);
+    if (difficulty == WOLF_DIFFICULTY_BABY) {
+        damage >>= 2;
+    }
+    if (damage > 0) {
+        (void)wolf_player_state_take_damage(&world->player, damage);
+    }
+    if (events != NULL) {
+        ++events->guard_shots;
+        events->shot_source_x = actor->position_x;
+        events->shot_source_z = actor->position_z;
+    }
 }
 
 static bool is_guard_state_shooting(uint16_t state_id)
@@ -468,32 +471,86 @@ bool wolf_enemy_ai_player_attack(
     WolfActor *actors,
     uint32_t actor_count,
     WolfWorldState *world,
+    float player_world_x,
+    float player_world_z,
     float player_yaw_radians,
     WolfWeaponType weapon)
 {
-    float player_x;
-    float player_z;
     float forward_x;
     float forward_z;
     float best_distance = INFINITY;
     WolfActor *target = NULL;
+    float max_range;
+    float aim_radius;
 
     if ((actor_count > 0u && actors == NULL) || world == NULL ||
+        !isfinite(player_world_x) || !isfinite(player_world_z) ||
         !isfinite(player_yaw_radians) ||
         weapon < WOLF_WEAPON_KNIFE || weapon >= WOLF_WEAPON_COUNT) {
         return false;
     }
-    /* Player coordinates are supplied through the world's cached camera-independent start below. */
-    player_x = world->level.width > 0u ? 0.0f : 0.0f;
-    player_z = world->level.height > 0u ? 0.0f : 0.0f;
+
     forward_x = sinf(player_yaw_radians);
     forward_z = -cosf(player_yaw_radians);
-    (void)player_x;
-    (void)player_z;
-    (void)forward_x;
-    (void)forward_z;
-    (void)best_distance;
-    (void)target;
+    max_range = weapon == WOLF_WEAPON_KNIFE
+        ? WOLF_ENEMY_KNIFE_RANGE_TILES * WOLF_WORLD_TILE_SIZE
+        : WOLF_ENEMY_SHOT_RANGE_TILES * WOLF_WORLD_TILE_SIZE;
+    aim_radius = (weapon == WOLF_WEAPON_KNIFE
+        ? WOLF_ENEMY_KNIFE_AIM_RADIUS_TILES
+        : WOLF_ENEMY_GUN_AIM_RADIUS_TILES) * WOLF_WORLD_TILE_SIZE;
+
+    for (uint32_t index = 0u; index < actor_count; ++index) {
+        WolfActor *actor = &actors[index];
+        float relative_x;
+        float relative_z;
+        float along_ray;
+        float perpendicular;
+
+        if (!actor->active || !actor->shootable || actor->family != WOLF_ACTOR_GUARD) {
+            continue;
+        }
+        relative_x = actor->position_x - player_world_x;
+        relative_z = actor->position_z - player_world_z;
+        along_ray = relative_x * forward_x + relative_z * forward_z;
+        perpendicular = fabsf(relative_x * forward_z - relative_z * forward_x);
+        if (along_ray <= 0.0f || along_ray > max_range ||
+            perpendicular > aim_radius || along_ray >= best_distance) {
+            continue;
+        }
+        if (!has_line_of_sight(
+                world, player_world_x, player_world_z,
+                actor->position_x, actor->position_z)) {
+            continue;
+        }
+        best_distance = along_ray;
+        target = actor;
+    }
+
+    if (target == NULL) {
+        return true;
+    }
+
+    {
+        int distance = chebyshev_tile_distance(
+            target, world, player_world_x, player_world_z);
+        int32_t damage;
+
+        if (weapon == WOLF_WEAPON_KNIFE) {
+            damage = (int32_t)(actor_random_byte(target) >> 4);
+        } else if (distance < 2) {
+            damage = (int32_t)(actor_random_byte(target) / 4u);
+        } else if (distance < 4) {
+            damage = (int32_t)(actor_random_byte(target) / 6u);
+        } else {
+            if ((int)(actor_random_byte(target) / 12u) < distance) {
+                return true;
+            }
+            damage = (int32_t)(actor_random_byte(target) / 6u);
+        }
+        if (damage > 0) {
+            (void)damage_guard(target, world, damage);
+        }
+    }
     return true;
 }
 
@@ -501,20 +558,19 @@ bool wolf_enemy_ai_update_tic(
     WolfActor *actors,
     uint32_t actor_count,
     WolfWorldState *world,
+    float player_world_x,
+    float player_world_z,
     float player_yaw_radians,
     WolfDifficulty difficulty,
     bool player_is_moving,
     bool player_made_noise,
     WolfEnemyAIEvents *events)
 {
-    (void)player_yaw_radians;
-    (void)difficulty;
-    (void)player_is_moving;
-    (void)player_made_noise;
     if (events != NULL) {
         memset(events, 0, sizeof(*events));
     }
     if ((actor_count > 0u && actors == NULL) || world == NULL ||
+        !isfinite(player_world_x) || !isfinite(player_world_z) ||
         !isfinite(player_yaw_radians) ||
         difficulty < WOLF_DIFFICULTY_BABY || difficulty > WOLF_DIFFICULTY_HARD) {
         return false;
@@ -531,10 +587,12 @@ bool wolf_enemy_ai_update_tic(
                 --actor->ai_reaction_tics;
                 if (actor->ai_reaction_tics == 0u) {
                     /* A reaction timer expires only after the original random delay. */
-                    first_sighting(actor, 0.0f, 0.0f, events);
+                    first_sighting(actor, player_world_x, player_world_z, events);
                 }
-            } else if (player_made_noise ||
-                actor_can_see_player(actor, world, 0.0f, 0.0f)) {
+            } else if ((player_made_noise &&
+                has_line_of_sight(world, actor->position_x, actor->position_z,
+                    player_world_x, player_world_z)) ||
+                actor_can_see_player(actor, world, player_world_x, player_world_z)) {
                 actor->ai_reaction_tics =
                     (uint16_t)(1u + actor_random_byte(actor) / 4u);
             }
@@ -543,15 +601,34 @@ bool wolf_enemy_ai_update_tic(
                 if (actor->state_id == WOLF_GUARD_STATE_SHOOT_ACTION &&
                     !actor->ai_action_fired) {
                     actor->ai_action_fired = true;
+                    guard_shoot_player(
+                        actor, world, player_world_x, player_world_z,
+                        player_yaw_radians, difficulty, player_is_moving, events);
                 }
             } else if (!is_guard_state_pain_or_dead(actor->state_id)) {
                 if (actor->ai_attack_cooldown > 0u) {
                     --actor->ai_attack_cooldown;
                 } else {
                     actor->ai_attack_cooldown = 8u;
+                    if (has_line_of_sight(
+                            world, actor->position_x, actor->position_z,
+                            player_world_x, player_world_z)) {
+                        int distance = chebyshev_tile_distance(
+                            actor, world, player_world_x, player_world_z);
+                        int chance = distance <= 1 ? 300 : 16 / distance;
+                        if ((int)actor_random_byte(actor) < chance) {
+                            face_player(actor, player_world_x, player_world_z);
+                            (void)wolf_actor_movement_set_direction(
+                                actor, WOLF_ACTOR_DIRECTION_NONE);
+                            (void)wolf_actor_collection_set_state(
+                                actor, WOLF_GUARD_STATE_SHOOT_FIRST);
+                            continue;
+                        }
+                    }
                 }
                 choose_guard_chase_step(
-                    actor, actors, actor_count, index, world, 0.0f, 0.0f);
+                    actor, actors, actor_count, index, world,
+                    player_world_x, player_world_z);
             }
         }
     }
