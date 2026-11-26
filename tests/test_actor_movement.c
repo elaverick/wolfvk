@@ -112,7 +112,7 @@ void test_actor_movement_respects_blocking_statics_but_ignores_passable_objects(
     TEST_ASSERT_FLOAT_WITHIN(0.001f, world_coordinate(3u, 8u), actor.position_x);
 
     world.level.object_tiles[3u * WOLF_LEVEL_PLANE_WIDTH + 4u] = 32u;
-    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 40u);
+    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 128u);
     TEST_ASSERT_EQUAL_UINT16(4u, actor.tile_x);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, world_coordinate(4u, 8u), actor.position_x);
 }
@@ -171,7 +171,7 @@ void test_actor_movement_keeps_clearance_from_the_player(void)
     TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 0u));
     TEST_ASSERT_TRUE(create_actor(&actor, 1u, 3u, 3u, 0.0f));
     TEST_ASSERT_TRUE(wolf_actor_movement_set_direction(&actor, WOLF_ACTOR_DIRECTION_EAST));
-    advance_actor(&actor, 1u, &world, player_x, player_z, 40u);
+    advance_actor(&actor, 1u, &world, player_x, player_z, 128u);
     TEST_ASSERT_TRUE(actor.position_x < player_x);
     TEST_ASSERT_TRUE(player_x - actor.position_x >=
         (WOLF_ACTOR_COLLISION_RADIUS_TILES + 0.34375f) * WOLF_WORLD_TILE_SIZE - 0.09f);
@@ -212,10 +212,10 @@ void test_actor_movement_follows_original_info_plane_path_arrows(void)
     TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 0u));
     TEST_ASSERT_TRUE(create_actor(&actor, 1u, 3u, 3u, 1.57079632679f));
     TEST_ASSERT_TRUE(wolf_actor_movement_set_direction(&actor, WOLF_ACTOR_DIRECTION_EAST));
-    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 40u);
+    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 128u);
     TEST_ASSERT_EQUAL_UINT16(4u, actor.tile_x);
     TEST_ASSERT_EQUAL_UINT16(3u, actor.tile_y);
-    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 40u);
+    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 128u);
     TEST_ASSERT_EQUAL_UINT16(4u, actor.tile_x);
     TEST_ASSERT_EQUAL_UINT16(2u, actor.tile_y);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, actor.yaw_radians);
