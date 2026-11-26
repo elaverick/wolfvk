@@ -71,7 +71,7 @@ The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the wor
 
 ## Automated tests
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The game test harness currently registers 187 Unity test cases (including the SwiftShader-backed renderer integration tests and audio-event coverage). The standalone audio-extractor harness adds 13 tests for VSWAP page reconstruction, malformed archives, original DigiMap aliases, AdLib chunk parsing and OPL synthesis. The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, pickups add seven, audio event mappings add five, and firing adds five:
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The game test harness currently registers 201 Unity test cases (including the SwiftShader-backed renderer integration tests, audio-event coverage, actor-state tests and fixed-tic clock tests). The standalone audio-extractor harness adds 13 tests for VSWAP page reconstruction, malformed archives, original DigiMap aliases, AdLib chunk parsing and OPL synthesis. The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, pickups add seven, audio event mappings add five, firing adds five, the actor-state foundation adds eight, and the fixed-tic simulation clock adds six:
 
 - 3 SDL3 window and event tests
 - 4 camera projection tests
@@ -93,12 +93,14 @@ The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedica
 - 5 audio event tests for door transitions, secret-wall starts, and original pickup-to-sound mapping
 - 18 Vulkan selection and renderer tests, including the SwiftShader-backed frame submission test, the model transform, a frame that draws placed model instances, and frames that draw and re-upload the status bar
 - 18 weapon tests: original 70 Hz/six-tic attack timing, automatic repeat, weapon selection, pose selection, view-model anchoring, all 20 named VOX poses and partial-asset fallback, plus firing: the shot frame, one bullet per shot, a fresh press per pistol or knife attack, machine gun and chaingun fire rates, and the switch to the knife when the bullets run out
+- 8 actor-state tests: actor initialisation, exact state duration, persistent-state think cadence, pain-to-death transition, terminal-state removal, invalid definitions, immediate state changes from think callbacks and inactive-state handling
+- 6 simulation-clock tests: 70 Hz tick emission, frame-partition independence, bounded catch-up, fractional-time retention, invalid elapsed-time rejection and reset
 
 CTest runs the suite in Windows CI. The world-state tests cover original door orientation and locks, opening/closing speeds, the 300-tic timeout, obstruction handling, key collection, door-page selection, horizontal and vertical panel movement, fully-open panel removal, and secret pushwall movement/collision, valid texture-page selection, held-use activation, the Level 1 secret-wall page pairs and ambush-marker removal.
 
 | Feature | Status |
 |---|---|
-| Windows x64 build | Previous milestone passed in [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985); current weapon revision is committed and awaiting its Windows CI result |
+| Windows x64 build | Previous milestone passed in [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985); current actor-state and simulation-clock revisions are committed, but no CI result is available yet |
 | SDL3 window and input | Implemented and tested; left mouse button state covered by a regression test |
 | Vulkan renderer and swapchain | Implemented; weapon overlay pipeline added, current revision awaiting Windows CI |
 | Indexed quad rendering and depth testing | Implemented and tested |
@@ -107,16 +109,18 @@ CTest runs the suite in Windows CI. The world-state tests cover original door or
 | Original wall textures on exposed faces | Implemented; horizontal/vertical page pairing and directional UV mapping tested |
 | WASD movement and mouse-look | Implemented; movement uses swept boundary resolution and wall sliding |
 | Sliding doors, keys and secret pushwalls | Implemented; original WL6 tile/marker mappings and timings have regression coverage |
-| Voxel actors and static objects | Implemented: placed by the original info-plane and difficulty rules, standing in their spawn pose. Verified locally on all 60 retail levels and passed in [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985). Pickups are implemented; animation and AI come later |
+| Voxel actors and static objects | Implemented as static spawn-pose instances. A reusable per-instance actor/state representation and deterministic 70 Hz clock are now committed with 14 new tests; runtime actor animation, movement and AI integration are still in progress |
 | Spatial audio | SDL3_mixer voice pool and listener-relative spatialisation are wired into weapons, pickups, doors, secret walls and failed Use actions. Runtime playback requires the 87 named OGG effects in `assets/sounds`, generated from the original WL6 archives |
 | WL6 audio extractor | Renders all 87 AdLib effects through the pinned Opal OPL3 emulator and exports VSWAP digitised samples over matching names. Thirteen standalone tests cover decoding, DigiMap names and synthesis. Uses FFmpeg/libvorbis; the 27 music tracks remain outstanding |
-| Player voxel weapons | Implemented: knife, pistol, machine gun and chaingun, camera-anchored overlay, original attack timing, keyboard/mouse/gamepad firing. Eleven weapon tests added; current CI result pending. Firing uses ammunition as in `T_Attack`; no damage yet |
+| Player voxel weapons | Implemented: knife, pistol, machine gun and chaingun, camera-anchored overlay, original attack timing, keyboard/mouse/gamepad firing. Firing uses ammunition as in `T_Attack`; player shots are not yet connected to enemy damage |
 | Sprite voxelizer | Builds and passes its tests on Windows and Linux in [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985) |
 | Windows demo | Packaged with the game, the voxelizer and the shaders by [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985) |
 | Original status bar | Implemented: decoded from VGAGRAPH, drawn at an integer scale below the view and driven by the player state; original 70 Hz random face-glance timing covered by regression tests |
 | Integer texture scaling | Next milestone; not implemented for the 3D scene (the status bar already uses integer scaling) |
 
 [![Windows build and tests](https://github.com/elaverick/WolfVK/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/elaverick/WolfVK/actions/workflows/build.yml)
+
+The latest committed actor-state and fixed-tic clock changes are not yet verified by a reported Windows Actions result. The previous green run does not cover these commits.
 
 ## Build locally
 
