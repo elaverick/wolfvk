@@ -2,6 +2,7 @@
 #define WOLFVK_VOXEL_SCENE_H
 
 #include "wolfvk/level.h"
+#include "wolfvk/actor.h"
 #include "wolfvk/level_objects.h"
 #include "wolfvk/vulkan_renderer.h"
 
@@ -63,6 +64,14 @@ bool wolf_voxel_scene_build_instances(
     const WolfLevel *level,
     const WolfLevelObject *objects,
     uint32_t object_count,
+    VulkanModelInstance **instances,
+    uint32_t *instance_count);
+
+/* Build instances from each live actor's current animation pose and world transform. */
+bool wolf_voxel_scene_build_actor_instances(
+    const WolfVoxelScene *scene,
+    const WolfActor *actors,
+    uint32_t actor_count,
     VulkanModelInstance **instances,
     uint32_t *instance_count);
 
