@@ -427,6 +427,52 @@ static bool build_scene_geometry(
 }
 
 /* Own the application lifetime: load WL6 data, establish SDL/Vulkan, run input and frame updates, then unwind. */
+/* Play family-specific alert, weapon and death cues at the actor's world position. */
+static void play_enemy_audio_events(
+    WolfAudio *audio,
+    const WolfEnemyAIEvents *events)
+{
+    if (audio == NULL || events == NULL) {
+        return;
+    }
+    if (events->guard_alerts > 0u) {
+        (void)wolf_audio_play(audio, "HALTSND",
+            (WolfAudioVector3){events->alert_source_x, WOLF_WORLD_EYE_HEIGHT, events->alert_source_z});
+    }
+    if (events->officer_alerts > 0u) {
+        (void)wolf_audio_play(audio, "SPIONSND",
+            (WolfAudioVector3){events->officer_alert_source_x, WOLF_WORLD_EYE_HEIGHT, events->officer_alert_source_z});
+    }
+    if (events->ss_alerts > 0u) {
+        (void)wolf_audio_play(audio, "SCHUTZADSND",
+            (WolfAudioVector3){events->ss_alert_source_x, WOLF_WORLD_EYE_HEIGHT, events->ss_alert_source_z});
+    }
+    if (events->guard_shots > 0u || events->officer_shots > 0u) {
+        (void)wolf_audio_play(audio, "NAZIFIRESND",
+            (WolfAudioVector3){events->shot_source_x, WOLF_WORLD_EYE_HEIGHT, events->shot_source_z});
+        if (events->officer_shots > 0u) {
+            (void)wolf_audio_play(audio, "NAZIFIRESND",
+                (WolfAudioVector3){events->officer_shot_source_x, WOLF_WORLD_EYE_HEIGHT, events->officer_shot_source_z});
+        }
+    }
+    if (events->ss_shots > 0u) {
+        (void)wolf_audio_play(audio, "SSFIRESND",
+            (WolfAudioVector3){events->ss_shot_source_x, WOLF_WORLD_EYE_HEIGHT, events->ss_shot_source_z});
+    }
+    if (events->guard_deaths > 0u) {
+        (void)wolf_audio_play(audio, "DEATHSCREAM1SND",
+            (WolfAudioVector3){events->guard_death_source_x, WOLF_WORLD_EYE_HEIGHT, events->guard_death_source_z});
+    }
+    if (events->officer_deaths > 0u) {
+        (void)wolf_audio_play(audio, "DEATHSCREAM2SND",
+            (WolfAudioVector3){events->officer_death_source_x, WOLF_WORLD_EYE_HEIGHT, events->officer_death_source_z});
+    }
+    if (events->ss_deaths > 0u) {
+        (void)wolf_audio_play(audio, "DEATHSCREAM3SND",
+            (WolfAudioVector3){events->ss_death_source_x, WOLF_WORLD_EYE_HEIGHT, events->ss_death_source_z});
+    }
+}
+
 int main(int argc, char *argv[])
 {
     SDL_Window *window;
@@ -767,15 +813,8 @@ int main(int argc, char *argv[])
                         fprintf(stderr, "Enemy AI, actor movement or state update failed.\\n");
                         running = 0;
                     }
-                    if (audio_available && enemy_events.guard_alerts > 0u) {
-                        (void)wolf_audio_play(&audio, "HALTSND",
-                            (WolfAudioVector3){enemy_events.alert_source_x,
-                                WOLF_WORLD_EYE_HEIGHT, enemy_events.alert_source_z});
-                    }
-                    if (audio_available && enemy_events.guard_shots > 0u) {
-                        (void)wolf_audio_play(&audio, "NAZIFIRESND",
-                            (WolfAudioVector3){enemy_events.shot_source_x,
-                                WOLF_WORLD_EYE_HEIGHT, enemy_events.shot_source_z});
+                    if (audio_available) {
+                        play_enemy_audio_events(&audio, &enemy_events);
                     }
                 }
                 if (running && actor_tics > 0u &&
@@ -859,23 +898,31 @@ int main(int argc, char *argv[])
                 if (attack_events.gun_shots > 0u) {
                     player_noise_pending = true;
                     for (uint32_t shot = 0u; shot < attack_events.gun_shots; ++shot) {
+                        WolfEnemyAIEvents attack_events;
+
                         if (!wolf_enemy_ai_player_attack(
                                 actors, actor_count, &world,
                                 camera.position[0], camera.position[2],
-                                camera.yaw_radians, attacking_weapon)) {
+                                camera.yaw_radians, attacking_weapon, &attack_events)) {
                             fprintf(stderr, "Could not resolve player gun attack against enemies.\\n");
                             running = 0;
+                        } else if (audio_available) {
+                            play_enemy_audio_events(&audio, &attack_events);
                         }
                     }
                 }
                 if (attack_events.knife_attacks > 0u) {
                     for (uint32_t attack = 0u; attack < attack_events.knife_attacks; ++attack) {
+                        WolfEnemyAIEvents attack_events;
+
                         if (!wolf_enemy_ai_player_attack(
                                 actors, actor_count, &world,
                                 camera.position[0], camera.position[2],
-                                camera.yaw_radians, WOLF_WEAPON_KNIFE)) {
+                                camera.yaw_radians, WOLF_WEAPON_KNIFE, &attack_events)) {
                             fprintf(stderr, "Could not resolve player knife attack against enemies.\\n");
                             running = 0;
+                        } else if (audio_available) {
+                            play_enemy_audio_events(&audio, &attack_events);
                         }
                     }
                 }
