@@ -18,12 +18,12 @@ typedef struct ActorFamilyAnimation {
 
 #define ACTOR_STATES(prefix) { \
     {prefix "_s", 0u, 0u, WOLF_ACTOR_STATE_NONE, NULL, NULL}, \
-    {prefix "_w", 0u, 10u, 2u, NULL, NULL}, \
-    {prefix "_w", 0u, 3u, 3u, NULL, NULL}, \
-    {prefix "_w", 1u, 8u, 4u, NULL, NULL}, \
-    {prefix "_w", 2u, 10u, 5u, NULL, NULL}, \
-    {prefix "_w", 2u, 3u, 6u, NULL, NULL}, \
-    {prefix "_w", 3u, 8u, 1u, NULL, NULL} \
+    {prefix "_w", 0u, 20u, 2u, NULL, NULL}, \
+    {prefix "_w", 0u, 5u, 3u, NULL, NULL}, \
+    {prefix "_w", 1u, 15u, 4u, NULL, NULL}, \
+    {prefix "_w", 2u, 20u, 5u, NULL, NULL}, \
+    {prefix "_w", 2u, 5u, 6u, NULL, NULL}, \
+    {prefix "_w", 3u, 15u, 1u, NULL, NULL} \
 }
 
 /*
