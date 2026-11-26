@@ -31,7 +31,7 @@ All 60 retail WL6 levels were loaded at the hardest difficulty, which places eve
 
 The original status bar is drawn along the bottom of the window from the game's own pictures in `VGAGRAPH.WL6`, using `VGAHEAD.WL6` for the chunk offsets and `VGADICT.WL6` for the Huffman tree. The pictures are decompressed and reordered from the original four-plane Mode X layout at startup.
 
-- **Contents:** the bar is composed exactly as `DrawPlayScreen` and the `Draw*` routines in `WL_AGENT.C` place it: floor, score, lives, BJ's face, health, ammunition, gold and silver key slots and the current weapon, with numbers right-aligned and blank-padded as `LatchNumber` does. The face shows one of seven damage levels, chosen from health as in `DrawFace`, and glances left and right at random intervals like `UpdateFace`.
+- **Contents:** the bar is composed exactly as `DrawPlayScreen` and the `Draw*` routines in `WL_AGENT.C` place it: floor, score, lives, BJ's face, health, ammunition, gold and silver key slots and the current weapon, with numbers right-aligned and blank-padded as `LatchNumber` does. The face shows one of seven damage levels, chosen from health as in `DrawFace`, and glances left and right using the original `UpdateFace` timing: one random 0–255 game-tic wait is sampled per glance and elapsed time is accumulated at 70 tics per second.
 - **Real values:** the numbers come from a player state (`include/wolfvk/player_state.h`) modelled on the original `gamestate`. A new game starts as `NewGame` does, with 100 health, 8 bullets, 3 lives and the pistol, and the floor shown is the map within its episode. Health, ammunition, weapons, points and extra lives each go through one function that applies the original limits. Keys are held there too, so the key the player picks up is the one door locks check and the one the bar shows. Pickups change these values, and so the bar, as they are collected. Damage arrives with enemy AI and will change the bar through the same functions.
 - **Integer scaling:** the bar is drawn at the largest whole-number scale at which a full 320×200 screen would fit the window (3× in the default 1280×720 window), with nearest-neighbour sampling, so every original pixel becomes an exact square block. It is centred, and the rest of its strip is filled with the original play-screen border colour (palette index 127).
 - **View placement:** the 3D view is drawn only in the area above the bar, using that area's aspect ratio, so the bar never hides any of the scene.
@@ -65,7 +65,7 @@ The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the wor
 
 ## Automated tests
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It currently registers 174 Unity test cases (including the SwiftShader-backed renderer integration tests). The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, pickups add six, and firing adds five:
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. It currently registers 176 Unity test cases (including the SwiftShader-backed renderer integration tests). The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, pickups add six, and firing adds five:
 
 - 3 SDL3 window and event tests
 - 4 camera projection tests
@@ -80,7 +80,7 @@ The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedica
 - 7 VSWAP page decoder, palette expansion and wall-page mapping tests
 - 5 keyboard, mouse and gamepad input tests, including held mouse-button state
 - 5 VGAGRAPH decoder tests: Huffman expansion, Mode X plane order, sparse chunks and malformed files
-- 6 player-state tests: the original new-game values and the health, ammunition, weapon, key and extra-life rules
+- 8 player-state tests: the original new-game values, health, ammunition, weapon, key and extra-life rules, plus face-glance timing
 - 6 pickup tests: the statinfo bonus table, the original grab range, every item's effect, items left on the floor when not needed, and weapon choice limited to weapons picked up
 - 6 status bar tests: every number, key, face and weapon position, the face for each damage level, palette expansion and the integer-scale layout
 - 18 world-state tests for doors, keys, secret pushwalls and their original timing/material behaviour
@@ -104,7 +104,7 @@ CTest runs the suite in Windows CI. The world-state tests cover original door or
 | Player voxel weapons | Implemented: knife, pistol, machine gun and chaingun, camera-anchored overlay, original attack timing, keyboard/mouse/gamepad firing. Eleven weapon tests added; current CI result pending. Firing uses ammunition as in `T_Attack`; no damage yet |
 | Sprite voxelizer | Builds and passes its tests on Windows and Linux in [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985) |
 | Windows demo | Packaged with the game, the voxelizer and the shaders by [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985) |
-| Original status bar | Implemented: decoded from VGAGRAPH, drawn at an integer scale below the view and driven by the player state; 174 Unity tests pass locally |
+| Original status bar | Implemented: decoded from VGAGRAPH, drawn at an integer scale below the view and driven by the player state; original 70 Hz random face-glance timing covered by regression tests |
 | Integer texture scaling | Next milestone; not implemented for the 3D scene (the status bar already uses integer scaling) |
 
 [![Windows build and tests](https://github.com/elaverick/WolfVK/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/elaverick/WolfVK/actions/workflows/build.yml)
