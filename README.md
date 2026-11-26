@@ -71,7 +71,7 @@ The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the wor
 
 ## Automated tests
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The game test harness currently registers 201 Unity test cases (including the SwiftShader-backed renderer integration tests, audio-event coverage, actor-state tests and fixed-tic clock tests). The standalone audio-extractor harness adds 13 tests for VSWAP page reconstruction, malformed archives, original DigiMap aliases, AdLib chunk parsing and OPL synthesis. The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, pickups add seven, audio event mappings add five, firing adds five, the actor-state foundation adds eight, and the fixed-tic simulation clock adds six:
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The game test harness currently registers 207 Unity test cases (including the SwiftShader-backed renderer integration tests, audio-event coverage, actor-state and animation tests, and fixed-tic clock tests). The standalone audio-extractor harness adds 13 tests for VSWAP page reconstruction, malformed archives, original DigiMap aliases, AdLib chunk parsing and OPL synthesis. The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, pickups add seven, audio event mappings add five, firing adds five, the actor-state foundation adds eight, and the fixed-tic simulation clock adds six:
 
 - 3 SDL3 window and event tests
 - 4 camera projection tests
@@ -80,7 +80,7 @@ The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedica
 - 7 MagicaVoxel reader tests: named animations and keyframed poses, the stored palette, oversized models, truncated or foreign data and dangling model references, against synthetic files laid out as the voxelizer writes them
 - 6 voxel mesher tests: hidden floor and ceiling faces, face merging by colour, model-space orientation and linear, shaded colour
 - 8 actor and object placement tests: static markers, original WL6 static-object collision flags, standing and patrolling facings, difficulty tiers, bosses, ghosts, the dead guard and open-floor facing
-- 4 voxel scene tests: one mesh per shared pose, missing files and poses, and tile placement
+- 5 voxel scene tests: one mesh per shared pose, missing files and poses, tile placement, and per-instance animated actor pose selection
 - 11 Carmack/RLEW decoder and level-loader tests
 - 18 wall-geometry and player-start tests, including original wall-page selection, door-side textures and all four face UV directions
 - 7 VSWAP page decoder, palette expansion and wall-page mapping tests
@@ -109,7 +109,7 @@ CTest runs the suite in Windows CI. The world-state tests cover original door or
 | Original wall textures on exposed faces | Implemented; horizontal/vertical page pairing and directional UV mapping tested |
 | WASD movement and mouse-look | Implemented; movement uses swept boundary resolution and wall sliding |
 | Sliding doors, keys and secret pushwalls | Implemented; original WL6 tile/marker mappings and timings have regression coverage |
-| Voxel actors and static objects | Implemented as static spawn-pose instances. A reusable per-instance actor/state representation and deterministic 70 Hz clock are now committed with 14 new tests; runtime actor animation, movement and AI integration are still in progress |
+| Voxel actors and static objects | Humanoid guards, officers, SS soldiers and mutants now use per-instance runtime state and 70 Hz animation updates. Standing poses remain static; patrol poses cycle through the original six-step walk sequence using shared meshes. Static objects remain separate. Movement, perception and combat are not yet implemented |
 | Spatial audio | SDL3_mixer voice pool and listener-relative spatialisation are wired into weapons, pickups, doors, secret walls and failed Use actions. Runtime playback requires the 87 named OGG effects in `assets/sounds`, generated from the original WL6 archives |
 | WL6 audio extractor | Renders all 87 AdLib effects through the pinned Opal OPL3 emulator and exports VSWAP digitised samples over matching names. Thirteen standalone tests cover decoding, DigiMap names and synthesis. Uses FFmpeg/libvorbis; the 27 music tracks remain outstanding |
 | Player voxel weapons | Implemented: knife, pistol, machine gun and chaingun, camera-anchored overlay, original attack timing, keyboard/mouse/gamepad firing. Firing uses ammunition as in `T_Attack`; player shots are not yet connected to enemy damage |
@@ -120,7 +120,7 @@ CTest runs the suite in Windows CI. The world-state tests cover original door or
 
 [![Windows build and tests](https://github.com/elaverick/WolfVK/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/elaverick/WolfVK/actions/workflows/build.yml)
 
-The latest committed actor-state and fixed-tic clock changes are not yet verified by a reported Windows Actions result. The previous green run does not cover these commits.
+The C1 actor-animation integration and its 207-test suite are committed on `main`, but have not yet been verified by a reported Windows Actions result. The previous green run does not cover these commits.
 
 ## Build locally
 
