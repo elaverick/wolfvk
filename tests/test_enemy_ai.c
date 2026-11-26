@@ -110,7 +110,7 @@ void test_guard_chase_uses_player_direction_and_moves_at_alert_speed(void)
     float player_x = tile_centre(2u, 8u);
     float player_z = tile_centre(4u, 8u);
 
-    TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 108u));
+    TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 110u));
     advance_until_alert(actors, actor_count, &world, player_x, player_z, &events);
     for (uint32_t tic = 0u; tic < 55u; ++tic) {
         TEST_ASSERT_TRUE(update_one_tic(
