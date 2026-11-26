@@ -7,8 +7,31 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define WOLF_ACTOR_WALK_STATE_COUNT 6u
-#define WOLF_ACTOR_FAMILY_STATE_COUNT (WOLF_ACTOR_WALK_STATE_COUNT + 1u)
+#define WOLF_ACTOR_FAMILY_STATE_COUNT WOLF_GUARD_STATE_COUNT
+#define ACTOR_STATES(prefix) { \
+    {prefix "_s", 0u, 0u, WOLF_ACTOR_STATE_NONE, NULL, NULL}, \
+    {prefix "_w", 0u, 20u, 2u, NULL, NULL}, \
+    {prefix "_w", 0u, 5u, 3u, NULL, NULL}, \
+    {prefix "_w", 1u, 15u, 4u, NULL, NULL}, \
+    {prefix "_w", 2u, 20u, 5u, NULL, NULL}, \
+    {prefix "_w", 2u, 5u, 6u, NULL, NULL}, \
+    {prefix "_w", 3u, 15u, 1u, NULL, NULL}, \
+    {prefix "_w", 0u, 10u, 8u, NULL, NULL}, \
+    {prefix "_w", 0u, 3u, 9u, NULL, NULL}, \
+    {prefix "_w", 1u, 8u, 10u, NULL, NULL}, \
+    {prefix "_w", 2u, 10u, 11u, NULL, NULL}, \
+    {prefix "_w", 2u, 3u, 12u, NULL, NULL}, \
+    {prefix "_w", 3u, 8u, 7u, NULL, NULL}, \
+    {prefix "_shoot", 0u, 20u, 14u, NULL, NULL}, \
+    {prefix "_shoot", 1u, 20u, 15u, NULL, NULL}, \
+    {prefix "_shoot", 2u, 20u, 7u, NULL, NULL}, \
+    {prefix "_pain", 0u, 10u, 7u, NULL, NULL}, \
+    {prefix "_pain", 1u, 10u, 7u, NULL, NULL}, \
+    {prefix "_die", 0u, 15u, 19u, NULL, NULL}, \
+    {prefix "_die", 1u, 15u, 20u, NULL, NULL}, \
+    {prefix "_die", 2u, 15u, 21u, NULL, NULL}, \
+    {prefix "_dead", 0u, 0u, WOLF_ACTOR_STATE_NONE, NULL, NULL} \
+}
 
 typedef struct ActorFamilyAnimation {
     const char *subject;
@@ -17,20 +40,10 @@ typedef struct ActorFamilyAnimation {
     WolfActorStateDefinition states[WOLF_ACTOR_FAMILY_STATE_COUNT];
 } ActorFamilyAnimation;
 
-#define ACTOR_STATES(prefix) { \
-    {prefix "_s", 0u, 0u, WOLF_ACTOR_STATE_NONE, NULL, NULL}, \
-    {prefix "_w", 0u, 20u, 2u, NULL, NULL}, \
-    {prefix "_w", 0u, 5u, 3u, NULL, NULL}, \
-    {prefix "_w", 1u, 15u, 4u, NULL, NULL}, \
-    {prefix "_w", 2u, 20u, 5u, NULL, NULL}, \
-    {prefix "_w", 2u, 5u, 6u, NULL, NULL}, \
-    {prefix "_w", 3u, 15u, 1u, NULL, NULL} \
-}
-
 /*
- * The six patrol-state entries follow the original path chain: 20, 5, 15,
- * 20, 5 and 15 tics. Chase uses a different, shorter chain and is deferred
- * until the guard AI stage. Each family uses its own named VOX animation.
+ * C3 implements the guard's complete combat state chain. The matching state
+ * slots are reserved in the other family tables so later family-specific
+ * state chains can be introduced without changing actor storage.
  */
 static const ActorFamilyAnimation actor_families[] = {
     {"grd", WOLF_ACTOR_GUARD, {25, 25, 25, 25}, ACTOR_STATES("grd")},
@@ -64,6 +77,16 @@ static const ActorFamilyAnimation *find_family(const char *subject)
 {
     for (size_t index = 0u; index < sizeof(actor_families) / sizeof(actor_families[0]); ++index) {
         if (strcmp(subject, actor_families[index].subject) == 0) {
+            return &actor_families[index];
+        }
+    }
+    return NULL;
+}
+
+static const ActorFamilyAnimation *find_family_by_type(WolfActorFamily family_type)
+{
+    for (size_t index = 0u; index < sizeof(actor_families) / sizeof(actor_families[0]); ++index) {
+        if (actor_families[index].family == family_type) {
             return &actor_families[index];
         }
     }
@@ -123,7 +146,7 @@ bool wolf_actor_collection_create(
         const ActorFamilyAnimation *family = find_family(object->subject);
         uint16_t initial_state;
 
-        /* The dead guard and all non-humanoid sprites remain static scene objects. */
+        /* Dogs, bosses, ghosts, scenery and the dead guard are outside this humanoid actor collection. */
         if (family == NULL ||
             (!object_is_patrolling(object) &&
              (strlen(object->animation) < 2u ||
@@ -144,12 +167,19 @@ bool wolf_actor_collection_create(
             free(created);
             return false;
         }
-        if (initial_state != 0u &&
-            !wolf_actor_movement_set_direction(
-                &created[created_count], direction_from_yaw(object->yaw_radians))) {
-            free(objects);
-            free(created);
-            return false;
+        created[created_count].ai_random_state =
+            0x9e3779b9u ^ (created_count + 1u) * 0x85ebca6bu;
+        if (created[created_count].ai_random_state == 0u) {
+            created[created_count].ai_random_state = 1u;
+        }
+        if (initial_state != 0u) {
+            created[created_count].movement_follow_path_arrows = true;
+            if (!wolf_actor_movement_set_direction(
+                    &created[created_count], direction_from_yaw(object->yaw_radians))) {
+                free(objects);
+                free(created);
+                return false;
+            }
         }
         ++created_count;
     }
@@ -164,22 +194,26 @@ bool wolf_actor_collection_create(
     return true;
 }
 
+bool wolf_actor_collection_set_state(WolfActor *actor, uint16_t state_id)
+{
+    const ActorFamilyAnimation *family;
+
+    if (actor == NULL) {
+        return false;
+    }
+    family = find_family_by_type(actor->family);
+    return family != NULL && wolf_actor_set_state(
+        actor, family->states, WOLF_ACTOR_FAMILY_STATE_COUNT, state_id, NULL);
+}
+
 bool wolf_actor_collection_update_tic(WolfActor *actors, uint32_t actor_count)
 {
     if (actor_count > 0u && actors == NULL) {
         return false;
     }
     for (uint32_t index = 0u; index < actor_count; ++index) {
-        const ActorFamilyAnimation *family = NULL;
+        const ActorFamilyAnimation *family = find_family_by_type(actors[index].family);
 
-        for (size_t family_index = 0u;
-             family_index < sizeof(actor_families) / sizeof(actor_families[0]);
-             ++family_index) {
-            if (actor_families[family_index].family == actors[index].family) {
-                family = &actor_families[family_index];
-                break;
-            }
-        }
         if (family != NULL && actors[index].active &&
             !wolf_actor_update_tic(
                 &actors[index], family->states, WOLF_ACTOR_FAMILY_STATE_COUNT, NULL)) {
