@@ -160,7 +160,7 @@ void test_player_gunfire_damages_guard_and_death_awards_score_and_drops_clip(voi
     for (uint32_t shot = 0u; shot < 100u && actors[0].shootable; ++shot) {
         TEST_ASSERT_TRUE(wolf_enemy_ai_player_attack(
             actors, actor_count, &world, player_x, player_z,
-            1.57079632679f, WOLF_WEAPON_PISTOL));
+            1.57079632679f, WOLF_WEAPON_PISTOL, NULL));
     }
     TEST_ASSERT_FALSE(actors[0].shootable);
     TEST_ASSERT_EQUAL_INT32(100, world.player.score);
@@ -249,7 +249,7 @@ void test_first_player_hit_alerts_guard_and_enters_pain_state(void)
     TEST_ASSERT_TRUE(wolf_enemy_ai_player_attack(
         actors, actor_count, &world,
         tile_centre(2u, 8u), tile_centre(4u, 8u),
-        1.57079632679f, WOLF_WEAPON_PISTOL));
+        1.57079632679f, WOLF_WEAPON_PISTOL, NULL));
     TEST_ASSERT_TRUE(actors[0].attack_mode);
     TEST_ASSERT_TRUE(actors[0].health > 0);
     TEST_ASSERT_TRUE(actors[0].health < 25);
@@ -309,7 +309,7 @@ void test_player_weapon_cannot_damage_guard_through_a_wall(void)
         TEST_ASSERT_TRUE(wolf_enemy_ai_player_attack(
             actors, actor_count, &world,
             tile_centre(2u, 8u), tile_centre(4u, 8u),
-            1.57079632679f, WOLF_WEAPON_PISTOL));
+            1.57079632679f, WOLF_WEAPON_PISTOL, NULL));
     }
     TEST_ASSERT_EQUAL_INT32(initial_health, actors[0].health);
 
