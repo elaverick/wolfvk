@@ -189,10 +189,10 @@ bool wolf_voxel_scene_load(
      * Each humanoid may need four walking poses in addition to its spawn
      * pose. Reserve five entries per object; duplicates are collapsed below.
      */
-    if ((size_t)object_count > SIZE_MAX / 5u / sizeof(*scene->poses)) {
+    if ((size_t)object_count > SIZE_MAX / 14u / sizeof(*scene->poses)) {
         return false;
     }
-    scene->poses = calloc((size_t)object_count * 5u, sizeof(*scene->poses));
+    scene->poses = calloc((size_t)object_count * 14u, sizeof(*scene->poses));
     if (scene->poses == NULL) {
         return false;
     }
@@ -209,33 +209,51 @@ bool wolf_voxel_scene_load(
         pose->pose = object->pose;
     }
 
-    /* Preload every walking frame so actor state changes only select a shared mesh range. */
+    /*
+     * Preload every pose needed by the complete humanoid state chains.
+     * Missing optional poses remain unavailable and are reported once; state
+     * selection can therefore never reference an unmeshed animation frame.
+     */
     for (uint32_t index = 0u; index < object_count; ++index) {
         const WolfLevelObject *object = &objects[index];
+        static const struct {
+            const char *suffix;
+            uint8_t pose_count;
+        } actor_animations[] = {
+            {"_w", 4u}, {"_shoot", 3u}, {"_pain", 2u}, {"_die", 3u}, {"_dead", 1u}
+        };
 
         if (is_runtime_humanoid(object)) {
-            char walk_animation[WOLF_LEVEL_OBJECT_NAME_LENGTH];
+            for (size_t animation_index = 0u;
+                 animation_index < sizeof(actor_animations) / sizeof(actor_animations[0]);
+                 ++animation_index) {
+                char animation_name[WOLF_LEVEL_OBJECT_NAME_LENGTH];
 
-            (void)snprintf(walk_animation, sizeof(walk_animation), "%s_w", object->subject);
-            for (uint8_t pose_index = 0u; pose_index < 4u; ++pose_index) {
-                WolfVoxelPoseMesh *pose;
-                bool already_present = false;
+                (void)snprintf(animation_name, sizeof(animation_name), "%s%s",
+                    object->subject, actor_animations[animation_index].suffix);
+                for (uint8_t pose_index = 0u;
+                     pose_index < actor_animations[animation_index].pose_count;
+                     ++pose_index) {
+                    bool already_present = false;
 
-                for (uint32_t existing = 0u; existing < scene->pose_count; ++existing) {
-                    if (scene->poses[existing].pose == pose_index &&
-                        strcmp(scene->poses[existing].subject, object->subject) == 0 &&
-                        strcmp(scene->poses[existing].animation, walk_animation) == 0) {
-                        already_present = true;
-                        break;
+                    for (uint32_t existing = 0u; existing < scene->pose_count; ++existing) {
+                        if (scene->poses[existing].pose == pose_index &&
+                            strcmp(scene->poses[existing].subject, object->subject) == 0 &&
+                            strcmp(scene->poses[existing].animation, animation_name) == 0) {
+                            already_present = true;
+                            break;
+                        }
+                    }
+                    if (already_present) {
+                        continue;
+                    }
+                    {
+                        WolfVoxelPoseMesh *pose = &scene->poses[scene->pose_count++];
+                        (void)snprintf(pose->subject, sizeof(pose->subject), "%s", object->subject);
+                        (void)snprintf(pose->animation, sizeof(pose->animation), "%s", animation_name);
+                        pose->pose = pose_index;
                     }
                 }
-                if (already_present) {
-                    continue;
-                }
-                pose = &scene->poses[scene->pose_count++];
-                (void)snprintf(pose->subject, sizeof(pose->subject), "%s", object->subject);
-                (void)snprintf(pose->animation, sizeof(pose->animation), "%s", walk_animation);
-                pose->pose = pose_index;
             }
         }
     }
