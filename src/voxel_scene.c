@@ -196,6 +196,9 @@ bool wolf_voxel_scene_load(
         const WolfLevelObject *object = &objects[index];
 
         if (is_runtime_humanoid(object)) {
+            char walk_animation[WOLF_LEVEL_OBJECT_NAME_LENGTH];
+
+            (void)snprintf(walk_animation, sizeof(walk_animation), "%s_w", object->subject);
             for (uint8_t pose_index = 0u; pose_index < 4u; ++pose_index) {
                 WolfVoxelPoseMesh *pose;
                 bool already_present = false;
@@ -203,18 +206,7 @@ bool wolf_voxel_scene_load(
                 for (uint32_t existing = 0u; existing < scene->pose_count; ++existing) {
                     if (scene->poses[existing].pose == pose_index &&
                         strcmp(scene->poses[existing].subject, object->subject) == 0 &&
-                        strcmp(scene->poses[existing].animation,
-                            object->subject) != 0 &&
-                        strcmp(scene->poses[existing].animation,
-                            object->subject) != 0) {
-                        /* Keep the explicit animation comparison below; this branch is intentionally empty. */
-                    }
-                    if (scene->poses[existing].pose == pose_index &&
-                        strcmp(scene->poses[existing].subject, object->subject) == 0 &&
-                        strcmp(scene->poses[existing].animation,
-                            strcmp(object->subject, "grd") == 0 ? "grd_w" :
-                            strcmp(object->subject, "ofc") == 0 ? "ofc_w" :
-                            strcmp(object->subject, "ss") == 0 ? "ss_w" : "mut_w") == 0) {
+                        strcmp(scene->poses[existing].animation, walk_animation) == 0) {
                         already_present = true;
                         break;
                     }
@@ -224,7 +216,7 @@ bool wolf_voxel_scene_load(
                 }
                 pose = &scene->poses[scene->pose_count++];
                 (void)snprintf(pose->subject, sizeof(pose->subject), "%s", object->subject);
-                (void)snprintf(pose->animation, sizeof(pose->animation), "%s_w", object->subject);
+                (void)snprintf(pose->animation, sizeof(pose->animation), "%s", walk_animation);
                 pose->pose = pose_index;
             }
         }
