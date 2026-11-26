@@ -17,6 +17,76 @@
 #define WOLF_ENEMY_KNIFE_AIM_RADIUS_TILES 0.28f
 #define WOLF_ENEMY_SIGHT_CLOSE_TILES 1.5f
 #define WOLF_ENEMY_MAX_TRACE_STEPS 8192u
+#define WOLF_LEVEL_STATIC_MACHINEGUN_MARKER 50u
+
+typedef struct WolfEnemyProfile {
+    uint16_t chase_first;
+    uint16_t chase_last;
+    uint16_t shoot_first;
+    uint16_t shoot_last;
+    uint16_t pain_first;
+    uint16_t death_first;
+    uint16_t death_last;
+    uint16_t dead_state;
+    uint16_t shot_action_states[4];
+    uint8_t shot_action_count;
+    float chase_speed_multiplier;
+    bool improved_accuracy;
+    int32_t score_value;
+} WolfEnemyProfile;
+
+/* Only the original guard, officer and SS families are enabled through C4. */
+static bool enemy_profile_for_family(
+    WolfActorFamily family,
+    WolfEnemyProfile *profile)
+{
+    static const WolfEnemyProfile profiles[3] = {
+        {
+            7u, 12u, 13u, 15u, 16u, 18u, 20u, 21u,
+            {14u, 0u, 0u, 0u}, 1u, 3.0f, false, 100
+        },
+        {
+            7u, 12u, 13u, 15u, 16u, 18u, 21u, 22u,
+            {14u, 0u, 0u, 0u}, 1u, 5.0f, false, 400
+        },
+        {
+            7u, 12u, 13u, 21u, 22u, 24u, 26u, 27u,
+            {14u, 16u, 18u, 20u}, 4u, 4.0f, true, 500
+        }
+    };
+
+    if (profile == NULL || family < WOLF_ACTOR_GUARD || family > WOLF_ACTOR_SS) {
+        return false;
+    }
+    *profile = profiles[(size_t)family];
+    return true;
+}
+
+static bool enemy_state_is_shooting(
+    const WolfEnemyProfile *profile,
+    uint16_t state_id)
+{
+    return state_id >= profile->shoot_first && state_id <= profile->shoot_last;
+}
+
+static bool enemy_state_is_action(
+    const WolfEnemyProfile *profile,
+    uint16_t state_id)
+{
+    for (uint8_t index = 0u; index < profile->shot_action_count; ++index) {
+        if (profile->shot_action_states[index] == state_id) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool enemy_state_is_pain_or_dead(
+    const WolfEnemyProfile *profile,
+    uint16_t state_id)
+{
+    return state_id >= profile->pain_first && state_id <= profile->dead_state;
+}
 
 static uint8_t actor_random_byte(WolfActor *actor)
 {
@@ -201,23 +271,46 @@ static void first_sighting(
     float player_z,
     WolfEnemyAIEvents *events)
 {
+    WolfEnemyProfile profile;
+
+    if (!enemy_profile_for_family(actor->family, &profile)) {
+        return;
+    }
     actor->attack_mode = true;
     actor->ai_first_attack = true;
     actor->movement_follow_path_arrows = false;
-    actor->movement_speed_world_per_tic = WOLF_ENEMY_GUARD_BASE_SPEED * 3.0f;
+    actor->movement_speed_world_per_tic =
+        WOLF_ENEMY_GUARD_BASE_SPEED * profile.chase_speed_multiplier;
     actor->ai_reaction_tics = 0u;
     actor->ai_attack_cooldown = 8u;
     actor->movement_in_progress = false;
     actor->movement_waiting_for_door = false;
+    actor->ai_action_state_id = WOLF_ACTOR_STATE_NONE;
+    actor->ai_action_fired = false;
     face_player(actor, player_x, player_z);
     (void)wolf_actor_movement_set_direction(actor, WOLF_ACTOR_DIRECTION_NONE);
-    actor->movement_speed_world_per_tic = WOLF_ENEMY_GUARD_BASE_SPEED * 3.0f;
-    (void)wolf_actor_collection_set_state(actor, WOLF_GUARD_STATE_CHASE_FIRST);
+    (void)wolf_actor_collection_set_state(actor, profile.chase_first);
 
     if (events != NULL) {
-        ++events->guard_alerts;
-        events->alert_source_x = actor->position_x;
-        events->alert_source_z = actor->position_z;
+        switch (actor->family) {
+        case WOLF_ACTOR_GUARD:
+            ++events->guard_alerts;
+            events->alert_source_x = actor->position_x;
+            events->alert_source_z = actor->position_z;
+            break;
+        case WOLF_ACTOR_OFFICER:
+            ++events->officer_alerts;
+            events->officer_alert_source_x = actor->position_x;
+            events->officer_alert_source_z = actor->position_z;
+            break;
+        case WOLF_ACTOR_SS:
+            ++events->ss_alerts;
+            events->ss_alert_source_x = actor->position_x;
+            events->ss_alert_source_z = actor->position_z;
+            break;
+        default:
+            break;
+        }
     }
 }
 
@@ -504,19 +597,24 @@ static WolfActorDirection select_dodge_direction(
     return WOLF_ACTOR_DIRECTION_NONE;
 }
 
-static int32_t guard_attack_damage(
+static int32_t enemy_attack_damage(
     WolfActor *actor,
     int distance,
+    bool improved_accuracy,
     bool player_is_moving,
-    bool player_can_see_guard)
+    bool player_can_see_enemy)
 {
     int hit_chance = 128;
     int damage;
 
+    /* The original SS class reduces effective distance by one third before its hit roll. */
+    if (improved_accuracy) {
+        distance = distance * 2 / 3;
+    }
     if (player_is_moving) {
-        hit_chance = 160 - distance * (player_can_see_guard ? 16 : 8);
+        hit_chance = 160 - distance * (player_can_see_enemy ? 16 : 8);
     } else {
-        hit_chance = 256 - distance * (player_can_see_guard ? 16 : 8);
+        hit_chance = 256 - distance * (player_can_see_enemy ? 16 : 8);
     }
     if (hit_chance < 0) hit_chance = 0;
     if (hit_chance > 255) hit_chance = 255;
@@ -534,8 +632,9 @@ static int32_t guard_attack_damage(
     return damage;
 }
 
-static void guard_shoot_player(
+static void enemy_shoot_player(
     WolfActor *actor,
+    const WolfEnemyProfile *profile,
     WolfWorldState *world,
     float player_x,
     float player_z,
@@ -546,16 +645,18 @@ static void guard_shoot_player(
 {
     float dx = actor->position_x - player_x;
     float dz = actor->position_z - player_z;
-    float angle_to_guard = atan2f(dx, -dz);
-    float angle_error = remainderf(angle_to_guard - player_yaw, WOLF_ENEMY_TWO_PI);
-    bool player_can_see_guard = fabsf(angle_error) < 0.65f;
+    float angle_to_enemy = atan2f(dx, -dz);
+    float angle_error = remainderf(angle_to_enemy - player_yaw, WOLF_ENEMY_TWO_PI);
+    bool player_can_see_enemy = fabsf(angle_error) < 0.65f;
     int distance = chebyshev_tile_distance(actor, world, player_x, player_z);
     int32_t damage;
 
     if (!has_line_of_sight(world, actor->position_x, actor->position_z, player_x, player_z)) {
         return;
     }
-    damage = guard_attack_damage(actor, distance, player_is_moving, player_can_see_guard);
+    damage = enemy_attack_damage(
+        actor, distance, profile->improved_accuracy,
+        player_is_moving, player_can_see_enemy);
     if (difficulty == WOLF_DIFFICULTY_BABY) {
         damage >>= 2;
     }
@@ -563,24 +664,31 @@ static void guard_shoot_player(
         (void)wolf_player_state_take_damage(&world->player, damage);
     }
     if (events != NULL) {
-        ++events->guard_shots;
-        events->shot_source_x = actor->position_x;
-        events->shot_source_z = actor->position_z;
+        switch (actor->family) {
+        case WOLF_ACTOR_GUARD:
+            ++events->guard_shots;
+            events->shot_source_x = actor->position_x;
+            events->shot_source_z = actor->position_z;
+            break;
+        case WOLF_ACTOR_OFFICER:
+            ++events->officer_shots;
+            events->officer_shot_source_x = actor->position_x;
+            events->officer_shot_source_z = actor->position_z;
+            break;
+        case WOLF_ACTOR_SS:
+            ++events->ss_shots;
+            events->ss_shot_source_x = actor->position_x;
+            events->ss_shot_source_z = actor->position_z;
+            break;
+        default:
+            break;
+        }
     }
 }
 
-static bool is_guard_state_shooting(uint16_t state_id)
-{
-    return state_id >= WOLF_GUARD_STATE_SHOOT_FIRST &&
-        state_id <= WOLF_GUARD_STATE_SHOOT_LAST;
-}
 
-static bool is_guard_state_pain_or_dead(uint16_t state_id)
-{
-    return state_id >= WOLF_GUARD_STATE_PAIN_FIRST;
-}
 
-static void choose_guard_chase_step(
+static void choose_enemy_chase_step(
     WolfActor *actor,
     const WolfActor *actors,
     uint32_t actor_count,
@@ -591,10 +699,11 @@ static void choose_guard_chase_step(
     bool dodge)
 {
     WolfActorDirection direction;
+    WolfEnemyProfile profile;
 
-    if (actor->movement_in_progress || actor->movement_waiting_for_door ||
-        actor->state_id < WOLF_GUARD_STATE_CHASE_FIRST ||
-        actor->state_id > WOLF_GUARD_STATE_CHASE_LAST) {
+    if (!enemy_profile_for_family(actor->family, &profile) ||
+        actor->movement_in_progress || actor->movement_waiting_for_door ||
+        actor->state_id < profile.chase_first || actor->state_id > profile.chase_last) {
         return;
     }
     direction = dodge
@@ -604,15 +713,18 @@ static void choose_guard_chase_step(
             actor, actors, actor_count, actor_index, world, player_x, player_z);
     (void)wolf_actor_movement_set_direction(actor, direction);
     actor->movement_follow_path_arrows = false;
-    actor->movement_speed_world_per_tic = WOLF_ENEMY_GUARD_BASE_SPEED * 3.0f;
+    actor->movement_speed_world_per_tic = WOLF_ENEMY_GUARD_BASE_SPEED * profile.chase_speed_multiplier;
 }
 
-static void drop_guard_clip(WolfActor *actor, WolfWorldState *world)
+static void drop_enemy_item(
+    WolfActor *actor,
+    WolfWorldState *world,
+    uint16_t item_marker)
 {
     int centre_x = (int)actor->tile_x;
     int centre_y = (int)actor->tile_y;
 
-    /* DropItem prefers the actor's current tile, then searches the surrounding 3x3 cells. */
+    /* DropItem first tries the actor tile, then searches its surrounding 3x3 cells. */
     for (int radius = 0; radius <= 1; ++radius) {
         for (int y = centre_y - radius; y <= centre_y + radius; ++y) {
             for (int x = centre_x - radius; x <= centre_x + radius; ++x) {
@@ -633,19 +745,28 @@ static void drop_guard_clip(WolfActor *actor, WolfWorldState *world)
                      marker <= WOLF_LEVEL_STATIC_EXTRA_CLIP)) {
                     continue;
                 }
-                world->level.object_tiles[index] = WOLF_LEVEL_STATIC_EXTRA_CLIP;
+                world->level.object_tiles[index] = item_marker;
                 return;
             }
         }
     }
 }
 
-static bool damage_guard(
+static bool damage_enemy(
     WolfActor *actor,
     WolfWorldState *world,
-    int32_t damage)
+    int32_t damage,
+    float player_x,
+    float player_z,
+    WolfEnemyAIEvents *events)
 {
-    if (actor == NULL || world == NULL || !actor->active || !actor->shootable || damage <= 0) {
+    WolfEnemyProfile profile;
+    uint16_t death_state;
+    uint16_t pain_state;
+    uint16_t item_marker;
+
+    if (actor == NULL || world == NULL || !actor->active || !actor->shootable ||
+        damage <= 0 || !enemy_profile_for_family(actor->family, &profile)) {
         return false;
     }
 
@@ -661,27 +782,50 @@ static bool damage_guard(
         actor->movement_in_progress = false;
         actor->movement_waiting_for_door = false;
         if (!actor->ai_score_awarded) {
-            wolf_player_state_give_points(&world->player, 100);
+            wolf_player_state_give_points(&world->player, profile.score_value);
             actor->ai_score_awarded = true;
         }
-        (void)wolf_actor_collection_set_state(actor, WOLF_GUARD_STATE_DIE_FIRST);
-        drop_guard_clip(actor, world);
+        death_state = profile.death_first;
+        (void)wolf_actor_collection_set_state(actor, death_state);
+        item_marker = actor->family == WOLF_ACTOR_SS &&
+            world->player.best_weapon < WOLF_WEAPON_MACHINEGUN
+            ? WOLF_LEVEL_STATIC_MACHINEGUN_MARKER
+            : WOLF_LEVEL_STATIC_EXTRA_CLIP;
+        drop_enemy_item(actor, world, item_marker);
+        if (events != NULL) {
+            switch (actor->family) {
+            case WOLF_ACTOR_GUARD:
+                ++events->guard_deaths;
+                events->guard_death_source_x = actor->position_x;
+                events->guard_death_source_z = actor->position_z;
+                break;
+            case WOLF_ACTOR_OFFICER:
+                ++events->officer_deaths;
+                events->officer_death_source_x = actor->position_x;
+                events->officer_death_source_z = actor->position_z;
+                break;
+            case WOLF_ACTOR_SS:
+                ++events->ss_deaths;
+                events->ss_death_source_x = actor->position_x;
+                events->ss_death_source_z = actor->position_z;
+                break;
+            default:
+                break;
+            }
+        }
         return true;
     }
 
     if (!actor->attack_mode) {
-        actor->attack_mode = true;
-        actor->ai_first_attack = true;
-        actor->movement_follow_path_arrows = false;
-        actor->movement_speed_world_per_tic = WOLF_ENEMY_GUARD_BASE_SPEED * 3.0f;
+        first_sighting(actor, player_x, player_z, events);
     }
     actor->movement_enabled = false;
     actor->movement_direction = WOLF_ACTOR_DIRECTION_NONE;
     actor->movement_in_progress = false;
-    (void)wolf_actor_collection_set_state(
-        actor, (actor->health & 1) != 0
-            ? WOLF_GUARD_STATE_PAIN_FIRST
-            : WOLF_GUARD_STATE_PAIN_LAST);
+    pain_state = (actor->health & 1) != 0
+        ? profile.pain_first
+        : (uint16_t)(profile.pain_first + 1u);
+    (void)wolf_actor_collection_set_state(actor, pain_state);
     return true;
 }
 
@@ -692,7 +836,8 @@ bool wolf_enemy_ai_player_attack(
     float player_world_x,
     float player_world_z,
     float player_yaw_radians,
-    WolfWeaponType weapon)
+    WolfWeaponType weapon,
+    WolfEnemyAIEvents *events)
 {
     float forward_x;
     float forward_z;
@@ -701,6 +846,9 @@ bool wolf_enemy_ai_player_attack(
     float max_range;
     float aim_radius;
 
+    if (events != NULL) {
+        memset(events, 0, sizeof(*events));
+    }
     if ((actor_count > 0u && actors == NULL) || world == NULL ||
         !isfinite(player_world_x) || !isfinite(player_world_z) ||
         !isfinite(player_yaw_radians) ||
@@ -724,7 +872,8 @@ bool wolf_enemy_ai_player_attack(
         float along_ray;
         float perpendicular;
 
-        if (!actor->active || !actor->shootable || actor->family != WOLF_ACTOR_GUARD) {
+        if (!actor->active || !actor->shootable ||
+            !enemy_profile_for_family(actor->family, &(WolfEnemyProfile){0})) {
             continue;
         }
         relative_x = actor->position_x - player_world_x;
@@ -766,7 +915,7 @@ bool wolf_enemy_ai_player_attack(
             damage = (int32_t)(actor_random_byte(target) / 6u);
         }
         if (damage > 0) {
-            (void)damage_guard(target, world, damage);
+            (void)damage_enemy(target, world, damage, player_world_x, player_world_z, events);
         }
     }
     return true;
@@ -797,8 +946,15 @@ bool wolf_enemy_ai_update_tic(
     for (uint32_t index = 0u; index < actor_count; ++index) {
         WolfActor *actor = &actors[index];
 
-        if (!actor->active || !actor->shootable || actor->family != WOLF_ACTOR_GUARD) {
+        WolfEnemyProfile profile;
+
+        if (!actor->active || !actor->shootable ||
+            !enemy_profile_for_family(actor->family, &profile)) {
             continue;
+        }
+        if (actor->ai_action_state_id != actor->state_id) {
+            actor->ai_action_state_id = actor->state_id;
+            actor->ai_action_fired = false;
         }
         if (!actor->attack_mode) {
             if (actor->ai_reaction_tics > 0u) {
@@ -815,15 +971,15 @@ bool wolf_enemy_ai_update_tic(
                     (uint16_t)(1u + actor_random_byte(actor) / 4u);
             }
         } else {
-            if (is_guard_state_shooting(actor->state_id)) {
-                if (actor->state_id == WOLF_GUARD_STATE_SHOOT_ACTION &&
+            if (enemy_state_is_shooting(&profile, actor->state_id)) {
+                if (enemy_state_is_action(&profile, actor->state_id) &&
                     !actor->ai_action_fired) {
                     actor->ai_action_fired = true;
-                    guard_shoot_player(
-                        actor, world, player_world_x, player_world_z,
+                    enemy_shoot_player(
+                        actor, &profile, world, player_world_x, player_world_z,
                         player_yaw_radians, difficulty, player_is_moving, events);
                 }
-            } else if (!is_guard_state_pain_or_dead(actor->state_id)) {
+            } else if (!enemy_state_is_pain_or_dead(&profile, actor->state_id)) {
                 bool dodge = false;
 
                 if (actor->ai_attack_cooldown > 0u) {
@@ -848,7 +1004,7 @@ bool wolf_enemy_ai_update_tic(
                         }
                     }
                 }
-                choose_guard_chase_step(
+                choose_enemy_chase_step(
                     actor, actors, actor_count, index, world,
                     player_world_x, player_world_z, dodge);
             }
