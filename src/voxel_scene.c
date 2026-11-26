@@ -1,4 +1,5 @@
 #include "wolfvk/voxel_scene.h"
+#include "wolfvk/actor.h"
 
 #include "game_palette.h"
 #include "wolfvk/vox_file.h"
@@ -26,6 +27,38 @@ static bool pose_matches(
     return pose->pose == pose_index &&
         strcmp(pose->subject, subject) == 0 &&
         strcmp(pose->animation, animation) == 0;
+}
+
+static bool is_runtime_humanoid(const WolfLevelObject *object)
+{
+    size_t length;
+
+    if (strcmp(object->subject, "grd") != 0 &&
+        strcmp(object->subject, "ofc") != 0 &&
+        strcmp(object->subject, "ss") != 0 &&
+        strcmp(object->subject, "mut") != 0) {
+        return false;
+    }
+    length = strlen(object->animation);
+    return length >= 2u && object->animation[length - 2u] == '_' &&
+        (object->animation[length - 1u] == 's' || object->animation[length - 1u] == 'w');
+}
+
+static const WolfVoxelPoseMesh *find_actor_pose(
+    const WolfVoxelScene *scene,
+    const WolfActor *actor)
+{
+    for (uint32_t index = 0u; index < scene->pose_count; ++index) {
+        if (scene->poses[index].pose == actor->pose &&
+            strcmp(scene->poses[index].subject,
+                actor->family == WOLF_ACTOR_GUARD ? "grd" :
+                actor->family == WOLF_ACTOR_OFFICER ? "ofc" :
+                actor->family == WOLF_ACTOR_SS ? "ss" : "mut") == 0 &&
+            strcmp(scene->poses[index].animation, actor->animation) == 0) {
+            return &scene->poses[index];
+        }
+    }
+    return NULL;
 }
 
 static const WolfVoxelPoseMesh *find_pose(
@@ -134,8 +167,14 @@ bool wolf_voxel_scene_load(
         return true;
     }
 
-    /* There can be no more distinct poses than objects. */
-    scene->poses = calloc(object_count, sizeof(*scene->poses));
+    /*
+     * Each humanoid may need four walking poses in addition to its spawn
+     * pose. Reserve five entries per object; duplicates are collapsed below.
+     */
+    if ((size_t)object_count > SIZE_MAX / 5u / sizeof(*scene->poses)) {
+        return false;
+    }
+    scene->poses = calloc((size_t)object_count * 5u, sizeof(*scene->poses));
     if (scene->poses == NULL) {
         return false;
     }
@@ -150,6 +189,45 @@ bool wolf_voxel_scene_load(
         (void)snprintf(pose->subject, sizeof(pose->subject), "%s", object->subject);
         (void)snprintf(pose->animation, sizeof(pose->animation), "%s", object->animation);
         pose->pose = object->pose;
+    }
+
+    /* Preload every walking frame so actor state changes only select a shared mesh range. */
+    for (uint32_t index = 0u; index < object_count; ++index) {
+        const WolfLevelObject *object = &objects[index];
+
+        if (is_runtime_humanoid(object)) {
+            for (uint8_t pose_index = 0u; pose_index < 4u; ++pose_index) {
+                WolfVoxelPoseMesh *pose;
+                bool already_present = false;
+
+                for (uint32_t existing = 0u; existing < scene->pose_count; ++existing) {
+                    if (scene->poses[existing].pose == pose_index &&
+                        strcmp(scene->poses[existing].subject, object->subject) == 0 &&
+                        strcmp(scene->poses[existing].animation,
+                            object->subject) != 0 &&
+                        strcmp(scene->poses[existing].animation,
+                            object->subject) != 0) {
+                        /* Keep the explicit animation comparison below; this branch is intentionally empty. */
+                    }
+                    if (scene->poses[existing].pose == pose_index &&
+                        strcmp(scene->poses[existing].subject, object->subject) == 0 &&
+                        strcmp(scene->poses[existing].animation,
+                            strcmp(object->subject, "grd") == 0 ? "grd_w" :
+                            strcmp(object->subject, "ofc") == 0 ? "ofc_w" :
+                            strcmp(object->subject, "ss") == 0 ? "ss_w" : "mut_w") == 0) {
+                        already_present = true;
+                        break;
+                    }
+                }
+                if (already_present) {
+                    continue;
+                }
+                pose = &scene->poses[scene->pose_count++];
+                (void)snprintf(pose->subject, sizeof(pose->subject), "%s", object->subject);
+                (void)snprintf(pose->animation, sizeof(pose->animation), "%s_w", object->subject);
+                pose->pose = pose_index;
+            }
+        }
     }
 
     /* Load each subject the first time one of its poses appears. */
@@ -214,9 +292,13 @@ bool wolf_voxel_scene_build_instances(
 
     for (uint32_t index = 0u; index < object_count; ++index) {
         const WolfLevelObject *object = &objects[index];
-        const WolfVoxelPoseMesh *pose = find_pose(scene, object);
+        const WolfVoxelPoseMesh *pose;
         VulkanModelInstance *instance;
 
+        if (is_runtime_humanoid(object)) {
+            continue;
+        }
+        pose = find_pose(scene, object);
         if (pose == NULL || !pose->available) {
             continue;
         }
@@ -229,6 +311,65 @@ bool wolf_voxel_scene_build_instances(
         instance->position[2] =
             level_origin_z + ((float)object->tile_y + 0.5f) * WOLF_WORLD_TILE_SIZE;
         instance->yaw_radians = object->yaw_radians;
+    }
+
+    if (placed_count == 0u) {
+        free(placed);
+        return true;
+    }
+    *instances = placed;
+    *instance_count = placed_count;
+    return true;
+}
+
+ 
+bool wolf_voxel_scene_build_actor_instances(
+    const WolfVoxelScene *scene,
+    const WolfActor *actors,
+    uint32_t actor_count,
+    VulkanModelInstance **instances,
+    uint32_t *instance_count)
+{
+    VulkanModelInstance *placed;
+    uint32_t placed_count = 0u;
+
+    if (instances != NULL) {
+        *instances = NULL;
+    }
+    if (instance_count != NULL) {
+        *instance_count = 0u;
+    }
+    if (scene == NULL || instances == NULL || instance_count == NULL ||
+        (actor_count > 0u && actors == NULL)) {
+        return false;
+    }
+    if (actor_count == 0u) {
+        return true;
+    }
+
+    placed = malloc((size_t)actor_count * sizeof(*placed));
+    if (placed == NULL) {
+        return false;
+    }
+    for (uint32_t index = 0u; index < actor_count; ++index) {
+        const WolfActor *actor = &actors[index];
+        const WolfVoxelPoseMesh *pose;
+        VulkanModelInstance *instance;
+
+        if (!actor->active) {
+            continue;
+        }
+        pose = find_actor_pose(scene, actor);
+        if (pose == NULL || !pose->available) {
+            continue;
+        }
+        instance = &placed[placed_count++];
+        instance->first_quad = pose->first_quad;
+        instance->quad_count = pose->quad_count;
+        instance->position[0] = actor->position_x;
+        instance->position[1] = 0.0f;
+        instance->position[2] = actor->position_z;
+        instance->yaw_radians = actor->yaw_radians;
     }
 
     if (placed_count == 0u) {
