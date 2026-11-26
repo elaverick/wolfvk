@@ -143,7 +143,7 @@ void test_player_state_health_is_kept_between_zero_and_one_hundred(void);
 void test_player_state_ammo_caps_at_99_and_restores_the_gun(void);
 void test_player_state_weapon_pickups_add_ammo_and_only_upgrade(void);
 void test_player_state_keys_and_extra_lives(void);
-void test_player_state_face_glances_only_ahead_left_or_right(void);
+void test_player_state_face_wait_uses_one_original_random_tic_threshold(void);\nvoid test_player_state_face_wait_is_reselected_after_each_glance(void);\nvoid test_player_state_face_glances_only_ahead_left_or_right(void);
 void test_status_bar_face_tracks_health_and_glance(void);
 void test_status_bar_places_numbers_keys_face_and_weapon_like_the_original(void);
 void test_status_bar_reflects_changed_player_values(void);
@@ -336,7 +336,7 @@ int main(void)
     RUN_TEST(test_player_state_ammo_caps_at_99_and_restores_the_gun);
     RUN_TEST(test_player_state_weapon_pickups_add_ammo_and_only_upgrade);
     RUN_TEST(test_player_state_keys_and_extra_lives);
-    RUN_TEST(test_player_state_face_glances_only_ahead_left_or_right);
+    RUN_TEST(test_player_state_face_wait_uses_one_original_random_tic_threshold);\n    RUN_TEST(test_player_state_face_wait_is_reselected_after_each_glance);\n    RUN_TEST(test_player_state_face_glances_only_ahead_left_or_right);
     RUN_TEST(test_status_bar_face_tracks_health_and_glance);
     RUN_TEST(test_status_bar_places_numbers_keys_face_and_weapon_like_the_original);
     RUN_TEST(test_status_bar_reflects_changed_player_values);
