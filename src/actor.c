@@ -33,6 +33,7 @@ bool wolf_actor_set_state(
     actor->state_id = state_id;
     actor->state_tics_remaining = definition->duration_tics;
     actor->state_elapsed_tics = 0u;
+    actor->ai_action_fired = false;
     (void)snprintf(actor->animation, sizeof(actor->animation), "%s", definition->animation);
     actor->pose = definition->pose;
     actor->active = true;
