@@ -19,7 +19,7 @@
 #define WOLF_PLAYER_EXTRA_LIFE_POINTS 40000
 #define WOLF_PLAYER_GOLD_KEY 1u
 #define WOLF_PLAYER_SILVER_KEY 2u
-/* UpdateFace in the original changes the face after a random wait of up to 255 tics. */
+/* UpdateFace in WL_AGENT.C advances against the game's 70 Hz tic clock. */
 #define WOLF_PLAYER_FACE_TICKS_PER_SECOND 70.0f
 
 /* The four weapons in the original order: KNIFEPIC + weapon picks the status bar picture. */
@@ -49,6 +49,8 @@ typedef struct WolfPlayerState {
     /* 0-2 picks the look-ahead, look-left or look-right version of the face. */
     uint8_t face_frame;
     float face_ticks;
+    /* One random 0-255 tic threshold is retained for the whole glance interval. */
+    uint8_t face_wait_ticks;
     uint32_t random_state;
     /* Set by the chaingun pickup: BJ grins until the face next changes, as with gotgatgun. */
     bool got_gatling_face;
