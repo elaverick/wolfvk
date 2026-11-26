@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define WOLF_AUDIO_MAX_SOUNDS 64
+#define WOLF_AUDIO_MAX_SOUNDS 96
 #define WOLF_AUDIO_MAX_VOICES 32
 #define WOLF_AUDIO_NAME_CAPACITY 48
 

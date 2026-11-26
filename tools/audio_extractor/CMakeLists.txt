@@ -7,18 +7,45 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
 include(CTest)
+include(FetchContent)
+
+# Pin the OPL emulator to a reviewed source revision. It is built as a single
+# C11 static library; no player, platform audio backend or C++ code is included.
+FetchContent_Declare(
+    Opal
+    GIT_REPOSITORY https://github.com/RealBitdancer/opal.git
+    GIT_TAG 5903c7e06783927f9568d4d0c27da0834464aa5f
+    GIT_SHALLOW FALSE
+)
+FetchContent_GetProperties(Opal)
+if(NOT opal_POPULATED)
+    FetchContent_Populate(Opal)
+endif()
+
+add_library(wolfvk_opal STATIC ${opal_SOURCE_DIR}/src/opal.c)
+target_include_directories(wolfvk_opal PUBLIC ${opal_SOURCE_DIR}/include)
+target_compile_features(wolfvk_opal PRIVATE c_std_11)
 
 add_library(audio_extractor_core STATIC
     src/audio_archive.c
+    src/adlib_archive.c
+    src/adlib_synth.c
 )
-target_include_directories(audio_extractor_core PUBLIC src)
+target_include_directories(audio_extractor_core
+    PUBLIC
+        src
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../include
+    PRIVATE
+        ${opal_SOURCE_DIR}/include
+)
+target_link_libraries(audio_extractor_core PUBLIC wolfvk_opal)
 
 add_executable(wolf_audio_extractor
     src/main.c
 )
 target_link_libraries(wolf_audio_extractor PRIVATE audio_extractor_core)
 
-set(AUDIO_EXTRACTOR_TARGETS audio_extractor_core wolf_audio_extractor)
+set(AUDIO_EXTRACTOR_TARGETS wolfvk_opal audio_extractor_core wolf_audio_extractor)
 
 if(BUILD_TESTING)
     include(FetchContent)
@@ -39,6 +66,8 @@ if(BUILD_TESTING)
     add_executable(audio_extractor_tests
         tests/test_main.c
         tests/test_audio_archive.c
+        tests/test_adlib_archive.c
+        tests/test_adlib_synth.c
     )
     target_link_libraries(audio_extractor_tests PRIVATE audio_extractor_core unity)
     list(APPEND AUDIO_EXTRACTOR_TARGETS audio_extractor_tests)
