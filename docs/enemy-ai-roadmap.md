@@ -6,7 +6,7 @@
 
 **Implementation language and platform:** C17, Windows, SDL3 and Vulkan. Do not introduce C++.
 
-**Status:** Planning document. No implementation stages below are marked complete.
+**Status:** Stage 0 audit complete (C0). Gameplay implementation has not started.
 
 ## Goal
 
@@ -69,14 +69,14 @@ Each checkpoint is a commit boundary. Keep the changes small enough that a check
 
 ### Stage 0 — Baseline audit and behavioural specification
 
-- [ ] Read the current WolfVK roadmap, CMake/build configuration, actor/object placement, voxel scene and animation manifest, player movement/collision, world/door state, weapon firing/damage events, player state, status bar and audio event code.
-- [ ] Inspect the corresponding original Wolf3D source routines and state tables for guards, officers, SS soldiers and mutants.
-- [ ] Identify the exact existing data and interfaces that can be reused, and list missing capabilities.
-- [ ] Write down per-enemy state sequences, animation names, tick durations, movement/attack parameters and difficulty rules from the reference source.
-- [ ] Confirm how the game advances simulation time and whether a deterministic 70 Hz actor tick can be used independently of render frame rate.
-- [ ] Record a concise implementation design and test plan before substantial code changes.
+- [x] Read the current WolfVK roadmap, CMake/build configuration, actor/object placement, voxel scene, player movement/collision, world/door state, weapon firing/damage events, player state, status bar and audio event code.
+- [x] Inspect the corresponding original Wolf3D source routines and state tables for guards, officers, SS soldiers and mutants.
+- [x] Identify the exact existing data and interfaces that can be reused, and list missing capabilities.
+- [x] Write down per-enemy state sequences, animation names, tick durations, movement/attack parameters and difficulty rules from the reference source.
+- [x] Confirm how the game advances simulation time and whether a deterministic 70 Hz actor tick can be used independently of render frame rate.
+- [x] Record a concise implementation design and test plan before substantial code changes.
 
-**Checkpoint C0 — audit complete:** Commit the source audit/design note and any test fixtures. No gameplay implementation is required in this checkpoint.
+**Checkpoint C0 — audit complete:** [docs/enemy-ai-audit.md](enemy-ai-audit.md) records the inspected WolfVK integration points, original source behaviour, missing capabilities, proposed architecture and test plan. No gameplay implementation is included in this checkpoint. The audit is committed on `main` at `b66bfa2755bd245e7ecc63974d9e2d229f7b785d`.
 
 **Acceptance:** The design is based on inspected WolfVK code and the original source, identifies integration points and risks, and does not assume unsupported systems exist.
 
