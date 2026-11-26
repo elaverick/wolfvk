@@ -62,7 +62,7 @@ void test_actor_movement_traverses_all_eight_grid_directions(void)
         TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 0u));
         TEST_ASSERT_TRUE(create_actor(&actor, 1u, 3u, 3u, 0.0f));
         TEST_ASSERT_TRUE(wolf_actor_movement_set_direction(&actor, directions[index]));
-        advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 40u);
+        advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 128u);
         TEST_ASSERT_EQUAL_UINT16(expected_x[index], actor.tile_x);
         TEST_ASSERT_EQUAL_UINT16(expected_y[index], actor.tile_y);
         TEST_ASSERT_FLOAT_WITHIN(0.001f,
@@ -88,12 +88,12 @@ void test_actor_movement_stops_at_solid_walls_and_map_boundaries(void)
 
     world.level.wall_tiles[3u * WOLF_LEVEL_PLANE_WIDTH + 4u] = 0u;
     TEST_ASSERT_TRUE(wolf_actor_movement_set_direction(&actor, WOLF_ACTOR_DIRECTION_EAST));
-    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 40u);
+    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 128u);
     TEST_ASSERT_EQUAL_UINT16(4u, actor.tile_x);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, world_coordinate(4u, 8u), actor.position_x);
 
     TEST_ASSERT_TRUE(wolf_actor_movement_set_direction(&actor, WOLF_ACTOR_DIRECTION_EAST));
-    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 160u);
+    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 512u);
     TEST_ASSERT_EQUAL_UINT16(7u, actor.tile_x);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, world_coordinate(7u, 8u), actor.position_x);
 }
@@ -138,7 +138,7 @@ void test_actor_movement_waits_for_door_to_fully_open_before_crossing(void)
         TEST_ASSERT_TRUE(wolf_world_state_update(&world, 0.1f, player_x, player_z, NULL));
     }
     TEST_ASSERT_TRUE(wolf_world_state_actor_door_is_open(&world, 4u, 3u));
-    advance_actor(&actor, 1u, &world, player_x, player_z, 40u);
+    advance_actor(&actor, 1u, &world, player_x, player_z, 128u);
     TEST_ASSERT_FALSE(actor.movement_waiting_for_door);
     TEST_ASSERT_EQUAL_UINT16(4u, actor.tile_x);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, world_coordinate(4u, 8u), actor.position_x);
@@ -191,9 +191,9 @@ void test_actor_movement_is_repeatable_for_identical_tic_sequences(void)
     TEST_ASSERT_TRUE(create_actor(&actor_b, 1u, 2u, 2u, 0.0f));
     TEST_ASSERT_TRUE(wolf_actor_movement_set_direction(&actor_a, WOLF_ACTOR_DIRECTION_SOUTH_EAST));
     TEST_ASSERT_TRUE(wolf_actor_movement_set_direction(&actor_b, WOLF_ACTOR_DIRECTION_SOUTH_EAST));
-    advance_actor(&actor_a, 1u, &world_a, -100.0f, -100.0f, 40u);
+    advance_actor(&actor_a, 1u, &world_a, -100.0f, -100.0f, 128u);
     for (uint32_t batch = 0u; batch < 4u; ++batch) {
-        advance_actor(&actor_b, 1u, &world_b, -100.0f, -100.0f, 10u);
+        advance_actor(&actor_b, 1u, &world_b, -100.0f, -100.0f, 32u);
     }
     TEST_ASSERT_EQUAL_UINT16(actor_a.tile_x, actor_b.tile_x);
     TEST_ASSERT_EQUAL_UINT16(actor_a.tile_y, actor_b.tile_y);
