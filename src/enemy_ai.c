@@ -9,7 +9,7 @@
 #include <string.h>
 
 #define WOLF_ENEMY_TWO_PI 6.28318530717958647692f
-#define WOLF_ENEMY_GUARD_BASE_SPEED WOLF_ACTOR_PATROL_SPEED_WORLD_PER_TIC
+#define WOLF_ENEMY_BASE_PATROL_SPEED WOLF_ACTOR_PATROL_SPEED_WORLD_PER_TIC
 #define WOLF_ENEMY_ACTOR_RADIUS 0.20f
 #define WOLF_ENEMY_SHOT_RANGE_TILES 64.0f
 #define WOLF_ENEMY_GUN_AIM_RADIUS_TILES 0.16f
@@ -280,7 +280,7 @@ static void first_sighting(
     actor->ai_first_attack = true;
     actor->movement_follow_path_arrows = false;
     actor->movement_speed_world_per_tic =
-        WOLF_ENEMY_GUARD_BASE_SPEED * profile.chase_speed_multiplier;
+        WOLF_ENEMY_BASE_PATROL_SPEED * profile.chase_speed_multiplier;
     actor->ai_reaction_tics = 0u;
     actor->ai_attack_cooldown = 8u;
     actor->movement_in_progress = false;
@@ -713,7 +713,7 @@ static void choose_enemy_chase_step(
             actor, actors, actor_count, actor_index, world, player_x, player_z);
     (void)wolf_actor_movement_set_direction(actor, direction);
     actor->movement_follow_path_arrows = false;
-    actor->movement_speed_world_per_tic = WOLF_ENEMY_GUARD_BASE_SPEED * profile.chase_speed_multiplier;
+    actor->movement_speed_world_per_tic = WOLF_ENEMY_BASE_PATROL_SPEED * profile.chase_speed_multiplier;
 }
 
 static void drop_enemy_item(
