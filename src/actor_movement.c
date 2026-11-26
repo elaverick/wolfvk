@@ -231,6 +231,11 @@ static bool advance_actor(
     float delta_z;
     float speed = WOLF_ACTOR_PATROL_SPEED_WORLD_PER_TIC;
 
+    if (actor->tile_x >= world->level.width || actor->tile_y >= world->level.height ||
+        actor->movement_direction < WOLF_ACTOR_DIRECTION_EAST ||
+        actor->movement_direction > WOLF_ACTOR_DIRECTION_NONE) {
+        return false;
+    }
     if (!actor->movement_enabled || actor->movement_direction == WOLF_ACTOR_DIRECTION_NONE) {
         return true;
     }
