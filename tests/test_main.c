@@ -3,7 +3,8 @@
 void test_actor_initialization_copies_spawn_data_and_enters_state(void);
 void test_actor_state_uses_exact_tic_duration_and_enters_next_state_once(void);
 void test_actor_persistent_state_thinks_once_per_simulation_tic(void);
-void test_actor_one_shot_state_becomes_inactive_after_its_final_pose(void);
+void test_actor_pain_sequence_transitions_to_a_persistent_dead_pose(void);
+void test_actor_terminal_state_removes_the_actor_after_its_final_tic(void);
 void test_actor_state_rejects_invalid_definitions_without_corrupting_instance(void);
 void test_actor_think_callback_can_interrupt_the_current_state(void);
 void test_actor_update_rejects_inactive_or_invalid_state(void);
@@ -400,7 +401,8 @@ int main(void)
     RUN_TEST(test_actor_initialization_copies_spawn_data_and_enters_state);
     RUN_TEST(test_actor_state_uses_exact_tic_duration_and_enters_next_state_once);
     RUN_TEST(test_actor_persistent_state_thinks_once_per_simulation_tic);
-    RUN_TEST(test_actor_one_shot_state_becomes_inactive_after_its_final_pose);
+    RUN_TEST(test_actor_pain_sequence_transitions_to_a_persistent_dead_pose);
+    RUN_TEST(test_actor_terminal_state_removes_the_actor_after_its_final_tic);
     RUN_TEST(test_actor_state_rejects_invalid_definitions_without_corrupting_instance);
     RUN_TEST(test_actor_think_callback_can_interrupt_the_current_state);
     RUN_TEST(test_actor_update_rejects_inactive_or_invalid_state);
