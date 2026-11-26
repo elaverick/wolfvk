@@ -447,13 +447,13 @@ static void play_enemy_audio_events(
         (void)wolf_audio_play(audio, "SCHUTZADSND",
             (WolfAudioVector3){events->ss_alert_source_x, WOLF_WORLD_EYE_HEIGHT, events->ss_alert_source_z});
     }
-    if (events->guard_shots > 0u || events->officer_shots > 0u) {
+    if (events->guard_shots > 0u) {
         (void)wolf_audio_play(audio, "NAZIFIRESND",
             (WolfAudioVector3){events->shot_source_x, WOLF_WORLD_EYE_HEIGHT, events->shot_source_z});
-        if (events->officer_shots > 0u) {
-            (void)wolf_audio_play(audio, "NAZIFIRESND",
-                (WolfAudioVector3){events->officer_shot_source_x, WOLF_WORLD_EYE_HEIGHT, events->officer_shot_source_z});
-        }
+    }
+    if (events->officer_shots > 0u) {
+        (void)wolf_audio_play(audio, "NAZIFIRESND",
+            (WolfAudioVector3){events->officer_shot_source_x, WOLF_WORLD_EYE_HEIGHT, events->officer_shot_source_z});
     }
     if (events->ss_shots > 0u) {
         (void)wolf_audio_play(audio, "SSFIRESND",
