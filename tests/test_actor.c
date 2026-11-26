@@ -93,7 +93,7 @@ void test_actor_persistent_state_thinks_once_per_simulation_tic(void)
     TEST_ASSERT_EQUAL_UINT16(0u, actor.state_id);
 }
 
-void test_actor_one_shot_state_becomes_inactive_after_its_final_pose(void)
+void test_actor_pain_sequence_transitions_to_a_persistent_dead_pose(void)
 {
     WolfActor actor;
     ActorCallbackCounts counts = {0u, 0u};
@@ -103,14 +103,30 @@ void test_actor_one_shot_state_becomes_inactive_after_its_final_pose(void)
         25, test_states, 4u, 2u, &counts));
     TEST_ASSERT_TRUE(wolf_actor_update_tic(&actor, test_states, 4u, &counts));
     TEST_ASSERT_TRUE(actor.active);
+    TEST_ASSERT_EQUAL_UINT16(2u, actor.state_id);
     TEST_ASSERT_TRUE(wolf_actor_update_tic(&actor, test_states, 4u, &counts));
     TEST_ASSERT_EQUAL_UINT16(3u, actor.state_id);
     TEST_ASSERT_TRUE(wolf_actor_update_tic(&actor, test_states, 4u, &counts));
     TEST_ASSERT_TRUE(actor.active);
     TEST_ASSERT_EQUAL_UINT16(3u, actor.state_id);
+    TEST_ASSERT_EQUAL_STRING("grd_dead", actor.animation);
     TEST_ASSERT_EQUAL_UINT32(3u, counts.enter_calls);
 }
 
+void test_actor_terminal_state_removes_the_actor_after_its_final_tic(void)
+{
+    static const WolfActorStateDefinition terminal_state[] = {
+        {"grd_die", 0u, 1u, WOLF_ACTOR_STATE_NONE, NULL, NULL}
+    };
+    WolfActor actor;
+
+    TEST_ASSERT_TRUE(wolf_actor_initialize(
+        &actor, 1u, WOLF_ACTOR_GUARD, 1u, 1u, 0.0f, 0.0f, 0.0f,
+        25, terminal_state, 1u, 0u, NULL));
+    TEST_ASSERT_TRUE(wolf_actor_update_tic(&actor, terminal_state, 1u, NULL));
+    TEST_ASSERT_FALSE(actor.active);
+    TEST_ASSERT_FALSE(actor.shootable);
+}
 void test_actor_state_rejects_invalid_definitions_without_corrupting_instance(void)
 {
     WolfActor actor;
