@@ -130,6 +130,31 @@ void test_actor_state_rejects_invalid_definitions_without_corrupting_instance(vo
         25, test_states, 4u, 0u, &counts));
 }
 
+
+static void transition_to_pain(WolfActor *actor, void *context)
+{
+    TEST_ASSERT_TRUE(wolf_actor_set_state(actor, test_states, 4u, 2u, context));
+}
+
+static const WolfActorStateDefinition transition_states[] = {
+    {"grd_s", 0u, 10u, 1u, transition_to_pain, NULL},
+    {"grd_w", 0u, 0u, WOLF_ACTOR_STATE_NONE, NULL, NULL}
+};
+
+void test_actor_think_callback_can_interrupt_the_current_state(void)
+{
+    WolfActor actor;
+    ActorCallbackCounts counts = {0u, 0u};
+
+    TEST_ASSERT_TRUE(wolf_actor_initialize(
+        &actor, 1u, WOLF_ACTOR_GUARD, 1u, 1u, 0.0f, 0.0f, 0.0f,
+        25, transition_states, 2u, 0u, &counts));
+    TEST_ASSERT_TRUE(wolf_actor_update_tic(&actor, transition_states, 2u, &counts));
+    TEST_ASSERT_EQUAL_UINT16(2u, actor.state_id);
+    TEST_ASSERT_EQUAL_STRING("grd_pain", actor.animation);
+    TEST_ASSERT_EQUAL_UINT16(2u, actor.state_tics_remaining);
+}
+
 void test_actor_update_rejects_inactive_or_invalid_state(void)
 {
     WolfActor actor;
