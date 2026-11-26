@@ -1,4 +1,7 @@
 #include "audio_archive.h"
+#include "adlib_archive.h"
+#include "adlib_synth.h"
+#include "wolfvk/audio_sound_names.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -21,19 +24,21 @@
 static void print_usage(const char *program_name)
 {
     printf(
-        "Usage: %s --vswap <VSWAP.WL6> [--output <directory>] [--ffmpeg <executable>]\n"
+        "Usage: %s --vswap <VSWAP.WL6> [--audiohed <AUDIOHED.WL6> --audiot <AUDIOT.WL6>] [--output <directory>] [--ffmpeg <executable>]\n"
         "\n"
-        "Extracts the original digitised WL6 sound effects from the VSWAP archive\n"
-        "and encodes each named DigiMap sound as an OGG Vorbis file.\n"
+        "Extracts original digitised WL6 effects and optionally renders the 87\n"
+        "AdLib effects from AUDIOHED/AUDIOT using an OPL emulator.\n"
         "\n"
         "Options:\n"
         "  --vswap <file>       Original VSWAP.WL6 file (required)\n"
+        "  --audiohed <file>    Original AUDIOHED.WL6 chunk-offset table\n"
+        "  --audiot <file>      Original AUDIOT.WL6 sound archive\n"
         "  --output <directory> Output directory (default: assets/sounds)\n"
         "  --ffmpeg <program>   FFmpeg executable (default: ffmpeg from PATH)\n"
         "  --help               Show this help text\n"
         "\n"
-        "FFmpeg must include its libvorbis encoder. The extracted PCM is 8-bit,\n"
-        "mono, 7000 Hz, matching the original Wolf3D SoundBlaster playback rate.\n",
+        "FFmpeg must include its libvorbis encoder. Digitised samples are 8-bit\n"
+        "mono at 7000 Hz; OPL-rendered effects are 16-bit mono at 44100 Hz.\n",
         program_name != NULL ? program_name : "wolf_audio_extractor");
 }
 
@@ -121,7 +126,51 @@ static bool write_u32_le(FILE *file, uint32_t value)
     return fwrite(bytes, 1u, sizeof(bytes), file) == sizeof(bytes);
 }
 
-/* Save the source PCM as a temporary standards-compliant unsigned 8-bit WAV file. */
+/* Read a complete original WL6 archive into memory for the offset-table decoder. */
+static bool read_file(const char *path, uint8_t **data, size_t *data_size)
+{
+    FILE *file;
+    long file_length;
+    uint8_t *buffer;
+
+#if defined(_MSC_VER)
+    file = NULL;
+    if (fopen_s(&file, path, "rb") != 0) {
+        file = NULL;
+    }
+#else
+    file = fopen(path, "rb");
+#endif
+    if (file == NULL) {
+        return false;
+    }
+    if (fseek(file, 0L, SEEK_END) != 0 || (file_length = ftell(file)) <= 0L ||
+        fseek(file, 0L, SEEK_SET) != 0) {
+        (void)fclose(file);
+        return false;
+    }
+
+    buffer = malloc((size_t)file_length);
+    if (buffer == NULL) {
+        (void)fclose(file);
+        return false;
+    }
+    if (fread(buffer, 1u, (size_t)file_length, file) != (size_t)file_length) {
+        free(buffer);
+        (void)fclose(file);
+        return false;
+    }
+    if (fclose(file) != 0) {
+        free(buffer);
+        return false;
+    }
+
+    *data = buffer;
+    *data_size = (size_t)file_length;
+    return true;
+}
+
+/* Save digitised 8-bit source PCM as a temporary standards-compliant WAV file. */
 static bool write_pcm_wave(const char *path, const WolfAudioPcmSample *sample)
 {
     FILE *file;
@@ -160,12 +209,69 @@ static bool write_pcm_wave(const char *path, const WolfAudioPcmSample *sample)
     return written;
 }
 
+/* Save rendered signed 16-bit mono PCM as a temporary RIFF/WAVE file. */
+static bool write_pcm16_wave(const char *path, const WolfAudioPcm16 *sample)
+{
+    FILE *file;
+    bool written;
+    uint32_t data_size;
+
+    if (sample == NULL || sample->samples == NULL || sample->frame_count == 0u ||
+        sample->sample_rate == 0u ||
+        sample->frame_count > UINT32_MAX / (uint32_t)sizeof(int16_t)) {
+        return false;
+    }
+    data_size = sample->frame_count * (uint32_t)sizeof(int16_t);
+
+#if defined(_MSC_VER)
+    file = NULL;
+    if (fopen_s(&file, path, "wb") != 0) {
+        file = NULL;
+    }
+#else
+    file = fopen(path, "wb");
+#endif
+    if (file == NULL) {
+        return false;
+    }
+
+    written =
+        fwrite("RIFF", 1u, 4u, file) == 4u &&
+        write_u32_le(file, 36u + data_size) &&
+        fwrite("WAVEfmt ", 1u, 8u, file) == 8u &&
+        write_u32_le(file, 16u) &&
+        write_u16_le(file, 1u) &&
+        write_u16_le(file, 1u) &&
+        write_u32_le(file, sample->sample_rate) &&
+        write_u32_le(file, sample->sample_rate * (uint32_t)sizeof(int16_t)) &&
+        write_u16_le(file, (uint16_t)sizeof(int16_t)) &&
+        write_u16_le(file, (uint16_t)(sizeof(int16_t) * 8u)) &&
+        fwrite("data", 1u, 4u, file) == 4u &&
+        write_u32_le(file, data_size);
+
+    for (uint32_t index = 0u; written && index < sample->frame_count; ++index) {
+        written = write_u16_le(file, (uint16_t)sample->samples[index]);
+    }
+
+    if (fclose(file) != 0) {
+        written = false;
+    }
+    return written;
+}
+
 /* Run FFmpeg without a shell so file names cannot be interpreted as shell commands. */
 static bool encode_ogg(
     const char *ffmpeg,
     const char *wave_path,
-    const char *ogg_path)
+    const char *ogg_path,
+    uint32_t sample_rate)
 {
+    char sample_rate_text[16];
+
+    if (snprintf(sample_rate_text, sizeof(sample_rate_text), "%u", (unsigned int)sample_rate) < 0 ||
+        strlen(sample_rate_text) >= sizeof(sample_rate_text)) {
+        return false;
+    }
 #if defined(_WIN32)
     char *arguments[] = {
         (char *)ffmpeg,
@@ -180,7 +286,7 @@ static bool encode_ogg(
         "-ac",
         "1",
         "-ar",
-        "7000",
+        sample_rate_text,
         "-c:a",
         "libvorbis",
         "-q:a",
@@ -203,7 +309,7 @@ static bool encode_ogg(
         "-ac",
         "1",
         "-ar",
-        "7000",
+        sample_rate_text,
         "-c:a",
         "libvorbis",
         "-q:a",
@@ -226,6 +332,75 @@ static bool encode_ogg(
     }
     return WIFEXITED(child_status) && WEXITSTATUS(child_status) == 0;
 #endif
+}
+
+/* Convert each source sample once, then publish every original DigiMap alias as its own OGG. */
+static bool export_adlib_sounds(
+    const WolfAudioAdlibArchive *archive,
+    const char *output_directory,
+    const char *ffmpeg)
+{
+    size_t exported_count = 0u;
+    bool success = true;
+    char error_message[256];
+
+    for (uint16_t sound_index = 0u; sound_index < WOLF_AUDIO_ADLIB_SOUND_COUNT; ++sound_index) {
+        WolfAudioAdlibSound sound = {0};
+        WolfAudioPcm16 rendered = {0};
+        char wave_path[WOLF_AUDIO_PATH_CAPACITY];
+        char ogg_path[WOLF_AUDIO_PATH_CAPACITY];
+        const char *sound_name = wolf_audio_sound_names[sound_index];
+        bool written;
+
+        if (!wolf_audio_adlib_archive_get_sound(
+                archive, sound_index, &sound, error_message, sizeof(error_message))) {
+            fprintf(stderr, "Could not read AdLib effect %s: %s\n", sound_name, error_message);
+            success = false;
+            continue;
+        }
+        if (!wolf_audio_adlib_render(&sound, &rendered)) {
+            fprintf(stderr, "Could not render AdLib effect %s.\n", sound_name);
+            success = false;
+            continue;
+        }
+        if (snprintf(
+                wave_path, sizeof(wave_path), "%s/%s.tmp.wav",
+                output_directory, sound_name) < 0 ||
+            strlen(wave_path) >= sizeof(wave_path) ||
+            snprintf(
+                ogg_path, sizeof(ogg_path), "%s/%s.ogg",
+                output_directory, sound_name) < 0 ||
+            strlen(ogg_path) >= sizeof(ogg_path)) {
+            fprintf(stderr, "The output path for %s is too long.\n", sound_name);
+            success = false;
+            wolf_audio_pcm16_destroy(&rendered);
+            continue;
+        }
+
+        written = write_pcm16_wave(wave_path, &rendered);
+        wolf_audio_pcm16_destroy(&rendered);
+        if (!written) {
+            fprintf(stderr, "Could not write temporary PCM data for %s.\n", sound_name);
+            success = false;
+            continue;
+        }
+        if (!encode_ogg(
+                ffmpeg, wave_path, ogg_path, WOLF_AUDIO_ADLIB_SAMPLE_RATE)) {
+            fprintf(stderr,
+                "FFmpeg could not encode %s. Check that FFmpeg and libvorbis are installed.\n",
+                sound_name);
+            success = false;
+            (void)remove(wave_path);
+            continue;
+        }
+
+        (void)remove(wave_path);
+        printf("Wrote %s\n", ogg_path);
+        ++exported_count;
+    }
+
+    printf("Rendered %zu original AdLib sound effects.\n", exported_count);
+    return success;
 }
 
 /* Convert each source sample once, then publish every original DigiMap alias as its own OGG. */
@@ -273,7 +448,7 @@ static bool export_sounds(
                 success = false;
                 continue;
             }
-            if (!encode_ogg(ffmpeg, wave_path, ogg_path)) {
+            if (!encode_ogg(ffmpeg, wave_path, ogg_path, WOLF_AUDIO_DIGI_SAMPLE_RATE)) {
                 fprintf(stderr,
                     "FFmpeg could not encode %s. Check that FFmpeg and libvorbis are installed.\n",
                     sound_map[sound_index].name);
@@ -301,9 +476,16 @@ static bool export_sounds(
 int main(int argc, char *argv[])
 {
     const char *vswap_path = NULL;
+    const char *audiohed_path = NULL;
+    const char *audiot_path = NULL;
     const char *output_directory = "assets/sounds";
     const char *ffmpeg = "ffmpeg";
     WolfAudioArchive archive = {0};
+    WolfAudioAdlibArchive adlib_archive = {0};
+    uint8_t *audiohed_data = NULL;
+    uint8_t *audiot_data = NULL;
+    size_t audiohed_size = 0u;
+    size_t audiot_size = 0u;
     char error_message[256];
     int exit_code = 1;
 
@@ -314,6 +496,10 @@ int main(int argc, char *argv[])
         }
         if (strcmp(argv[argument], "--vswap") == 0 && argument + 1 < argc) {
             vswap_path = argv[++argument];
+        } else if (strcmp(argv[argument], "--audiohed") == 0 && argument + 1 < argc) {
+            audiohed_path = argv[++argument];
+        } else if (strcmp(argv[argument], "--audiot") == 0 && argument + 1 < argc) {
+            audiot_path = argv[++argument];
         } else if (strcmp(argv[argument], "--output") == 0 && argument + 1 < argc) {
             output_directory = argv[++argument];
         } else if (strcmp(argv[argument], "--ffmpeg") == 0 && argument + 1 < argc) {
@@ -325,6 +511,11 @@ int main(int argc, char *argv[])
         }
     }
 
+    if ((audiohed_path == NULL) != (audiot_path == NULL)) {
+        fprintf(stderr, "The --audiohed and --audiot options must be used together.\n");
+        print_usage(argv[0]);
+        return 1;
+    }
     if (vswap_path == NULL || !make_directories(output_directory)) {
         if (vswap_path == NULL) {
             fprintf(stderr, "The --vswap option is required.\n");
@@ -333,6 +524,25 @@ int main(int argc, char *argv[])
         }
         print_usage(argv[0]);
         return 1;
+    }
+
+    if (audiohed_path != NULL) {
+        if (!read_file(audiohed_path, &audiohed_data, &audiohed_size) ||
+            !read_file(audiot_path, &audiot_data, &audiot_size)) {
+            fprintf(stderr, "Could not read AUDIOHED.WL6 and AUDIOT.WL6.\n");
+            goto cleanup;
+        }
+        if (!wolf_audio_adlib_archive_decode(
+                audiohed_data, audiohed_size, audiot_data, audiot_size,
+                &adlib_archive, error_message, sizeof(error_message))) {
+            fprintf(stderr, "Could not decode WL6 AdLib archive: %s\n", error_message);
+            goto cleanup;
+        }
+        printf("Decoded the 87 original AdLib effect chunks from %s and %s.\n",
+            audiohed_path, audiot_path);
+        if (!export_adlib_sounds(&adlib_archive, output_directory, ffmpeg)) {
+            goto cleanup;
+        }
     }
 
     if (!wolf_audio_archive_load(
@@ -347,5 +557,8 @@ int main(int argc, char *argv[])
 
 cleanup:
     wolf_audio_archive_destroy(&archive);
+    wolf_audio_adlib_archive_destroy(&adlib_archive);
+    free(audiohed_data);
+    free(audiot_data);
     return exit_code;
 }
