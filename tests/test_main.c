@@ -1,5 +1,9 @@
 #include "unity.h"
 
+void test_actor_collection_uses_officer_and_ss_specific_state_chains(void);
+void test_officer_uses_original_alert_speed_and_single_shot_action(void);
+void test_ss_uses_original_alert_speed_and_four_shot_burst(void);
+void test_officer_and_ss_deaths_award_original_points_and_drops(void);
 void test_actor_initialization_copies_spawn_data_and_enters_state(void);
 void test_guard_perception_is_blocked_by_walls_and_alerts_after_reaction_delay(void);
 void test_guard_chase_uses_player_direction_and_moves_at_alert_speed(void);
@@ -436,6 +440,10 @@ int main(void)
     RUN_TEST(test_guard_facing_direction_gates_detection_until_player_is_in_front);
     RUN_TEST(test_guard_revalidates_line_of_sight_at_the_shot_action_frame);
     RUN_TEST(test_first_player_hit_alerts_guard_and_enters_pain_state);
+    RUN_TEST(test_actor_collection_uses_officer_and_ss_specific_state_chains);
+    RUN_TEST(test_officer_uses_original_alert_speed_and_single_shot_action);
+    RUN_TEST(test_ss_uses_original_alert_speed_and_four_shot_burst);
+    RUN_TEST(test_officer_and_ss_deaths_award_original_points_and_drops);
     RUN_TEST(test_actor_movement_traverses_all_eight_grid_directions);
     RUN_TEST(test_actor_movement_stops_at_solid_walls_and_map_boundaries);
     RUN_TEST(test_actor_movement_respects_blocking_statics_but_ignores_passable_objects);
