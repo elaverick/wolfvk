@@ -1,5 +1,6 @@
 #include "wolfvk/camera.h"
 #include "wolfvk/actor_animation.h"
+#include "wolfvk/actor_movement.h"
 #include "wolfvk/simulation_clock.h"
 #include "wolfvk/command_line.h"
 #include "wolfvk/input.h"
