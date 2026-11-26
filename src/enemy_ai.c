@@ -270,8 +270,8 @@ static bool tile_is_available_for_chase(
     if (wolf_level_object_marker_blocks_player(world->level.object_tiles[index])) {
         return false;
     }
-    if (fabsf(centre_x - player_x) <= WOLF_WORLD_TILE_SIZE &&
-        fabsf(centre_z - player_z) <= WOLF_WORLD_TILE_SIZE) {
+    if (fabsf(centre_x - player_x) < WOLF_WORLD_TILE_SIZE &&
+        fabsf(centre_z - player_z) < WOLF_WORLD_TILE_SIZE) {
         return false;
     }
     for (uint32_t index_actor = 0u; index_actor < actor_count; ++index_actor) {
@@ -419,17 +419,25 @@ static WolfActorDirection select_chase_direction(
 }
 
 static WolfActorDirection diagonal_direction(
-    WolfActorDirection horizontal,
-    WolfActorDirection vertical)
+    WolfActorDirection first,
+    WolfActorDirection second)
 {
-    if (horizontal == WOLF_ACTOR_DIRECTION_EAST &&
-        vertical == WOLF_ACTOR_DIRECTION_NORTH) return WOLF_ACTOR_DIRECTION_NORTH_EAST;
-    if (horizontal == WOLF_ACTOR_DIRECTION_EAST &&
-        vertical == WOLF_ACTOR_DIRECTION_SOUTH) return WOLF_ACTOR_DIRECTION_SOUTH_EAST;
-    if (horizontal == WOLF_ACTOR_DIRECTION_WEST &&
-        vertical == WOLF_ACTOR_DIRECTION_NORTH) return WOLF_ACTOR_DIRECTION_NORTH_WEST;
-    if (horizontal == WOLF_ACTOR_DIRECTION_WEST &&
-        vertical == WOLF_ACTOR_DIRECTION_SOUTH) return WOLF_ACTOR_DIRECTION_SOUTH_WEST;
+    if ((first == WOLF_ACTOR_DIRECTION_EAST && second == WOLF_ACTOR_DIRECTION_NORTH) ||
+        (first == WOLF_ACTOR_DIRECTION_NORTH && second == WOLF_ACTOR_DIRECTION_EAST)) {
+        return WOLF_ACTOR_DIRECTION_NORTH_EAST;
+    }
+    if ((first == WOLF_ACTOR_DIRECTION_EAST && second == WOLF_ACTOR_DIRECTION_SOUTH) ||
+        (first == WOLF_ACTOR_DIRECTION_SOUTH && second == WOLF_ACTOR_DIRECTION_EAST)) {
+        return WOLF_ACTOR_DIRECTION_SOUTH_EAST;
+    }
+    if ((first == WOLF_ACTOR_DIRECTION_WEST && second == WOLF_ACTOR_DIRECTION_NORTH) ||
+        (first == WOLF_ACTOR_DIRECTION_NORTH && second == WOLF_ACTOR_DIRECTION_WEST)) {
+        return WOLF_ACTOR_DIRECTION_NORTH_WEST;
+    }
+    if ((first == WOLF_ACTOR_DIRECTION_WEST && second == WOLF_ACTOR_DIRECTION_SOUTH) ||
+        (first == WOLF_ACTOR_DIRECTION_SOUTH && second == WOLF_ACTOR_DIRECTION_WEST)) {
+        return WOLF_ACTOR_DIRECTION_SOUTH_WEST;
+    }
     return WOLF_ACTOR_DIRECTION_NONE;
 }
 
