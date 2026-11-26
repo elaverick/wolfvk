@@ -1,5 +1,13 @@
 #include "unity.h"
 
+void test_actor_initialization_copies_spawn_data_and_enters_state(void);
+void test_actor_state_uses_exact_tic_duration_and_enters_next_state_once(void);
+void test_actor_persistent_state_thinks_once_per_simulation_tic(void);
+void test_actor_one_shot_state_becomes_inactive_after_its_final_pose(void);
+void test_actor_state_rejects_invalid_definitions_without_corrupting_instance(void);
+void test_actor_think_callback_can_interrupt_the_current_state(void);
+void test_actor_update_rejects_inactive_or_invalid_state(void);
+
 void test_simulation_clock_emits_one_tick_per_seventieth_second(void);
 void test_simulation_clock_is_independent_of_frame_partitioning(void);
 void test_simulation_clock_caps_catch_up_after_a_long_frame(void);
@@ -389,6 +397,13 @@ int main(void)
     RUN_TEST(test_weapon_machinegun_fires_every_twelve_tics_while_held);
     RUN_TEST(test_weapon_chaingun_fires_every_six_tics_and_twice_per_tap);
     RUN_TEST(test_weapon_switches_to_the_knife_when_the_bullets_run_out);
+    RUN_TEST(test_actor_initialization_copies_spawn_data_and_enters_state);
+    RUN_TEST(test_actor_state_uses_exact_tic_duration_and_enters_next_state_once);
+    RUN_TEST(test_actor_persistent_state_thinks_once_per_simulation_tic);
+    RUN_TEST(test_actor_one_shot_state_becomes_inactive_after_its_final_pose);
+    RUN_TEST(test_actor_state_rejects_invalid_definitions_without_corrupting_instance);
+    RUN_TEST(test_actor_think_callback_can_interrupt_the_current_state);
+    RUN_TEST(test_actor_update_rejects_inactive_or_invalid_state);
     RUN_TEST(test_simulation_clock_emits_one_tick_per_seventieth_second);
     RUN_TEST(test_simulation_clock_is_independent_of_frame_partitioning);
     RUN_TEST(test_simulation_clock_caps_catch_up_after_a_long_frame);
