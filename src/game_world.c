@@ -615,6 +615,38 @@ bool wolf_world_state_position_overlaps_solid(
     return false;
 }
 
+/* Open a door for an enemy using the same animated door state as player interaction. */
+bool wolf_world_state_actor_request_door_open(
+    WolfWorldState *world, uint16_t tile_x, uint16_t tile_y)
+{
+    int index;
+
+    if (world == NULL || tile_x >= world->level.width || tile_y >= world->level.height) {
+        return false;
+    }
+    index = door_index_at(world, (int)tile_x, (int)tile_y);
+    if (index < 0) {
+        return false;
+    }
+    if (world->doors[index].action == WOLF_DOOR_OPEN) {
+        return true;
+    }
+    world->doors[index].action = WOLF_DOOR_OPENING;
+    return true;
+}
+
+bool wolf_world_state_actor_door_is_open(
+    const WolfWorldState *world, uint16_t tile_x, uint16_t tile_y)
+{
+    int index;
+
+    if (world == NULL || tile_x >= world->level.width || tile_y >= world->level.height) {
+        return false;
+    }
+    index = door_index_at(world, (int)tile_x, (int)tile_y);
+    return index >= 0 && world->doors[index].action == WOLF_DOOR_OPEN;
+}
+
 /*
  * Pick up every bonus in the original grab range, as the original does while
  * drawing the statics it can see. Only the tiles around the player can be in
