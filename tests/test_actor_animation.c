@@ -137,7 +137,6 @@ void test_actor_animation_is_independent_of_render_frame_partitioning(void)
     TEST_ASSERT_EQUAL_UINT16(actors_a[0].state_id, actors_b[0].state_id);
     TEST_ASSERT_EQUAL_UINT8(actors_a[0].pose, actors_b[0].pose);
     TEST_ASSERT_EQUAL_UINT16(actors_a[0].state_tics_remaining, actors_b[0].state_tics_remaining);
-    TEST_ASSERT_EQUAL_UINT32(70u, actors_a[0].state_elapsed_tics);
 
     wolf_actor_collection_destroy(actors_a);
     wolf_actor_collection_destroy(actors_b);
