@@ -253,6 +253,9 @@ static bool advance_actor(
     /* The actor reserves the next tile before moving, as the original actorat grid did. */
     if (!actor->movement_in_progress) {
         if (!begin_next_tile(actor, actor_index, actors, actor_count, world)) {
+            /* TryWalk leaves a patrol actor directionless when its next tile is blocked. */
+            actor->movement_enabled = false;
+            actor->movement_direction = WOLF_ACTOR_DIRECTION_NONE;
             return true;
         }
         if (actor->movement_waiting_for_door) {
