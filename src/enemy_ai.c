@@ -42,14 +42,33 @@ static float map_y(const WolfWorldState *world, float world_z)
     return world_z / WOLF_WORLD_TILE_SIZE + (float)world->level.height * 0.5f;
 }
 
-static bool door_is_fully_open(
-    const WolfWorldState *world, uint16_t tile_x, uint16_t tile_y)
+static bool door_allows_line(
+    const WolfWorldState *world,
+    uint16_t tile_x,
+    uint16_t tile_y,
+    float map_position_x,
+    float map_position_y)
 {
     for (uint16_t index = 0u; index < world->door_count; ++index) {
-        if (world->doors[index].tile_x == tile_x &&
-            world->doors[index].tile_y == tile_y) {
-            return world->doors[index].action == WOLF_DOOR_OPEN;
+        const WolfDoor *door = &world->doors[index];
+        float intercept;
+
+        if (door->tile_x != tile_x || door->tile_y != tile_y) {
+            continue;
         }
+        if (door->action == WOLF_DOOR_OPEN) {
+            return true;
+        }
+
+        /*
+         * CheckLine compares the ray's fractional intercept against the
+         * sliding panel position. A vertical door slides along Y; a
+         * horizontal door slides along X. This preserves partial apertures.
+         */
+        intercept = door->vertical
+            ? map_position_y - floorf(map_position_y)
+            : map_position_x - floorf(map_position_x);
+        return intercept <= (float)door->position / (float)WOLF_WORLD_DOOR_OPEN_POSITION;
     }
     return false;
 }
@@ -103,7 +122,9 @@ static bool has_line_of_sight(
             continue;
         }
         if (wolf_level_is_door_tile(wall_tile) &&
-            door_is_fully_open(world, (uint16_t)tile_x, (uint16_t)tile_y)) {
+            door_allows_line(
+                world, (uint16_t)tile_x, (uint16_t)tile_y,
+                start_x + delta_x * fraction, start_y + delta_y * fraction)) {
             continue;
         }
         return false;
