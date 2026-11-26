@@ -1,4 +1,6 @@
 #include "wolfvk/camera.h"
+#include "wolfvk/actor_animation.h"
+#include "wolfvk/simulation_clock.h"
 #include "wolfvk/command_line.h"
 #include "wolfvk/input.h"
 #include "wolfvk/level.h"
@@ -266,22 +268,52 @@ static bool update_model_instances(
     VulkanRenderer *renderer,
     const WolfWorldState *world,
     WolfDifficulty difficulty,
-    const WolfVoxelScene *scene)
+    const WolfVoxelScene *scene,
+    const WolfActor *actors,
+    uint32_t actor_count)
 {
     WolfLevelObject *objects = NULL;
     uint32_t object_count = 0u;
-    VulkanModelInstance *instances = NULL;
-    uint32_t instance_count = 0u;
-    bool updated;
+    VulkanModelInstance *static_instances = NULL;
+    uint32_t static_count = 0u;
+    VulkanModelInstance *actor_instances = NULL;
+    uint32_t actor_instance_count = 0u;
+    VulkanModelInstance *combined = NULL;
+    uint32_t combined_count;
+    bool updated = false;
 
     if (!wolf_level_find_objects(&world->level, difficulty, &objects, &object_count)) {
         return false;
     }
-    updated = wolf_voxel_scene_build_instances(
-            scene, &world->level, objects, object_count, &instances, &instance_count) &&
-        vulkan_renderer_set_model_instances(renderer, instances, instance_count);
+    if (!wolf_voxel_scene_build_instances(
+            scene, &world->level, objects, object_count, &static_instances, &static_count) ||
+        !wolf_voxel_scene_build_actor_instances(
+            scene, actors, actor_count, &actor_instances, &actor_instance_count) ||
+        static_count > UINT32_MAX - actor_instance_count) {
+        goto cleanup;
+    }
+
+    combined_count = static_count + actor_instance_count;
+    if (combined_count > 0u) {
+        combined = malloc((size_t)combined_count * sizeof(*combined));
+        if (combined == NULL) {
+            goto cleanup;
+        }
+        if (static_count > 0u) {
+            memcpy(combined, static_instances, (size_t)static_count * sizeof(*combined));
+        }
+        if (actor_instance_count > 0u) {
+            memcpy(combined + static_count, actor_instances,
+                (size_t)actor_instance_count * sizeof(*combined));
+        }
+    }
+    updated = vulkan_renderer_set_model_instances(renderer, combined, combined_count);
+
+cleanup:
     free(objects);
-    free(instances);
+    free(static_instances);
+    free(actor_instances);
+    free(combined);
     return updated;
 }
 
@@ -430,6 +462,9 @@ int main(int argc, char *argv[])
     uint32_t geometry_revision = 0u;
     WolfPlayerStart player_start = {0};
     WolfVoxelScene voxel_scene = {0};
+    WolfActor *actors = NULL;
+    uint32_t actor_count = 0u;
+    WolfSimulationClock actor_clock = {0.0};
     WolfWeaponScene weapon_scene = {0};
     WolfWeaponState weapon_state;
     WolfAudio audio = {0};
@@ -570,9 +605,13 @@ int main(int argc, char *argv[])
     geometry_revision = wolf_world_state_geometry_revision(&world);
 
     if (!load_voxel_scene(&world, options.difficulty, &voxel_scene) ||
+        !wolf_actor_collection_create(
+            &world.level, options.difficulty, &actors, &actor_count) ||
         !vulkan_renderer_set_model_meshes(renderer, voxel_scene.quads, voxel_scene.quad_count) ||
-        !update_model_instances(renderer, &world, options.difficulty, &voxel_scene)) {
-        fprintf(stderr, "Could not place the level's voxel actors and objects.\n");
+        !update_model_instances(
+            renderer, &world, options.difficulty, &voxel_scene, actors, actor_count)) {
+        fprintf(stderr, "Could not initialise the level's voxel actors and objects.\n");
+        wolf_actor_collection_destroy(actors);
         wolf_voxel_scene_destroy(&voxel_scene);
         free(scene_quads);
         vulkan_renderer_destroy(renderer);
@@ -580,6 +619,7 @@ int main(int argc, char *argv[])
         SDL_Quit();
         return 1;
     }
+    printf("Initialised %u animated humanoid actors.\n", (unsigned int)actor_count);
 
     if (find_voxel_asset_directory(error_message, sizeof(error_message))) {
         if (!wolf_weapon_scene_load(&weapon_scene, error_message)) {
@@ -588,6 +628,7 @@ int main(int argc, char *argv[])
             if (!vulkan_renderer_set_weapon_meshes(renderer, weapon_scene.quads, weapon_scene.quad_count)) {
                 fprintf(stderr, "Could not upload the first-person weapon meshes.\n");
                 wolf_weapon_scene_destroy(&weapon_scene);
+                wolf_actor_collection_destroy(actors);
                 wolf_voxel_scene_destroy(&voxel_scene);
                 free(scene_quads);
                 vulkan_renderer_destroy(renderer);
@@ -610,6 +651,7 @@ int main(int argc, char *argv[])
     if (input == NULL) {
         fprintf(stderr, "Input initialisation failed: %s\n", SDL_GetError());
         wolf_weapon_scene_destroy(&weapon_scene);
+        wolf_actor_collection_destroy(actors);
         wolf_voxel_scene_destroy(&voxel_scene);
         vulkan_renderer_destroy(renderer);
         SDL_DestroyWindow(window);
@@ -634,6 +676,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "SDL audio subsystem is unavailable: %s\n", SDL_GetError());
     }
 
+    wolf_simulation_clock_reset(&actor_clock);
     performance_frequency = SDL_GetPerformanceFrequency();
     previous_counter = SDL_GetPerformanceCounter();
 
@@ -683,6 +726,30 @@ int main(int argc, char *argv[])
                 running = 0;
             }
 
+            /*
+             * Actor animation advances on the original 70 Hz clock, not on
+             * render frames. The bounded accumulator prevents long stalls
+             * from causing an unbounded catch-up loop.
+             */
+            {
+                uint32_t actor_tics = wolf_simulation_clock_advance(
+                    &actor_clock, (double)delta_seconds);
+
+                for (uint32_t tic = 0u; tic < actor_tics && running; ++tic) {
+                    if (!wolf_actor_collection_update_tic(actors, actor_count)) {
+                        fprintf(stderr, "Animated actor state update failed.\n");
+                        running = 0;
+                    }
+                }
+                if (running && actor_tics > 0u &&
+                    !update_model_instances(
+                        renderer, &world, options.difficulty, &voxel_scene,
+                        actors, actor_count)) {
+                    fprintf(stderr, "Could not update animated actor model poses.\n");
+                    running = 0;
+                }
+            }
+
             {
                 WolfBonusType collected_bonuses[9];
                 size_t collected_bonus_count = 0u;
@@ -692,7 +759,8 @@ int main(int argc, char *argv[])
                     &collected_bonus_count);
 
                 if (collected &&
-                    !update_model_instances(renderer, &world, options.difficulty, &voxel_scene)) {
+                    !update_model_instances(
+                        renderer, &world, options.difficulty, &voxel_scene, actors, actor_count)) {
                     fprintf(stderr, "Could not remove a picked-up item's model.\n");
                     running = 0;
                 }
@@ -869,6 +937,7 @@ int main(int argc, char *argv[])
     (void)SDL_SetWindowRelativeMouseMode(window, false);
     wolf_input_destroy(input);
     wolf_weapon_scene_destroy(&weapon_scene);
+    wolf_actor_collection_destroy(actors);
     wolf_voxel_scene_destroy(&voxel_scene);
     wolf_status_bar_graphics_destroy(&status_bar.graphics);
     free(scene_quads);
