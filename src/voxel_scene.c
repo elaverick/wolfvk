@@ -44,16 +44,34 @@ static bool is_runtime_humanoid(const WolfLevelObject *object)
         (object->animation[length - 1u] == 's' || object->animation[length - 1u] == 'w');
 }
 
+static const char *actor_subject(WolfActorFamily family)
+{
+    switch (family) {
+    case WOLF_ACTOR_GUARD:
+        return "grd";
+    case WOLF_ACTOR_OFFICER:
+        return "ofc";
+    case WOLF_ACTOR_SS:
+        return "ss";
+    case WOLF_ACTOR_MUTANT:
+        return "mut";
+    default:
+        return NULL;
+    }
+}
+
 static const WolfVoxelPoseMesh *find_actor_pose(
     const WolfVoxelScene *scene,
     const WolfActor *actor)
 {
+    const char *subject = actor_subject(actor->family);
+
+    if (subject == NULL) {
+        return NULL;
+    }
     for (uint32_t index = 0u; index < scene->pose_count; ++index) {
         if (scene->poses[index].pose == actor->pose &&
-            strcmp(scene->poses[index].subject,
-                actor->family == WOLF_ACTOR_GUARD ? "grd" :
-                actor->family == WOLF_ACTOR_OFFICER ? "ofc" :
-                actor->family == WOLF_ACTOR_SS ? "ss" : "mut") == 0 &&
+            strcmp(scene->poses[index].subject, subject) == 0 &&
             strcmp(scene->poses[index].animation, actor->animation) == 0) {
             return &scene->poses[index];
         }
