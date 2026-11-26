@@ -1,6 +1,10 @@
 #include "unity.h"
 
 void test_actor_initialization_copies_spawn_data_and_enters_state(void);
+void test_actor_collection_spawns_four_humanoid_families_with_original_health(void);
+void test_actor_collection_uses_standing_state_and_mutant_difficulty_health(void);
+void test_actor_collection_advances_patrol_poses_on_exact_original_tics(void);
+void test_actor_collection_handles_empty_levels_and_invalid_arguments(void);
 void test_actor_state_uses_exact_tic_duration_and_enters_next_state_once(void);
 void test_actor_persistent_state_thinks_once_per_simulation_tic(void);
 void test_actor_pain_sequence_transitions_to_a_persistent_dead_pose(void);
@@ -399,6 +403,10 @@ int main(void)
     RUN_TEST(test_weapon_chaingun_fires_every_six_tics_and_twice_per_tap);
     RUN_TEST(test_weapon_switches_to_the_knife_when_the_bullets_run_out);
     RUN_TEST(test_actor_initialization_copies_spawn_data_and_enters_state);
+    RUN_TEST(test_actor_collection_spawns_four_humanoid_families_with_original_health);
+    RUN_TEST(test_actor_collection_uses_standing_state_and_mutant_difficulty_health);
+    RUN_TEST(test_actor_collection_advances_patrol_poses_on_exact_original_tics);
+    RUN_TEST(test_actor_collection_handles_empty_levels_and_invalid_arguments);
     RUN_TEST(test_actor_state_uses_exact_tic_duration_and_enters_next_state_once);
     RUN_TEST(test_actor_persistent_state_thinks_once_per_simulation_tic);
     RUN_TEST(test_actor_pain_sequence_transitions_to_a_persistent_dead_pose);
