@@ -87,3 +87,51 @@ const char *wolf_audio_world_event_sound(WolfAudioWorldEvent event)
         return NULL;
     }
 }
+
+const char *wolf_audio_bonus_sound_name(WolfBonusType bonus)
+{
+    switch (bonus) {
+    case WOLF_BONUS_GOLD_KEY:
+    case WOLF_BONUS_SILVER_KEY:
+        return "GETKEYSND";
+
+    case WOLF_BONUS_DOG_FOOD:
+    case WOLF_BONUS_FOOD:
+        return "HEALTH1SND";
+
+    case WOLF_BONUS_FIRST_AID:
+        return "HEALTH2SND";
+
+    case WOLF_BONUS_GIBS:
+        return "SLURPIESND";
+
+    case WOLF_BONUS_CLIP:
+    case WOLF_BONUS_USED_CLIP:
+        return "GETAMMOSND";
+
+    case WOLF_BONUS_MACHINEGUN:
+        return "GETMACHINESND";
+
+    case WOLF_BONUS_CHAINGUN:
+        return "GETGATLINGSND";
+
+    case WOLF_BONUS_CROSS:
+        return "BONUS1SND";
+
+    case WOLF_BONUS_CHALICE:
+        return "BONUS2SND";
+
+    case WOLF_BONUS_BIBLE:
+        return "BONUS3SND";
+
+    case WOLF_BONUS_CROWN:
+        return "BONUS4SND";
+
+    case WOLF_BONUS_EXTRA_LIFE:
+        return "BONUS1UPSND";
+
+    case WOLF_BONUS_NONE:
+    default:
+        return NULL;
+    }
+}

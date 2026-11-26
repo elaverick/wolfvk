@@ -84,3 +84,24 @@ void test_audio_world_snapshot_handles_multiple_transitions_and_invalid_inputs(v
     TEST_ASSERT_EQUAL_UINT(0u, wolf_audio_world_snapshot_diff(
         &previous, &current, NULL, sizeof(events) / sizeof(events[0])));
 }
+
+void test_audio_bonus_events_map_to_original_wl6_effect_names(void)
+{
+    TEST_ASSERT_EQUAL_STRING("GETKEYSND", wolf_audio_bonus_sound_name(WOLF_BONUS_GOLD_KEY));
+    TEST_ASSERT_EQUAL_STRING("GETKEYSND", wolf_audio_bonus_sound_name(WOLF_BONUS_SILVER_KEY));
+    TEST_ASSERT_EQUAL_STRING("HEALTH1SND", wolf_audio_bonus_sound_name(WOLF_BONUS_DOG_FOOD));
+    TEST_ASSERT_EQUAL_STRING("HEALTH1SND", wolf_audio_bonus_sound_name(WOLF_BONUS_FOOD));
+    TEST_ASSERT_EQUAL_STRING("HEALTH2SND", wolf_audio_bonus_sound_name(WOLF_BONUS_FIRST_AID));
+    TEST_ASSERT_EQUAL_STRING("SLURPIESND", wolf_audio_bonus_sound_name(WOLF_BONUS_GIBS));
+    TEST_ASSERT_EQUAL_STRING("GETAMMOSND", wolf_audio_bonus_sound_name(WOLF_BONUS_CLIP));
+    TEST_ASSERT_EQUAL_STRING("GETAMMOSND", wolf_audio_bonus_sound_name(WOLF_BONUS_USED_CLIP));
+    TEST_ASSERT_EQUAL_STRING("GETMACHINESND", wolf_audio_bonus_sound_name(WOLF_BONUS_MACHINEGUN));
+    TEST_ASSERT_EQUAL_STRING("GETGATLINGSND", wolf_audio_bonus_sound_name(WOLF_BONUS_CHAINGUN));
+    TEST_ASSERT_EQUAL_STRING("BONUS1SND", wolf_audio_bonus_sound_name(WOLF_BONUS_CROSS));
+    TEST_ASSERT_EQUAL_STRING("BONUS2SND", wolf_audio_bonus_sound_name(WOLF_BONUS_CHALICE));
+    TEST_ASSERT_EQUAL_STRING("BONUS3SND", wolf_audio_bonus_sound_name(WOLF_BONUS_BIBLE));
+    TEST_ASSERT_EQUAL_STRING("BONUS4SND", wolf_audio_bonus_sound_name(WOLF_BONUS_CROWN));
+    TEST_ASSERT_EQUAL_STRING("BONUS1UPSND", wolf_audio_bonus_sound_name(WOLF_BONUS_EXTRA_LIFE));
+    TEST_ASSERT_NULL(wolf_audio_bonus_sound_name(WOLF_BONUS_NONE));
+    TEST_ASSERT_NULL(wolf_audio_bonus_sound_name((WolfBonusType)999));
+}

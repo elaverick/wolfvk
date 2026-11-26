@@ -16,6 +16,7 @@
 #include "wolfvk/weapon.h"
 #include "wolfvk/audio.h"
 #include "wolfvk/audio_events.h"
+#include "wolfvk/audio_sound_names.h"
 
 #include "game_palette.h"
 
@@ -49,61 +50,11 @@ static void load_optional_sound(WolfAudio *audio, const char *sound_name)
     }
 }
 
-/* Load every named effect currently exported by the VSWAP DigiMap extractor. */
+/* Load all 87 original effect IDs; missing assets remain optional for partial installs. */
 static void load_audio_assets(WolfAudio *audio)
 {
-    static const char *const sound_names[] = {
-        "HALTSND",
-        "DOGBARKSND",
-        "CLOSEDOORSND",
-        "OPENDOORSND",
-        "ATKMACHINEGUNSND",
-        "ATKPISTOLSND",
-        "ATKGATLINGSND",
-        "SCHUTZADSND",
-        "GUTENTAGSND",
-        "MUTTISND",
-        "BOSSFIRESND",
-        "SSFIRESND",
-        "DEATHSCREAM1SND",
-        "DEATHSCREAM2SND",
-        "DEATHSCREAM3SND",
-        "TAKEDAMAGESND",
-        "PUSHWALLSND",
-        "DOGDEATHSND",
-        "AHHHGSND",
-        "DIESND",
-        "EVASND",
-        "LEBENSND",
-        "NAZIFIRESND",
-        "SLURPIESND",
-        "TOT_HUNDSND",
-        "MEINGOTTSND",
-        "SCHABBSHASND",
-        "HITLERHASND",
-        "SPIONSND",
-        "NEINSOVASSND",
-        "DOGATTACKSND",
-        "LEVELDONESND",
-        "MECHSTEPSND",
-        "YEAHSND",
-        "SCHEISTSND",
-        "DEATHSCREAM4SND",
-        "DEATHSCREAM5SND",
-        "DONNERSND",
-        "EINESND",
-        "ERLAUBENSND",
-        "DEATHSCREAM6SND",
-        "DEATHSCREAM7SND",
-        "DEATHSCREAM8SND",
-        "DEATHSCREAM9SND",
-        "KEINSND",
-        "MEINSND",
-        "ROSESND"
-    };
-
-    for (size_t index = 0u; index < sizeof(sound_names) / sizeof(sound_names[0]); ++index) {
-        load_optional_sound(audio, sound_names[index]);
+    for (size_t index = 0u; index < WOLF_AUDIO_SOUND_COUNT; ++index) {
+        load_optional_sound(audio, wolf_audio_sound_names[index]);
     }
 }
 
@@ -734,9 +685,12 @@ int main(int argc, char *argv[])
             }
 
             {
-                WolfPlayerState previous_player = world.player;
-                bool collected = wolf_world_state_collect_bonuses(
-                    &world, camera.position[0], camera.position[2], camera.yaw_radians);
+                WolfBonusType collected_bonuses[9];
+                size_t collected_bonus_count = 0u;
+                bool collected = wolf_world_state_collect_bonuses_with_events(
+                    &world, camera.position[0], camera.position[2], camera.yaw_radians,
+                    collected_bonuses, sizeof(collected_bonuses) / sizeof(collected_bonuses[0]),
+                    &collected_bonus_count);
 
                 if (collected &&
                     !update_model_instances(renderer, &world, options.difficulty, &voxel_scene)) {
@@ -744,25 +698,14 @@ int main(int argc, char *argv[])
                     running = 0;
                 }
                 if (collected && audio_available) {
-                    const char *pickup_sound = NULL;
+                    for (size_t index = 0u; index < collected_bonus_count; ++index) {
+                        const char *pickup_sound =
+                            wolf_audio_bonus_sound_name(collected_bonuses[index]);
 
-                    if (previous_player.keys != world.player.keys) {
-                        pickup_sound = "GETKEYSND";
-                    } else if (previous_player.weapon != world.player.weapon) {
-                        pickup_sound = "GETMACHINESND";
-                    } else if (previous_player.ammo != world.player.ammo) {
-                        pickup_sound = "GETAMMOSND";
-                    } else if (previous_player.health != world.player.health) {
-                        pickup_sound = "HEALTH1SND";
-                    } else if (previous_player.score != world.player.score) {
-                        pickup_sound = "BONUS1SND";
-                    } else if (previous_player.lives != world.player.lives) {
-                        pickup_sound = "YEAHSND";
-                    }
-
-                    if (pickup_sound != NULL) {
-                        (void)wolf_audio_play(&audio, pickup_sound,
-                            (WolfAudioVector3){camera.position[0], camera.position[1], camera.position[2]});
+                        if (pickup_sound != NULL) {
+                            (void)wolf_audio_play(&audio, pickup_sound,
+                                (WolfAudioVector3){camera.position[0], camera.position[1], camera.position[2]});
+                        }
                     }
                 }
             }
@@ -864,9 +807,15 @@ int main(int argc, char *argv[])
                 wolf_world_state_has_secret_wall_ahead(
                     &world, camera.position[0], camera.position[2],
                     camera.yaw_radians))) {
-                dynamic_geometry_changed = wolf_world_state_use(
+                bool used = wolf_world_state_use(
                     &world, camera.position[0], camera.position[2],
-                    camera.yaw_radians) || dynamic_geometry_changed;
+                    camera.yaw_radians);
+
+                dynamic_geometry_changed = used || dynamic_geometry_changed;
+                if (!used && !use_was_down && audio_available) {
+                    (void)wolf_audio_play(&audio, "DONOTHINGSND",
+                        (WolfAudioVector3){camera.position[0], camera.position[1], camera.position[2]});
+                }
             }
             use_was_down = use_down;
 

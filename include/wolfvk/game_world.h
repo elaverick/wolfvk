@@ -1,6 +1,7 @@
 #ifndef WOLFVK_GAME_WORLD_H
 #define WOLFVK_GAME_WORLD_H
 
+#include "wolfvk/bonus_items.h"
 #include "wolfvk/level.h"
 #include "wolfvk/player_state.h"
 #include "wolfvk/vulkan_renderer.h"
@@ -102,6 +103,19 @@ bool wolf_world_state_collect_bonuses(
     float player_world_x,
     float player_world_z,
     float player_yaw_radians);
+
+/*
+ * As above, while also returning the exact bonus types collected during this
+ * frame. At most nine adjacent map cells can be collected in one call.
+ */
+bool wolf_world_state_collect_bonuses_with_events(
+    WolfWorldState *world,
+    float player_world_x,
+    float player_world_z,
+    float player_yaw_radians,
+    WolfBonusType *collected_bonuses,
+    size_t bonus_capacity,
+    size_t *collected_count);
 
 /* Dynamic geometry reserves one two-sided quad per door and four for a map with pushwalls. */
 uint32_t wolf_world_state_dynamic_quad_count(const WolfWorldState *world);

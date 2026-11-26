@@ -621,18 +621,24 @@ bool wolf_world_state_position_overlaps_solid(
  * range. A bonus the player cannot use yet (full health, full ammunition)
  * stays on the floor; one that is taken is removed from the info plane.
  */
-bool wolf_world_state_collect_bonuses(
+bool wolf_world_state_collect_bonuses_with_events(
     WolfWorldState *world,
     float player_world_x,
     float player_world_z,
-    float player_yaw_radians)
+    float player_yaw_radians,
+    WolfBonusType *collected_bonuses,
+    size_t bonus_capacity,
+    size_t *collected_count)
 {
     float map_x;
     float map_y;
     int player_tile_x;
     int player_tile_y;
-    bool collected = false;
+    size_t event_count = 0u;
 
+    if (collected_count != NULL) {
+        *collected_count = 0u;
+    }
     if (world == NULL || !isfinite(player_world_x) || !isfinite(player_world_z) ||
         !isfinite(player_yaw_radians)) {
         return false;
@@ -659,10 +665,27 @@ bool wolf_world_state_collect_bonuses(
                 continue;
             }
             world->level.object_tiles[index] = 0u;
-            collected = true;
+            if (collected_bonuses != NULL && event_count < bonus_capacity) {
+                collected_bonuses[event_count] = bonus;
+            }
+            ++event_count;
         }
     }
-    return collected;
+    if (collected_count != NULL) {
+        *collected_count = event_count;
+    }
+    return event_count > 0u;
+}
+
+/* Preserve the simple collection API for callers that do not need sound events. */
+bool wolf_world_state_collect_bonuses(
+    WolfWorldState *world,
+    float player_world_x,
+    float player_world_z,
+    float player_yaw_radians)
+{
+    return wolf_world_state_collect_bonuses_with_events(
+        world, player_world_x, player_world_z, player_yaw_radians, NULL, 0u, NULL);
 }
 
 static void set_vertex(

@@ -1,6 +1,7 @@
 #ifndef WOLFVK_AUDIO_EVENTS_H
 #define WOLFVK_AUDIO_EVENTS_H
 
+#include "wolfvk/bonus_items.h"
 #include "wolfvk/game_world.h"
 
 #include <stddef.h>
@@ -37,5 +38,8 @@ size_t wolf_audio_world_snapshot_diff(
 
 /* Map an event to the exact named sound exported from a retail WL6 DigiMap. */
 const char *wolf_audio_world_event_sound(WolfAudioWorldEvent event);
+
+/* Map a collected statinfo item to its original AUDIOWL6 effect identifier. */
+const char *wolf_audio_bonus_sound_name(WolfBonusType bonus);
 
 #endif
