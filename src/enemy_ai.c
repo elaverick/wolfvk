@@ -345,7 +345,7 @@ static WolfActorDirection opposite_direction(WolfActorDirection direction)
 
 /* Port the original SelectChaseDir preference order, without introducing A* or global pathfinding. */
 static WolfActorDirection select_chase_direction(
-    const WolfActor *actor,
+    WolfActor *actor,
     const WolfActor *actors,
     uint32_t actor_count,
     uint32_t self_index,
@@ -390,7 +390,7 @@ static WolfActorDirection select_chase_direction(
         return old_direction;
     }
 
-    reverse_order = actor_random_byte((WolfActor *)&actors[self_index]) <= 128u;
+    reverse_order = actor_random_byte(actor) <= 128u;
     if (reverse_order) {
         candidates[0] = WOLF_ACTOR_DIRECTION_WEST;
         candidates[1] = WOLF_ACTOR_DIRECTION_SOUTH;
@@ -815,19 +815,20 @@ bool wolf_enemy_ai_update_tic(
                         player_yaw_radians, difficulty, player_is_moving, events);
                 }
             } else if (!is_guard_state_pain_or_dead(actor->state_id)) {
-                {
-                    bool dodge = false;
-                    if (actor->ai_attack_cooldown > 0u) {
-                        --actor->ai_attack_cooldown;
-                    } else {
-                        actor->ai_attack_cooldown = 8u;
-                        if (has_line_of_sight(
-                                world, actor->position_x, actor->position_z,
-                                player_world_x, player_world_z)) {
-                            dodge = true;
+                bool dodge = false;
+
+                if (actor->ai_attack_cooldown > 0u) {
+                    --actor->ai_attack_cooldown;
+                } else {
+                    actor->ai_attack_cooldown = 8u;
+                    if (has_line_of_sight(
+                            world, actor->position_x, actor->position_z,
+                            player_world_x, player_world_z)) {
                         int distance = chebyshev_tile_distance(
                             actor, world, player_world_x, player_world_z);
                         int chance = distance <= 1 ? 300 : 16 / distance;
+
+                        dodge = true;
                         if ((int)actor_random_byte(actor) < chance) {
                             face_player(actor, player_world_x, player_world_z);
                             (void)wolf_actor_movement_set_direction(
@@ -840,7 +841,7 @@ bool wolf_enemy_ai_update_tic(
                 }
                 choose_guard_chase_step(
                     actor, actors, actor_count, index, world,
-                    player_world_x, player_world_z);
+                    player_world_x, player_world_z, dodge);
             }
         }
     }
