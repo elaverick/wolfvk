@@ -83,7 +83,7 @@ static bool actor_reserves_tile(
     uint16_t tile_y)
 {
     for (uint32_t index = 0u; index < actor_count; ++index) {
-        if (index != moving_index && actors[index].active &&
+        if (index != moving_index && actors[index].active && actors[index].shootable &&
             actors[index].tile_x == tile_x && actors[index].tile_y == tile_y) {
             return true;
         }
@@ -117,7 +117,7 @@ static bool actor_position_is_clear(
         float actor_dx;
         float actor_dz;
 
-        if (index == moving_index || !actors[index].active) {
+        if (index == moving_index || !actors[index].active || !actors[index].shootable) {
             continue;
         }
         actor_dx = x - actors[index].position_x;
