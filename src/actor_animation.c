@@ -7,8 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define WOLF_ACTOR_FAMILY_STATE_COUNT WOLF_GUARD_STATE_COUNT
-#define ACTOR_STATES(prefix) { \
+#define ACTOR_BASE_STATES(prefix) \
     {prefix "_s", 0u, 0u, WOLF_ACTOR_STATE_NONE, NULL, NULL}, \
     {prefix "_w", 0u, 20u, 2u, NULL, NULL}, \
     {prefix "_w", 0u, 5u, 3u, NULL, NULL}, \
@@ -21,7 +20,10 @@
     {prefix "_w", 1u, 8u, 10u, NULL, NULL}, \
     {prefix "_w", 2u, 10u, 11u, NULL, NULL}, \
     {prefix "_w", 2u, 3u, 12u, NULL, NULL}, \
-    {prefix "_w", 3u, 8u, 7u, NULL, NULL}, \
+    {prefix "_w", 3u, 8u, 7u, NULL, NULL},
+
+#define GUARD_STATES(prefix) { \
+    ACTOR_BASE_STATES(prefix) \
     {prefix "_shoot", 0u, 20u, 14u, NULL, NULL}, \
     {prefix "_shoot", 1u, 20u, 15u, NULL, NULL}, \
     {prefix "_shoot", 2u, 20u, 7u, NULL, NULL}, \
@@ -33,23 +35,53 @@
     {prefix "_dead", 0u, 0u, WOLF_ACTOR_STATE_NONE, NULL, NULL} \
 }
 
+#define OFFICER_STATES(prefix) { \
+    ACTOR_BASE_STATES(prefix) \
+    {prefix "_shoot", 0u, 6u, 14u, NULL, NULL}, \
+    {prefix "_shoot", 1u, 20u, 15u, NULL, NULL}, \
+    {prefix "_shoot", 2u, 10u, 7u, NULL, NULL}, \
+    {prefix "_pain", 0u, 10u, 7u, NULL, NULL}, \
+    {prefix "_pain", 1u, 10u, 7u, NULL, NULL}, \
+    {prefix "_die", 0u, 11u, 19u, NULL, NULL}, \
+    {prefix "_die", 1u, 11u, 20u, NULL, NULL}, \
+    {prefix "_die", 2u, 11u, 21u, NULL, NULL}, \
+    {prefix "_die", 3u, 11u, 22u, NULL, NULL}, \
+    {prefix "_dead", 0u, 0u, WOLF_ACTOR_STATE_NONE, NULL, NULL} \
+}
+
+#define SS_STATES(prefix) { \
+    ACTOR_BASE_STATES(prefix) \
+    {prefix "_shoot", 0u, 20u, 14u, NULL, NULL}, \
+    {prefix "_shoot", 1u, 20u, 15u, NULL, NULL}, \
+    {prefix "_shoot", 2u, 10u, 16u, NULL, NULL}, \
+    {prefix "_shoot", 1u, 10u, 17u, NULL, NULL}, \
+    {prefix "_shoot", 2u, 10u, 18u, NULL, NULL}, \
+    {prefix "_shoot", 1u, 10u, 19u, NULL, NULL}, \
+    {prefix "_shoot", 2u, 10u, 20u, NULL, NULL}, \
+    {prefix "_shoot", 1u, 10u, 21u, NULL, NULL}, \
+    {prefix "_shoot", 2u, 10u, 7u, NULL, NULL}, \
+    {prefix "_pain", 0u, 10u, 7u, NULL, NULL}, \
+    {prefix "_pain", 1u, 10u, 7u, NULL, NULL}, \
+    {prefix "_die", 0u, 15u, 25u, NULL, NULL}, \
+    {prefix "_die", 1u, 15u, 26u, NULL, NULL}, \
+    {prefix "_die", 2u, 15u, 27u, NULL, NULL}, \
+    {prefix "_dead", 0u, 0u, WOLF_ACTOR_STATE_NONE, NULL, NULL} \
+}
+
 typedef struct ActorFamilyAnimation {
     const char *subject;
     WolfActorFamily family;
     int32_t health[4];
-    WolfActorStateDefinition states[WOLF_ACTOR_FAMILY_STATE_COUNT];
+    uint16_t state_count;
+    WolfActorStateDefinition states[WOLF_ACTOR_STATE_MAX_COUNT];
 } ActorFamilyAnimation;
 
-/*
- * C3 implements the guard's complete combat state chain. The matching state
- * slots are reserved in the other family tables so later family-specific
- * state chains can be introduced without changing actor storage.
- */
+/* State chains retain each enemy's original timing and animation sequence. */
 static const ActorFamilyAnimation actor_families[] = {
-    {"grd", WOLF_ACTOR_GUARD, {25, 25, 25, 25}, ACTOR_STATES("grd")},
-    {"ofc", WOLF_ACTOR_OFFICER, {50, 50, 50, 50}, ACTOR_STATES("ofc")},
-    {"ss", WOLF_ACTOR_SS, {100, 100, 100, 100}, ACTOR_STATES("ss")},
-    {"mut", WOLF_ACTOR_MUTANT, {45, 55, 55, 65}, ACTOR_STATES("mut")}
+    {"grd", WOLF_ACTOR_GUARD, {25, 25, 25, 25}, WOLF_GUARD_STATE_COUNT, GUARD_STATES("grd")},
+    {"ofc", WOLF_ACTOR_OFFICER, {50, 50, 50, 50}, WOLF_OFFICER_STATE_COUNT, OFFICER_STATES("ofc")},
+    {"ss", WOLF_ACTOR_SS, {100, 100, 100, 100}, WOLF_SS_STATE_COUNT, SS_STATES("ss")},
+    {"mut", WOLF_ACTOR_MUTANT, {45, 55, 55, 65}, WOLF_GUARD_STATE_COUNT, GUARD_STATES("mut")}
 };
 
 #define WOLF_ACTOR_TWO_PI 6.28318530717958647692f
@@ -162,11 +194,12 @@ bool wolf_actor_collection_create(
                 level_origin_x + ((float)object->tile_x + 0.5f) * WOLF_WORLD_TILE_SIZE,
                 level_origin_z + ((float)object->tile_y + 0.5f) * WOLF_WORLD_TILE_SIZE,
                 object->yaw_radians, starting_health(family, difficulty),
-                family->states, WOLF_ACTOR_FAMILY_STATE_COUNT, initial_state, NULL)) {
+                family->states, family->state_count, initial_state, NULL)) {
             free(objects);
             free(created);
             return false;
         }
+        created[created_count].ai_action_state_id = WOLF_ACTOR_STATE_NONE;
         created[created_count].ai_random_state =
             0x9e3779b9u ^ (created_count + 1u) * 0x85ebca6bu;
         if (created[created_count].ai_random_state == 0u) {
@@ -205,7 +238,7 @@ bool wolf_actor_collection_set_state(WolfActor *actor, uint16_t state_id)
     }
     family = find_family_by_type(actor->family);
     return family != NULL && wolf_actor_set_state(
-        actor, family->states, WOLF_ACTOR_FAMILY_STATE_COUNT, state_id, NULL);
+        actor, family->states, family->state_count, state_id, NULL);
 }
 
 bool wolf_actor_collection_update_tic(WolfActor *actors, uint32_t actor_count)
@@ -218,7 +251,7 @@ bool wolf_actor_collection_update_tic(WolfActor *actors, uint32_t actor_count)
 
         if (family != NULL && actors[index].active &&
             !wolf_actor_update_tic(
-                &actors[index], family->states, WOLF_ACTOR_FAMILY_STATE_COUNT, NULL)) {
+                &actors[index], family->states, family->state_count, NULL)) {
             return false;
         }
     }
