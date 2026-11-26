@@ -49,8 +49,8 @@ typedef struct WolfPlayerState {
     /* 0-2 picks the look-ahead, look-left or look-right version of the face. */
     uint8_t face_frame;
     float face_ticks;
-    /* One random 0-255 tic threshold is retained for the whole glance interval. */
-    uint8_t face_wait_ticks;
+    /* Fractional time towards the next game tic and the original integer facecount. */
+    uint32_t face_count;
     uint32_t random_state;
     /* Set by the chaingun pickup: BJ grins until the face next changes, as with gotgatgun. */
     bool got_gatling_face;
