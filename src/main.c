@@ -14,6 +14,7 @@
 #include "wolfvk/world.h"
 #include "wolfvk/wall_textures.h"
 #include "wolfvk/weapon.h"
+#include "wolfvk/audio.h"
 
 #include "game_palette.h"
 
@@ -31,6 +32,47 @@ typedef struct StatusBarDisplay {
     uint8_t shown_pixels[WOLF_STATUS_BAR_PIXEL_COUNT];
     bool has_shown_pixels;
 } StatusBarDisplay;
+
+/*
+ * Load an optional extracted sound from the runtime assets directory. The
+ * converter writes these named OGG files; missing assets are non-fatal.
+ */
+static void load_optional_sound(WolfAudio *audio, const char *sound_name)
+{
+    char sound_path[512];
+    SDL_PathInfo path_info;
+
+    (void)snprintf(sound_path, sizeof(sound_path), "assets/sounds/%s.ogg", sound_name);
+    if (SDL_GetPathInfo(sound_path, &path_info) && path_info.type == SDL_PATHTYPE_FILE) {
+        (void)wolf_audio_load(audio, sound_name, sound_path);
+    }
+}
+
+/* Load the original digitised weapon effects and pickup sounds when extracted. */
+static void load_audio_assets(WolfAudio *audio)
+{
+    static const char *const sound_names[] = {
+        "ATKPISTOLSND",
+        "ATKMACHINEGUNSND",
+        "ATKGATLINGSND",
+        "ATKKNIFESND",
+        "GETKEYSND",
+        "GETAMMOSND",
+        "GETMACHINESND",
+        "HEALTH1SND",
+        "HEALTH2SND",
+        "BONUS1SND",
+        "BONUS2SND",
+        "BONUS3SND",
+        "BONUS4SND",
+        "YEAHSND",
+        "LEBENSND"
+    };
+
+    for (size_t index = 0u; index < sizeof(sound_names) / sizeof(sound_names[0]); ++index) {
+        load_optional_sound(audio, sound_names[index]);
+    }
+}
 
 /*
  * Use the framebuffer pixels of the 3D view for the aspect ratio, so the
@@ -379,6 +421,8 @@ int main(int argc, char *argv[])
     WolfVoxelScene voxel_scene = {0};
     WolfWeaponScene weapon_scene = {0};
     WolfWeaponState weapon_state;
+    WolfAudio audio = {0};
+    bool audio_available = false;
     StatusBarDisplay status_bar = {0};
     char error_message[256];
     char window_title[128];
@@ -567,6 +611,18 @@ int main(int argc, char *argv[])
             SDL_GetError());
     }
 
+    if (SDL_InitSubSystem(SDL_INIT_AUDIO)) {
+        audio_available = wolf_audio_initialize(&audio);
+        if (audio_available) {
+            load_audio_assets(&audio);
+            printf("Spatial audio initialised; %zu sounds loaded.\n", audio.sound_count);
+        } else {
+            fprintf(stderr, "Spatial audio is unavailable: %s\n", SDL_GetError());
+        }
+    } else {
+        fprintf(stderr, "SDL audio subsystem is unavailable: %s\n", SDL_GetError());
+    }
+
     performance_frequency = SDL_GetPerformanceFrequency();
     previous_counter = SDL_GetPerformanceCounter();
 
@@ -583,6 +639,7 @@ int main(int argc, char *argv[])
                 running = 0;
             } else if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) {
                 (void)SDL_SetWindowRelativeMouseMode(window, false);
+    wolf_audio_shutdown(&audio);
             } else if (event.type == SDL_EVENT_WINDOW_FOCUS_GAINED) {
                 (void)SDL_SetWindowRelativeMouseMode(window, true);
             } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
@@ -614,11 +671,44 @@ int main(int argc, char *argv[])
                 running = 0;
             }
 
-            if (wolf_world_state_collect_bonuses(
-                    &world, camera.position[0], camera.position[2], camera.yaw_radians) &&
-                !update_model_instances(renderer, &world, options.difficulty, &voxel_scene)) {
-                fprintf(stderr, "Could not remove a picked-up item's model.\n");
-                running = 0;
+            {
+                WolfPlayerState previous_player = world.player;
+                bool collected = wolf_world_state_collect_bonuses(
+                    &world, camera.position[0], camera.position[2], camera.yaw_radians);
+
+                if (collected &&
+                    !update_model_instances(renderer, &world, options.difficulty, &voxel_scene)) {
+                    fprintf(stderr, "Could not remove a picked-up item's model.\n");
+                    running = 0;
+                }
+                if (collected && audio_available) {
+                    const char *pickup_sound = NULL;
+
+                    if (previous_player.keys != world.player.keys) {
+                        pickup_sound = "GETKEYSND";
+                    } else if (previous_player.weapon != world.player.weapon) {
+                        pickup_sound = "GETMACHINESND";
+                    } else if (previous_player.ammo != world.player.ammo) {
+                        pickup_sound = "GETAMMOSND";
+                    } else if (previous_player.health != world.player.health) {
+                        pickup_sound = "HEALTH1SND";
+                    } else if (previous_player.score != world.player.score) {
+                        pickup_sound = "BONUS1SND";
+                    } else if (previous_player.lives != world.player.lives) {
+                        pickup_sound = "YEAHSND";
+                    }
+
+                    if (pickup_sound != NULL) {
+                        (void)wolf_audio_play(&audio, pickup_sound,
+                            (WolfAudioVector3){camera.position[0], camera.position[1], camera.position[2]});
+                    }
+                }
+            }
+
+            if (audio_available) {
+                (void)wolf_audio_set_listener(&audio,
+                    (WolfAudioVector3){camera.position[0], camera.position[1], camera.position[2]},
+                    camera.yaw_radians);
             }
 
             fire_down = wolf_input_mouse_button_down(input, SDL_BUTTON_LEFT) ||
@@ -648,10 +738,35 @@ int main(int argc, char *argv[])
              * Firing uses bullets and swaps to the knife when they run out. The
              * shot and knife events are not used until enemies can take damage.
              */
-            if (!wolf_weapon_state_update(
-                    &weapon_state, &world.player, fire_down, delta_seconds, NULL)) {
-                fprintf(stderr, "Weapon attack update failed.\n");
-                running = 0;
+            {
+                WolfWeaponAttackEvents attack_events;
+                WolfWeaponType attacking_weapon = weapon_state.selected;
+
+                if (!wolf_weapon_state_update(
+                        &weapon_state, &world.player, fire_down, delta_seconds, &attack_events)) {
+                    fprintf(stderr, "Weapon attack update failed.\n");
+                    running = 0;
+                }
+                if (audio_available && attack_events.gun_shots > 0u) {
+                    const char *shot_sound = attacking_weapon == WOLF_WEAPON_PISTOL
+                        ? "ATKPISTOLSND"
+                        : attacking_weapon == WOLF_WEAPON_MACHINEGUN
+                            ? "ATKMACHINEGUNSND"
+                            : attacking_weapon == WOLF_WEAPON_CHAINGUN
+                                ? "ATKGATLINGSND"
+                                : NULL;
+
+                    for (uint32_t shot = 0u; shot < attack_events.gun_shots && shot_sound != NULL; ++shot) {
+                        (void)wolf_audio_play(&audio, shot_sound,
+                            (WolfAudioVector3){camera.position[0], camera.position[1], camera.position[2]});
+                    }
+                }
+                if (audio_available && attack_events.knife_attacks > 0u) {
+                    for (uint32_t attack = 0u; attack < attack_events.knife_attacks; ++attack) {
+                        (void)wolf_audio_play(&audio, "ATKKNIFESND",
+                            (WolfAudioVector3){camera.position[0], camera.position[1], camera.position[2]});
+                    }
+                }
             }
             {
                 const WolfWeaponPose *pose = weapon_assets_uploaded
