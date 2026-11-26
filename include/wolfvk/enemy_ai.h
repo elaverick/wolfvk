@@ -39,7 +39,7 @@ typedef struct WolfEnemyAIEvents {
     float ss_death_source_z;
 } WolfEnemyAIEvents;
 
-/* Advance the shared perception and guard combat logic by one original 70 Hz tic. */
+/* Advance guard, officer and SS perception/combat logic by one original 70 Hz tic. */
 bool wolf_enemy_ai_update_tic(
     WolfActor *actors,
     uint32_t actor_count,
