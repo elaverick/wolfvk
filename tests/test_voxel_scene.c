@@ -147,7 +147,13 @@ void test_voxel_scene_preloads_and_selects_runtime_actor_walk_poses(void)
     static const WolfVoxVoxel pose_b[] = {{10u, 10u, 4u, 2u}, {50u, 50u, 4u, 3u}};
     static const WolfVoxVoxel *const poses[] = {pose_a, pose_a, pose_b, pose_a};
     static const uint32_t pose_counts[] = {1u, 1u, 2u, 1u};
-    const TestVoxAnimation animations[] = {{"grd_w", 4u, poses, pose_counts}};
+    const TestVoxAnimation animations[] = {
+        {"grd_w", 4u, poses, pose_counts},
+        {"grd_shoot", 3u, poses, pose_counts},
+        {"grd_pain", 2u, poses, pose_counts},
+        {"grd_die", 3u, poses, pose_counts},
+        {"grd_dead", 1u, poses, pose_counts}
+    };
     WolfLevelObject object = make_object("grd", "grd_w", 0u, 4u, 5u, 0.5f);
     WolfLevel *level = calloc(1u, sizeof(*level));
     WolfVoxelScene scene;
@@ -161,9 +167,9 @@ void test_voxel_scene_preloads_and_selects_runtime_actor_walk_poses(void)
     TEST_ASSERT_NOT_NULL(level);
     level->width = WOLF_LEVEL_PLANE_WIDTH;
     level->height = WOLF_LEVEL_PLANE_HEIGHT;
-    TEST_ASSERT_TRUE(test_vox_write_file("./grd.vox", animations, 1u));
+    TEST_ASSERT_TRUE(test_vox_write_file("./grd.vox", animations, 5u));
     TEST_ASSERT_TRUE(wolf_voxel_scene_load(&scene, &object, 1u, "."));
-    TEST_ASSERT_EQUAL_UINT32(4u, scene.pose_count);
+    TEST_ASSERT_EQUAL_UINT32(14u, scene.pose_count);
     TEST_ASSERT_TRUE(wolf_voxel_scene_build_instances(
         &scene, level, &object, 1u, &static_instances, &static_count));
     TEST_ASSERT_EQUAL_UINT32(0u, static_count);
