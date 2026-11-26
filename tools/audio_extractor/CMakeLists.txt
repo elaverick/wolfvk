@@ -33,8 +33,8 @@ if(BUILD_TESTING)
         FetchContent_Populate(Unity)
     endif()
 
-    add_library(unity STATIC \${unity_SOURCE_DIR}/src/unity.c)
-    target_include_directories(unity PUBLIC \${unity_SOURCE_DIR}/src)
+    add_library(unity STATIC ${unity_SOURCE_DIR}/src/unity.c)
+    target_include_directories(unity PUBLIC ${unity_SOURCE_DIR}/src)
 
     add_executable(audio_extractor_tests
         tests/test_main.c
@@ -49,8 +49,8 @@ endif()
 
 foreach(target IN LISTS AUDIO_EXTRACTOR_TARGETS)
     if(MSVC)
-        target_compile_options(\${target} PRIVATE /W4 /WX)
+        target_compile_options(${target} PRIVATE /W4 /WX)
     else()
-        target_compile_options(\${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
     endif()
 endforeach()
