@@ -198,6 +198,7 @@ if(BUILD_TESTING)
         src/camera.c
         src/actor.c
         src/actor_animation.c
+        src/actor_movement.c
         src/simulation_clock.c
         src/player_controller.c
         src/game_world.c
