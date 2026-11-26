@@ -145,11 +145,11 @@ bool wolf_player_state_update_face(WolfPlayerState *player, float delta_seconds)
      * random byte on each update. Process those logical tics independently
      * so an uncapped renderer does not perform extra random checks.
      */
-    player->face_ticks += delta_seconds * WOLF_PLAYER_FACE_TICKS_PER_SECOND;
-    while (player->face_ticks + 0.00001f >= 1.0f) {
+    player->face_ticks += (double)delta_seconds * (double)WOLF_PLAYER_FACE_TICKS_PER_SECOND;
+    while (player->face_ticks >= 1.0) {
         uint8_t previous_frame;
 
-        player->face_ticks -= 1.0f;
+        player->face_ticks -= 1.0;
         ++player->face_count;
         if (player->face_count <= (uint32_t)next_random_byte(player)) {
             continue;
