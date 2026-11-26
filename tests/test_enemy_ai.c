@@ -315,3 +315,119 @@ void test_player_weapon_cannot_damage_guard_through_a_wall(void)
 
     wolf_actor_collection_destroy(actors);
 }
+
+
+void test_officer_uses_original_alert_speed_and_single_shot_action(void)
+{
+    WolfWorldState world = {0};
+    WolfActor *actors = NULL;
+    uint32_t actor_count = 0u;
+    WolfEnemyAIEvents events = {0};
+    float player_x = tile_centre(2u, 8u);
+    float player_z = tile_centre(4u, 8u);
+
+    TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 118u));
+    actors[0].health = 1000;
+    advance_until_alert(actors, actor_count, &world, player_x, player_z, &events);
+    TEST_ASSERT_TRUE(actors[0].attack_mode);
+    TEST_ASSERT_EQUAL_UINT16(WOLF_OFFICER_STATE_CHASE_FIRST, actors[0].state_id);
+    TEST_ASSERT_EQUAL_UINT32(1u, events.officer_alerts);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, WOLF_ACTOR_PATROL_SPEED_WORLD_PER_TIC * 5.0f,
+        actors[0].movement_speed_world_per_tic);
+
+    TEST_ASSERT_TRUE(wolf_actor_collection_set_state(
+        &actors[0], WOLF_OFFICER_STATE_SHOOT_ACTION));
+    TEST_ASSERT_TRUE(wolf_enemy_ai_update_tic(
+        actors, actor_count, &world, player_x, player_z,
+        1.57079632679f, WOLF_DIFFICULTY_HARD, false, false, &events));
+    TEST_ASSERT_EQUAL_UINT32(1u, events.officer_shots);
+    TEST_ASSERT_EQUAL_UINT32(0u, events.ss_shots);
+
+    wolf_actor_collection_destroy(actors);
+}
+
+void test_ss_uses_original_alert_speed_and_four_shot_burst(void)
+{
+    static const uint16_t action_states[] = {
+        WOLF_SS_STATE_SHOOT_ACTION_1,
+        WOLF_SS_STATE_SHOOT_ACTION_2,
+        WOLF_SS_STATE_SHOOT_ACTION_3,
+        WOLF_SS_STATE_SHOOT_ACTION_4
+    };
+    WolfWorldState world = {0};
+    WolfActor *actors = NULL;
+    uint32_t actor_count = 0u;
+    WolfEnemyAIEvents events = {0};
+    float player_x = tile_centre(2u, 8u);
+    float player_z = tile_centre(4u, 8u);
+
+    TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 128u));
+    actors[0].health = 1000;
+    advance_until_alert(actors, actor_count, &world, player_x, player_z, &events);
+    TEST_ASSERT_TRUE(actors[0].attack_mode);
+    TEST_ASSERT_EQUAL_UINT16(WOLF_SS_STATE_CHASE_FIRST, actors[0].state_id);
+    TEST_ASSERT_EQUAL_UINT32(1u, events.ss_alerts);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, WOLF_ACTOR_PATROL_SPEED_WORLD_PER_TIC * 4.0f,
+        actors[0].movement_speed_world_per_tic);
+
+    for (size_t index = 0u; index < sizeof(action_states) / sizeof(action_states[0]); ++index) {
+        TEST_ASSERT_TRUE(wolf_actor_collection_set_state(&actors[0], action_states[index]));
+        TEST_ASSERT_TRUE(wolf_enemy_ai_update_tic(
+            actors, actor_count, &world, player_x, player_z,
+            1.57079632679f, WOLF_DIFFICULTY_HARD, false, false, &events));
+        TEST_ASSERT_EQUAL_UINT32(1u, events.ss_shots);
+    }
+
+    wolf_actor_collection_destroy(actors);
+}
+
+void test_officer_and_ss_deaths_award_original_points_and_drops(void)
+{
+    WolfWorldState officer_world = {0};
+    WolfWorldState ss_world = {0};
+    WolfActor *officer = NULL;
+    WolfActor *ss = NULL;
+    uint32_t officer_count = 0u;
+    uint32_t ss_count = 0u;
+    WolfEnemyAIEvents events = {0};
+    float player_x = tile_centre(2u, 8u);
+    float player_z = tile_centre(4u, 8u);
+    bool officer_clip_found = false;
+    bool ss_weapon_found = false;
+
+    TEST_ASSERT_TRUE(create_guard_world(
+        &officer_world, &officer, &officer_count, 118u));
+    for (uint32_t shot = 0u; shot < 500u && officer[0].shootable; ++shot) {
+        TEST_ASSERT_TRUE(wolf_enemy_ai_player_attack(
+            officer, officer_count, &officer_world, player_x, player_z,
+            1.57079632679f, WOLF_WEAPON_PISTOL, &events));
+    }
+    TEST_ASSERT_FALSE(officer[0].shootable);
+    TEST_ASSERT_EQUAL_INT32(400, officer_world.player.score);
+    TEST_ASSERT_EQUAL_UINT16(WOLF_OFFICER_STATE_DIE_FIRST, officer[0].state_id);
+    TEST_ASSERT_EQUAL_UINT32(1u, events.officer_deaths);
+    for (size_t index = 0u; index < WOLF_LEVEL_PLANE_WORDS; ++index) {
+        officer_clip_found = officer_clip_found ||
+            officer_world.level.object_tiles[index] == WOLF_LEVEL_STATIC_EXTRA_CLIP;
+    }
+    TEST_ASSERT_TRUE(officer_clip_found);
+
+    TEST_ASSERT_TRUE(create_guard_world(&ss_world, &ss, &ss_count, 128u));
+    for (uint32_t shot = 0u; shot < 1000u && ss[0].shootable; ++shot) {
+        TEST_ASSERT_TRUE(wolf_enemy_ai_player_attack(
+            ss, ss_count, &ss_world, player_x, player_z,
+            1.57079632679f, WOLF_WEAPON_PISTOL, &events));
+    }
+    TEST_ASSERT_FALSE(ss[0].shootable);
+    TEST_ASSERT_EQUAL_INT32(500, ss_world.player.score);
+    TEST_ASSERT_EQUAL_UINT16(WOLF_SS_STATE_DIE_FIRST, ss[0].state_id);
+    TEST_ASSERT_EQUAL_UINT32(1u, events.ss_deaths);
+    for (size_t index = 0u; index < WOLF_LEVEL_PLANE_WORDS; ++index) {
+        ss_weapon_found = ss_weapon_found ||
+            ss_world.level.object_tiles[index] == 50u;
+    }
+    TEST_ASSERT_TRUE(ss_weapon_found);
+
+    wolf_actor_collection_destroy(officer);
+    wolf_actor_collection_destroy(ss);
+}
