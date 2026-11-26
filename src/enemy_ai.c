@@ -202,6 +202,7 @@ static void first_sighting(
     WolfEnemyAIEvents *events)
 {
     actor->attack_mode = true;
+    actor->ai_first_attack = true;
     actor->movement_follow_path_arrows = false;
     actor->movement_speed_world_per_tic = WOLF_ENEMY_GUARD_BASE_SPEED * 3.0f;
     actor->ai_reaction_tics = 0u;
@@ -220,6 +221,22 @@ static void first_sighting(
     }
 }
 
+static bool cell_is_door(
+    const WolfWorldState *world,
+    int tile_x,
+    int tile_y)
+{
+    uint16_t wall_tile;
+
+    if (tile_x < 0 || tile_y < 0 ||
+        tile_x >= world->level.width || tile_y >= world->level.height) {
+        return false;
+    }
+    wall_tile = world->level.wall_tiles[
+        (size_t)tile_y * WOLF_LEVEL_PLANE_WIDTH + (size_t)tile_x];
+    return wolf_level_is_door_tile(wall_tile);
+}
+
 static bool tile_is_available_for_chase(
     const WolfActor *actors,
     uint32_t actor_count,
@@ -232,34 +249,101 @@ static bool tile_is_available_for_chase(
 {
     float centre_x;
     float centre_z;
+    size_t index;
 
     if (tile_x < 0 || tile_y < 0 ||
         tile_x >= world->level.width || tile_y >= world->level.height) {
         return false;
     }
+    index = (size_t)tile_y * WOLF_LEVEL_PLANE_WIDTH + (size_t)tile_x;
     centre_x = ((float)tile_x + 0.5f - (float)world->level.width * 0.5f) *
         WOLF_WORLD_TILE_SIZE;
     centre_z = ((float)tile_y + 0.5f - (float)world->level.height * 0.5f) *
         WOLF_WORLD_TILE_SIZE;
-    if (wolf_world_state_position_overlaps_solid(
+
+    /* TryWalk allows a door destination and asks it to open; other walls remain blocked. */
+    if (!cell_is_door(world, tile_x, tile_y) &&
+        wolf_world_state_position_overlaps_solid(
             world, centre_x, centre_z, WOLF_ENEMY_ACTOR_RADIUS)) {
         return false;
     }
-    if (fabsf(centre_x - player_x) < WOLF_WORLD_TILE_SIZE * 0.55f &&
-        fabsf(centre_z - player_z) < WOLF_WORLD_TILE_SIZE * 0.55f) {
+    if (wolf_level_object_marker_blocks_player(world->level.object_tiles[index])) {
         return false;
     }
-    for (uint32_t index = 0u; index < actor_count; ++index) {
-        if (index != self_index && actors[index].active && actors[index].shootable &&
-            actors[index].tile_x == (uint16_t)tile_x &&
-            actors[index].tile_y == (uint16_t)tile_y) {
+    if (fabsf(centre_x - player_x) <= WOLF_WORLD_TILE_SIZE &&
+        fabsf(centre_z - player_z) <= WOLF_WORLD_TILE_SIZE) {
+        return false;
+    }
+    for (uint32_t index_actor = 0u; index_actor < actor_count; ++index_actor) {
+        if (index_actor != self_index && actors[index_actor].active &&
+            actors[index_actor].shootable &&
+            actors[index_actor].tile_x == (uint16_t)tile_x &&
+            actors[index_actor].tile_y == (uint16_t)tile_y) {
             return false;
         }
     }
     return true;
 }
 
-/* The original chase selector is greedy and direction-prioritised, not a global pathfinder. */
+static bool direction_can_be_taken(
+    WolfActorDirection direction,
+    const WolfActor *actors,
+    uint32_t actor_count,
+    uint32_t actor_index,
+    const WolfWorldState *world,
+    float player_x,
+    float player_z)
+{
+    static const int direction_x[8] = {1, 1, 0, -1, -1, -1, 0, 1};
+    static const int direction_y[8] = {0, -1, -1, -1, 0, 1, 1, 1};
+    int dx;
+    int dy;
+    int target_x;
+    int target_y;
+
+    if (direction < WOLF_ACTOR_DIRECTION_EAST ||
+        direction > WOLF_ACTOR_DIRECTION_SOUTH_EAST) {
+        return false;
+    }
+    dx = direction_x[direction];
+    dy = direction_y[direction];
+    target_x = (int)actors[actor_index].tile_x + dx;
+    target_y = (int)actors[actor_index].tile_y + dy;
+    if (!tile_is_available_for_chase(
+            actors, actor_count, actor_index, world,
+            target_x, target_y, player_x, player_z)) {
+        return false;
+    }
+
+    /* Original TryWalk's CHECKDIAG rejects both side cells, including doors. */
+    if (dx != 0 && dy != 0) {
+        int side_x = (int)actors[actor_index].tile_x + dx;
+        int side_y = (int)actors[actor_index].tile_y + dy;
+
+        if (cell_is_door(world, side_x, (int)actors[actor_index].tile_y) ||
+            cell_is_door(world, (int)actors[actor_index].tile_x, side_y) ||
+            !tile_is_available_for_chase(
+                actors, actor_count, actor_index, world,
+                side_x, (int)actors[actor_index].tile_y, player_x, player_z) ||
+            !tile_is_available_for_chase(
+                actors, actor_count, actor_index, world,
+                (int)actors[actor_index].tile_x, side_y, player_x, player_z)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static WolfActorDirection opposite_direction(WolfActorDirection direction)
+{
+    if (direction < WOLF_ACTOR_DIRECTION_EAST ||
+        direction > WOLF_ACTOR_DIRECTION_SOUTH_EAST) {
+        return WOLF_ACTOR_DIRECTION_NONE;
+    }
+    return (WolfActorDirection)(((unsigned int)direction + 4u) % 8u);
+}
+
+/* Port the original SelectChaseDir preference order, without introducing A* or global pathfinding. */
 static WolfActorDirection select_chase_direction(
     const WolfActor *actor,
     const WolfActor *actors,
@@ -269,45 +353,147 @@ static WolfActorDirection select_chase_direction(
     float player_x,
     float player_z)
 {
-    static const WolfActorDirection directions[8] = {
-        WOLF_ACTOR_DIRECTION_EAST, WOLF_ACTOR_DIRECTION_NORTH_EAST,
-        WOLF_ACTOR_DIRECTION_NORTH, WOLF_ACTOR_DIRECTION_NORTH_WEST,
-        WOLF_ACTOR_DIRECTION_WEST, WOLF_ACTOR_DIRECTION_SOUTH_WEST,
-        WOLF_ACTOR_DIRECTION_SOUTH, WOLF_ACTOR_DIRECTION_SOUTH_EAST
-    };
-    static const int dx[8] = {1, 1, 0, -1, -1, -1, 0, 1};
-    static const int dy[8] = {0, -1, -1, -1, 0, 1, 1, 1};
-    int target_x = (int)floorf(map_x(world, player_x));
-    int target_y = (int)floorf(map_y(world, player_z));
-    int best_score = INT32_MAX;
-    WolfActorDirection best = WOLF_ACTOR_DIRECTION_NONE;
+    WolfActorDirection old_direction = actor->movement_direction;
+    WolfActorDirection turnaround = opposite_direction(old_direction);
+    int delta_x = (int)floorf(map_x(world, player_x)) - (int)actor->tile_x;
+    int delta_y = (int)floorf(map_y(world, player_z)) - (int)actor->tile_y;
+    WolfActorDirection preferred_x = delta_x > 0
+        ? WOLF_ACTOR_DIRECTION_EAST
+        : delta_x < 0 ? WOLF_ACTOR_DIRECTION_WEST : WOLF_ACTOR_DIRECTION_NONE;
+    WolfActorDirection preferred_y = delta_y > 0
+        ? WOLF_ACTOR_DIRECTION_SOUTH
+        : delta_y < 0 ? WOLF_ACTOR_DIRECTION_NORTH : WOLF_ACTOR_DIRECTION_NONE;
+    WolfActorDirection candidates[4];
+    bool reverse_order;
 
-    for (size_t index = 0u; index < 8u; ++index) {
-        int candidate_x = (int)actor->tile_x + dx[index];
-        int candidate_y = (int)actor->tile_y + dy[index];
-        int score;
+    if (abs(delta_y) > abs(delta_x)) {
+        WolfActorDirection temporary = preferred_x;
+        preferred_x = preferred_y;
+        preferred_y = temporary;
+    }
+    if (preferred_x == turnaround) preferred_x = WOLF_ACTOR_DIRECTION_NONE;
+    if (preferred_y == turnaround) preferred_y = WOLF_ACTOR_DIRECTION_NONE;
 
-        if (!tile_is_available_for_chase(
-                actors, actor_count, self_index, world,
-                candidate_x, candidate_y, player_x, player_z)) {
-            continue;
-        }
-        if (dx[index] != 0 && dy[index] != 0 &&
-            (!tile_is_available_for_chase(
-                 actors, actor_count, self_index, world,
-                 (int)actor->tile_x + dx[index], (int)actor->tile_y, player_x, player_z) ||
-             !tile_is_available_for_chase(
-                 actors, actor_count, self_index, world,
-                 (int)actor->tile_x, (int)actor->tile_y + dy[index], player_x, player_z))) {
-            continue;
-        }
-        score = abs(target_x - candidate_x) + abs(target_y - candidate_y);
-        if (score < best_score) {
-            best_score = score;
-            best = directions[index];
+    if (preferred_x != WOLF_ACTOR_DIRECTION_NONE &&
+        direction_can_be_taken(
+            preferred_x, actors, actor_count, self_index, world, player_x, player_z)) {
+        return preferred_x;
+    }
+    if (preferred_y != WOLF_ACTOR_DIRECTION_NONE &&
+        direction_can_be_taken(
+            preferred_y, actors, actor_count, self_index, world, player_x, player_z)) {
+        return preferred_y;
+    }
+    if (old_direction != WOLF_ACTOR_DIRECTION_NONE &&
+        direction_can_be_taken(
+            old_direction, actors, actor_count, self_index, world, player_x, player_z)) {
+        return old_direction;
+    }
+
+    reverse_order = actor_random_byte((WolfActor *)&actors[self_index]) <= 128u;
+    if (reverse_order) {
+        candidates[0] = WOLF_ACTOR_DIRECTION_WEST;
+        candidates[1] = WOLF_ACTOR_DIRECTION_SOUTH;
+        candidates[2] = WOLF_ACTOR_DIRECTION_EAST;
+        candidates[3] = WOLF_ACTOR_DIRECTION_NORTH;
+    } else {
+        candidates[0] = WOLF_ACTOR_DIRECTION_NORTH;
+        candidates[1] = WOLF_ACTOR_DIRECTION_EAST;
+        candidates[2] = WOLF_ACTOR_DIRECTION_SOUTH;
+        candidates[3] = WOLF_ACTOR_DIRECTION_WEST;
+    }
+    for (size_t index = 0u; index < 4u; ++index) {
+        if (candidates[index] != turnaround &&
+            direction_can_be_taken(
+                candidates[index], actors, actor_count, self_index,
+                world, player_x, player_z)) {
+            return candidates[index];
         }
     }
-    return best;
+    if (turnaround != WOLF_ACTOR_DIRECTION_NONE &&
+        direction_can_be_taken(
+            turnaround, actors, actor_count, self_index, world, player_x, player_z)) {
+        return turnaround;
+    }
+    return WOLF_ACTOR_DIRECTION_NONE;
+}
+
+static WolfActorDirection diagonal_direction(
+    WolfActorDirection horizontal,
+    WolfActorDirection vertical)
+{
+    if (horizontal == WOLF_ACTOR_DIRECTION_EAST &&
+        vertical == WOLF_ACTOR_DIRECTION_NORTH) return WOLF_ACTOR_DIRECTION_NORTH_EAST;
+    if (horizontal == WOLF_ACTOR_DIRECTION_EAST &&
+        vertical == WOLF_ACTOR_DIRECTION_SOUTH) return WOLF_ACTOR_DIRECTION_SOUTH_EAST;
+    if (horizontal == WOLF_ACTOR_DIRECTION_WEST &&
+        vertical == WOLF_ACTOR_DIRECTION_NORTH) return WOLF_ACTOR_DIRECTION_NORTH_WEST;
+    if (horizontal == WOLF_ACTOR_DIRECTION_WEST &&
+        vertical == WOLF_ACTOR_DIRECTION_SOUTH) return WOLF_ACTOR_DIRECTION_SOUTH_WEST;
+    return WOLF_ACTOR_DIRECTION_NONE;
+}
+
+/* SelectDodgeDir: try the diagonal towards the player, then randomized cardinal alternatives. */
+static WolfActorDirection select_dodge_direction(
+    WolfActor *actor,
+    const WolfActor *actors,
+    uint32_t actor_count,
+    uint32_t self_index,
+    const WolfWorldState *world,
+    float player_x,
+    float player_z)
+{
+    int delta_x = (int)floorf(map_x(world, player_x)) - (int)actor->tile_x;
+    int delta_y = (int)floorf(map_y(world, player_z)) - (int)actor->tile_y;
+    WolfActorDirection horizontal = delta_x > 0
+        ? WOLF_ACTOR_DIRECTION_EAST : WOLF_ACTOR_DIRECTION_WEST;
+    WolfActorDirection vertical = delta_y > 0
+        ? WOLF_ACTOR_DIRECTION_SOUTH : WOLF_ACTOR_DIRECTION_NORTH;
+    WolfActorDirection opposite_horizontal = opposite_direction(horizontal);
+    WolfActorDirection opposite_vertical = opposite_direction(vertical);
+    WolfActorDirection turnaround = actor->ai_first_attack
+        ? WOLF_ACTOR_DIRECTION_NONE
+        : opposite_direction(actor->movement_direction);
+    WolfActorDirection candidates[5];
+
+    if (abs(delta_x) > abs(delta_y)) {
+        WolfActorDirection temporary = horizontal;
+        horizontal = vertical;
+        vertical = temporary;
+        temporary = opposite_horizontal;
+        opposite_horizontal = opposite_vertical;
+        opposite_vertical = temporary;
+    }
+    if (actor_random_byte(actor) < 128u) {
+        WolfActorDirection temporary = horizontal;
+        horizontal = vertical;
+        vertical = temporary;
+        temporary = opposite_horizontal;
+        opposite_horizontal = opposite_vertical;
+        opposite_vertical = temporary;
+    }
+    candidates[0] = diagonal_direction(horizontal, vertical);
+    candidates[1] = horizontal;
+    candidates[2] = vertical;
+    candidates[3] = opposite_horizontal;
+    candidates[4] = opposite_vertical;
+    actor->ai_first_attack = false;
+
+    for (size_t index = 0u; index < 5u; ++index) {
+        if (candidates[index] != WOLF_ACTOR_DIRECTION_NONE &&
+            candidates[index] != turnaround &&
+            direction_can_be_taken(
+                candidates[index], actors, actor_count, self_index,
+                world, player_x, player_z)) {
+            return candidates[index];
+        }
+    }
+    if (turnaround != WOLF_ACTOR_DIRECTION_NONE &&
+        direction_can_be_taken(
+            turnaround, actors, actor_count, self_index, world, player_x, player_z)) {
+        return turnaround;
+    }
+    return WOLF_ACTOR_DIRECTION_NONE;
 }
 
 static int32_t guard_attack_damage(
@@ -393,7 +579,8 @@ static void choose_guard_chase_step(
     uint32_t actor_index,
     const WolfWorldState *world,
     float player_x,
-    float player_z)
+    float player_z,
+    bool dodge)
 {
     WolfActorDirection direction;
 
@@ -402,8 +589,11 @@ static void choose_guard_chase_step(
         actor->state_id > WOLF_GUARD_STATE_CHASE_LAST) {
         return;
     }
-    direction = select_chase_direction(
-        actor, actors, actor_count, actor_index, world, player_x, player_z);
+    direction = dodge
+        ? select_dodge_direction(
+            actor, actors, actor_count, actor_index, world, player_x, player_z)
+        : select_chase_direction(
+            actor, actors, actor_count, actor_index, world, player_x, player_z);
     (void)wolf_actor_movement_set_direction(actor, direction);
     actor->movement_follow_path_arrows = false;
     actor->movement_speed_world_per_tic = WOLF_ENEMY_GUARD_BASE_SPEED * 3.0f;
@@ -625,13 +815,16 @@ bool wolf_enemy_ai_update_tic(
                         player_yaw_radians, difficulty, player_is_moving, events);
                 }
             } else if (!is_guard_state_pain_or_dead(actor->state_id)) {
-                if (actor->ai_attack_cooldown > 0u) {
-                    --actor->ai_attack_cooldown;
-                } else {
-                    actor->ai_attack_cooldown = 8u;
-                    if (has_line_of_sight(
-                            world, actor->position_x, actor->position_z,
-                            player_world_x, player_world_z)) {
+                {
+                    bool dodge = false;
+                    if (actor->ai_attack_cooldown > 0u) {
+                        --actor->ai_attack_cooldown;
+                    } else {
+                        actor->ai_attack_cooldown = 8u;
+                        if (has_line_of_sight(
+                                world, actor->position_x, actor->position_z,
+                                player_world_x, player_world_z)) {
+                            dodge = true;
                         int distance = chebyshev_tile_distance(
                             actor, world, player_world_x, player_world_z);
                         int chance = distance <= 1 ? 300 : 16 / distance;
