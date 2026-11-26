@@ -16,6 +16,18 @@ typedef enum WolfActorFamily {
     WOLF_ACTOR_FAMILY_COUNT
 } WolfActorFamily;
 
+typedef enum WolfActorDirection {
+    WOLF_ACTOR_DIRECTION_EAST = 0,
+    WOLF_ACTOR_DIRECTION_NORTH_EAST,
+    WOLF_ACTOR_DIRECTION_NORTH,
+    WOLF_ACTOR_DIRECTION_NORTH_WEST,
+    WOLF_ACTOR_DIRECTION_WEST,
+    WOLF_ACTOR_DIRECTION_SOUTH_WEST,
+    WOLF_ACTOR_DIRECTION_SOUTH,
+    WOLF_ACTOR_DIRECTION_SOUTH_EAST,
+    WOLF_ACTOR_DIRECTION_NONE
+} WolfActorDirection;
+
 typedef struct WolfActor WolfActor;
 typedef void (*WolfActorStateCallback)(WolfActor *actor, void *context);
 
@@ -52,6 +64,12 @@ struct WolfActor {
     uint8_t pose;
     bool active;
     bool shootable;
+    /* C2 grid movement: the destination tile is reserved while traversing it. */
+    WolfActorDirection movement_direction;
+    bool movement_enabled;
+    bool movement_waiting_for_door;
+    uint16_t movement_door_tile_x;
+    uint16_t movement_door_tile_y;
 };
 
 /* Initialise a live actor at its decoded map position and enter its first state. */
