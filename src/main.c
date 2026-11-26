@@ -464,11 +464,11 @@ static void play_enemy_audio_events(
             (WolfAudioVector3){events->guard_death_source_x, WOLF_WORLD_EYE_HEIGHT, events->guard_death_source_z});
     }
     if (events->officer_deaths > 0u) {
-        (void)wolf_audio_play(audio, "DEATHSCREAM2SND",
+        (void)wolf_audio_play(audio, "NEINSOVASSND",
             (WolfAudioVector3){events->officer_death_source_x, WOLF_WORLD_EYE_HEIGHT, events->officer_death_source_z});
     }
     if (events->ss_deaths > 0u) {
-        (void)wolf_audio_play(audio, "DEATHSCREAM3SND",
+        (void)wolf_audio_play(audio, "LEBENSND",
             (WolfAudioVector3){events->ss_death_source_x, WOLF_WORLD_EYE_HEIGHT, events->ss_death_source_z});
     }
 }
