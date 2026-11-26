@@ -33,6 +33,16 @@ if(NOT SDL3_FOUND)
         GIT_SHALLOW TRUE
     )
     FetchContent_MakeAvailable(SDL3)
+
+    # SDL's build-tree aliases are created inside its FetchContent directory.
+    # Re-expose the same concrete targets in this project scope so SDL3_mixer's
+    # own configure can resolve the package-style SDL target names.
+    if(NOT TARGET SDL3::SDL3 AND TARGET SDL3-static)
+        add_library(SDL3::SDL3 ALIAS SDL3-static)
+    endif()
+    if(NOT TARGET SDL3::Headers AND TARGET SDL3_Headers)
+        add_library(SDL3::Headers ALIAS SDL3_Headers)
+    endif()
 endif()
 
 # SDL3_mixer provides the engine's positional effect playback. Build it against
