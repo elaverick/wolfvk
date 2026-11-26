@@ -71,7 +71,7 @@ jobs:
           Requirements
           - 64-bit Windows
           - A Vulkan-capable graphics device and current graphics driver
-          - Original Wolfenstein 3D WL6 map, wall and VGA graphics data (not included)
+          - Original Wolfenstein 3D WL6 map, wall, VGA graphics and audio data (not included)
 
           Setup
           1. Copy MAPHEAD.WL6, GAMEMAPS.WL6 and VSWAP.WL6 from your own WL6

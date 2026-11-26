@@ -71,7 +71,7 @@ The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the wor
 
 ## Automated tests
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The game test harness currently registers 178 Unity test cases (including the SwiftShader-backed renderer integration tests and audio-event coverage). The standalone audio-extractor harness adds 13 tests for VSWAP page reconstruction, malformed archives, original DigiMap aliases, AdLib chunk parsing and OPL synthesis. The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, pickups add seven, audio event mappings add five, and firing adds five:
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The game test harness currently registers 187 Unity test cases (including the SwiftShader-backed renderer integration tests and audio-event coverage). The standalone audio-extractor harness adds 13 tests for VSWAP page reconstruction, malformed archives, original DigiMap aliases, AdLib chunk parsing and OPL synthesis. The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, pickups add seven, audio event mappings add five, and firing adds five:
 
 - 3 SDL3 window and event tests
 - 4 camera projection tests
@@ -134,10 +134,10 @@ Keep `shaders/` beside `wolfvk.exe`. Place `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VS
 
 ```powershell
 build-tools\Release\wolf_sprite_voxelizer.exe --vswap VSWAP.WL6 --output tools\sprite_voxelizer\output --assets <game directory>\assets\voxels
-build-audio\Release\wolf_audio_extractor.exe --vswap VSWAP.WL6 --output assets\sounds
+build-audio\Release\wolf_audio_extractor.exe --vswap VSWAP.WL6 --audiohed AUDIOHED.WL6 --audiot AUDIOT.WL6 --output assets\sounds
 ```
 
-The audio command requires FFmpeg with libvorbis in `PATH`. The game directory then looks like this:
+The audio command requires `AUDIOHED.WL6` and `AUDIOT.WL6` as well as `VSWAP.WL6`, plus FFmpeg with libvorbis in `PATH`. It writes the 87 named sound effects to `assets\sounds`. The game directory then looks like this:
 
 ```
 wolfvk.exe
@@ -145,6 +145,8 @@ shaders\            triangle.vert.spv, triangle.frag.spv
 MAPHEAD.WL6
 GAMEMAPS.WL6
 VSWAP.WL6
+AUDIOHED.WL6       required for AdLib effect extraction
+AUDIOT.WL6         required for AdLib effect extraction
 VGAHEAD.WL6
 VGADICT.WL6
 VGAGRAPH.WL6
