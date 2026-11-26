@@ -14,6 +14,9 @@ bool wolf_actor_collection_create(
     WolfActor **actors,
     uint32_t *actor_count);
 
+/* Enter a family state using its shared immutable state table. */
+bool wolf_actor_collection_set_state(WolfActor *actor, uint16_t state_id);
+
 /* Advance every active actor by one original 70 Hz game tic. */
 bool wolf_actor_collection_update_tic(WolfActor *actors, uint32_t actor_count);
 
