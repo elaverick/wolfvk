@@ -172,10 +172,12 @@ bool wolf_actor_collection_create(
         if (created[created_count].ai_random_state == 0u) {
             created[created_count].ai_random_state = 1u;
         }
+        created[created_count].movement_direction =
+            direction_from_yaw(object->yaw_radians);
         if (initial_state != 0u) {
             created[created_count].movement_follow_path_arrows = true;
             if (!wolf_actor_movement_set_direction(
-                    &created[created_count], direction_from_yaw(object->yaw_radians))) {
+                    &created[created_count], created[created_count].movement_direction)) {
                 free(objects);
                 free(created);
                 return false;
