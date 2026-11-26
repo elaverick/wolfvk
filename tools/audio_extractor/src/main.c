@@ -52,7 +52,12 @@ static bool make_one_directory(const char *path)
     }
     if (errno == EEXIST) {
         struct stat path_status;
-        return stat(path, &path_status) == 0 && (path_status.st_mode & S_IFDIR) != 0;
+#if defined(_WIN32)
+        return stat(path, &path_status) == 0 &&
+            (path_status.st_mode & _S_IFMT) == _S_IFDIR;
+#else
+        return stat(path, &path_status) == 0 && S_ISDIR(path_status.st_mode);
+#endif
     }
     return false;
 }
