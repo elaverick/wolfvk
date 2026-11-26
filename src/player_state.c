@@ -38,7 +38,6 @@ void wolf_player_state_new_game(WolfPlayerState *player, uint32_t level_index)
     player->chosen_weapon = WOLF_WEAPON_PISTOL;
     player->map_number = level_index % WOLF_MAPS_PER_EPISODE;
     player->random_state = 0x2545f491u;
-    player->face_wait_ticks = next_random_byte(player);
 }
 
 bool wolf_player_state_heal(WolfPlayerState *player, int32_t points)
@@ -134,29 +133,37 @@ void wolf_player_state_give_points(WolfPlayerState *player, int32_t points)
 
 bool wolf_player_state_update_face(WolfPlayerState *player, float delta_seconds)
 {
-    uint8_t previous_frame;
+    bool face_changed = false;
 
     if (player == NULL || !(delta_seconds > 0.0f)) {
         return false;
     }
 
     /*
-     * WL_AGENT.C's UpdateFace accumulates game tics and compares them with
-     * one random byte. The threshold stays fixed until a glance is selected;
-     * drawing faster must not cause the face to glance more often.
+     * The original UpdateFace runs from the 70 Hz actor-thinking loop:
+     * facecount accumulates game tics, then is compared with a newly sampled
+     * random byte on each update. Process those logical tics independently
+     * so an uncapped renderer does not perform extra random checks.
      */
     player->face_ticks += delta_seconds * WOLF_PLAYER_FACE_TICKS_PER_SECOND;
-    if (player->face_ticks <= (float)player->face_wait_ticks) {
-        return false;
+    while (player->face_ticks + 0.00001f >= 1.0f) {
+        uint8_t previous_frame;
+
+        player->face_ticks -= 1.0f;
+        ++player->face_count;
+        if (player->face_count <= (uint32_t)next_random_byte(player)) {
+            continue;
+        }
+
+        previous_frame = player->face_frame;
+        player->got_gatling_face = false;
+        player->face_frame = (uint8_t)(next_random_byte(player) >> 6);
+        if (player->face_frame == 3u) {
+            player->face_frame = 1u;
+        }
+        player->face_count = 0u;
+        face_changed = face_changed || player->face_frame != previous_frame;
     }
 
-    previous_frame = player->face_frame;
-    player->got_gatling_face = false;
-    player->face_frame = (uint8_t)(next_random_byte(player) >> 6);
-    if (player->face_frame == 3u) {
-        player->face_frame = 1u;
-    }
-    player->face_ticks = 0.0f;
-    player->face_wait_ticks = next_random_byte(player);
-    return player->face_frame != previous_frame;
+    return face_changed;
 }
