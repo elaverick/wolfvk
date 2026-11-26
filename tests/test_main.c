@@ -5,6 +5,7 @@ void test_actor_collection_spawns_four_humanoid_families_with_original_health(vo
 void test_actor_collection_uses_standing_state_and_mutant_difficulty_health(void);
 void test_actor_collection_advances_patrol_poses_on_exact_original_tics(void);
 void test_actor_animation_is_independent_of_render_frame_partitioning(void);
+void test_actor_animation_does_not_advance_while_window_delta_is_paused(void);
 void test_actor_collection_handles_empty_levels_and_invalid_arguments(void);
 void test_actor_state_uses_exact_tic_duration_and_enters_next_state_once(void);
 void test_actor_persistent_state_thinks_once_per_simulation_tic(void);
@@ -410,6 +411,7 @@ int main(void)
     RUN_TEST(test_actor_collection_uses_standing_state_and_mutant_difficulty_health);
     RUN_TEST(test_actor_collection_advances_patrol_poses_on_exact_original_tics);
     RUN_TEST(test_actor_animation_is_independent_of_render_frame_partitioning);
+    RUN_TEST(test_actor_animation_does_not_advance_while_window_delta_is_paused);
     RUN_TEST(test_actor_collection_handles_empty_levels_and_invalid_arguments);
     RUN_TEST(test_actor_state_uses_exact_tic_duration_and_enters_next_state_once);
     RUN_TEST(test_actor_persistent_state_thinks_once_per_simulation_tic);
