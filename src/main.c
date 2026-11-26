@@ -898,31 +898,31 @@ int main(int argc, char *argv[])
                 if (attack_events.gun_shots > 0u) {
                     player_noise_pending = true;
                     for (uint32_t shot = 0u; shot < attack_events.gun_shots; ++shot) {
-                        WolfEnemyAIEvents attack_events;
+                        WolfEnemyAIEvents enemy_events;
 
                         if (!wolf_enemy_ai_player_attack(
                                 actors, actor_count, &world,
                                 camera.position[0], camera.position[2],
-                                camera.yaw_radians, attacking_weapon, &attack_events)) {
+                                camera.yaw_radians, attacking_weapon, &enemy_events)) {
                             fprintf(stderr, "Could not resolve player gun attack against enemies.\\n");
                             running = 0;
                         } else if (audio_available) {
-                            play_enemy_audio_events(&audio, &attack_events);
+                            play_enemy_audio_events(&audio, &enemy_events);
                         }
                     }
                 }
                 if (attack_events.knife_attacks > 0u) {
                     for (uint32_t attack = 0u; attack < attack_events.knife_attacks; ++attack) {
-                        WolfEnemyAIEvents attack_events;
+                        WolfEnemyAIEvents enemy_events;
 
                         if (!wolf_enemy_ai_player_attack(
                                 actors, actor_count, &world,
                                 camera.position[0], camera.position[2],
-                                camera.yaw_radians, WOLF_WEAPON_KNIFE, &attack_events)) {
+                                camera.yaw_radians, WOLF_WEAPON_KNIFE, &enemy_events)) {
                             fprintf(stderr, "Could not resolve player knife attack against enemies.\\n");
                             running = 0;
                         } else if (audio_available) {
-                            play_enemy_audio_events(&audio, &attack_events);
+                            play_enemy_audio_events(&audio, &enemy_events);
                         }
                     }
                 }
