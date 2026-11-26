@@ -98,8 +98,7 @@ static bool actor_position_is_clear(
     float player_x,
     float player_z)
 {
-    const float player_clearance = (WOLF_ACTOR_COLLISION_RADIUS_TILES + 0.34375f) *
-        WOLF_WORLD_TILE_SIZE;
+    const float minimum_actor_distance = WOLF_WORLD_TILE_SIZE;
     const float actor_clearance = WOLF_ACTOR_COLLISION_RADIUS_TILES * 2.0f *
         WOLF_WORLD_TILE_SIZE;
     float dx = x - player_x;
@@ -107,7 +106,7 @@ static bool actor_position_is_clear(
 
     if (wolf_world_state_position_overlaps_solid(
             world, x, z, WOLF_ACTOR_COLLISION_RADIUS_TILES) ||
-        dx * dx + dz * dz < player_clearance * player_clearance) {
+        (fabsf(dx) <= minimum_actor_distance && fabsf(dz) <= minimum_actor_distance)) {
         return false;
     }
 
