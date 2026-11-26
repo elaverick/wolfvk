@@ -999,7 +999,7 @@ bool wolf_enemy_ai_update_tic(
                             (void)wolf_actor_movement_set_direction(
                                 actor, WOLF_ACTOR_DIRECTION_NONE);
                             (void)wolf_actor_collection_set_state(
-                                actor, WOLF_GUARD_STATE_SHOOT_FIRST);
+                                actor, profile.shoot_first);
                             continue;
                         }
                     }
