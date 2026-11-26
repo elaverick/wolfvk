@@ -25,6 +25,47 @@ typedef enum WolfGuardState {
     WOLF_GUARD_STATE_COUNT = 22u
 } WolfGuardState;
 
+/* Officer states retain the shared patrol/chase indices but use their own combat chain. */
+typedef enum WolfOfficerState {
+    WOLF_OFFICER_STATE_STAND = 0u,
+    WOLF_OFFICER_STATE_PATROL_FIRST = 1u,
+    WOLF_OFFICER_STATE_PATROL_LAST = 6u,
+    WOLF_OFFICER_STATE_CHASE_FIRST = 7u,
+    WOLF_OFFICER_STATE_CHASE_LAST = 12u,
+    WOLF_OFFICER_STATE_SHOOT_FIRST = 13u,
+    WOLF_OFFICER_STATE_SHOOT_ACTION = 14u,
+    WOLF_OFFICER_STATE_SHOOT_LAST = 15u,
+    WOLF_OFFICER_STATE_PAIN_FIRST = 16u,
+    WOLF_OFFICER_STATE_PAIN_LAST = 17u,
+    WOLF_OFFICER_STATE_DIE_FIRST = 18u,
+    WOLF_OFFICER_STATE_DIE_LAST = 21u,
+    WOLF_OFFICER_STATE_DEAD = 22u,
+    WOLF_OFFICER_STATE_COUNT = 23u
+} WolfOfficerState;
+
+/* SS soldiers use a nine-state burst with four independently timed shots. */
+typedef enum WolfSSState {
+    WOLF_SS_STATE_STAND = 0u,
+    WOLF_SS_STATE_PATROL_FIRST = 1u,
+    WOLF_SS_STATE_PATROL_LAST = 6u,
+    WOLF_SS_STATE_CHASE_FIRST = 7u,
+    WOLF_SS_STATE_CHASE_LAST = 12u,
+    WOLF_SS_STATE_SHOOT_FIRST = 13u,
+    WOLF_SS_STATE_SHOOT_ACTION_1 = 14u,
+    WOLF_SS_STATE_SHOOT_ACTION_2 = 16u,
+    WOLF_SS_STATE_SHOOT_ACTION_3 = 18u,
+    WOLF_SS_STATE_SHOOT_ACTION_4 = 20u,
+    WOLF_SS_STATE_SHOOT_LAST = 21u,
+    WOLF_SS_STATE_PAIN_FIRST = 22u,
+    WOLF_SS_STATE_PAIN_LAST = 23u,
+    WOLF_SS_STATE_DIE_FIRST = 24u,
+    WOLF_SS_STATE_DIE_LAST = 26u,
+    WOLF_SS_STATE_DEAD = 27u,
+    WOLF_SS_STATE_COUNT = 28u
+} WolfSSState;
+
+#define WOLF_ACTOR_STATE_MAX_COUNT WOLF_SS_STATE_COUNT
+
 typedef enum WolfActorFamily {
     WOLF_ACTOR_GUARD = 0,
     WOLF_ACTOR_OFFICER,
@@ -98,6 +139,8 @@ struct WolfActor {
     uint16_t ai_reaction_tics;
     uint16_t ai_attack_cooldown;
     uint32_t ai_random_state;
+    /* Identifies the current state's one-shot AI action (SS has four shots per burst). */
+    uint16_t ai_action_state_id;
 };
 
 /* Initialise a live actor at its decoded map position and enter its first state. */
