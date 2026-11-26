@@ -8,6 +8,23 @@
 #define WOLF_ACTOR_ANIMATION_NAME_LENGTH 24u
 #define WOLF_ACTOR_STATE_NONE UINT16_MAX
 
+typedef enum WolfGuardState {
+    WOLF_GUARD_STATE_STAND = 0u,
+    WOLF_GUARD_STATE_PATROL_FIRST = 1u,
+    WOLF_GUARD_STATE_PATROL_LAST = 6u,
+    WOLF_GUARD_STATE_CHASE_FIRST = 7u,
+    WOLF_GUARD_STATE_CHASE_LAST = 12u,
+    WOLF_GUARD_STATE_SHOOT_FIRST = 13u,
+    WOLF_GUARD_STATE_SHOOT_ACTION = 14u,
+    WOLF_GUARD_STATE_SHOOT_LAST = 15u,
+    WOLF_GUARD_STATE_PAIN_FIRST = 16u,
+    WOLF_GUARD_STATE_PAIN_LAST = 17u,
+    WOLF_GUARD_STATE_DIE_FIRST = 18u,
+    WOLF_GUARD_STATE_DIE_LAST = 20u,
+    WOLF_GUARD_STATE_DEAD = 21u,
+    WOLF_GUARD_STATE_COUNT = 22u
+} WolfGuardState;
+
 typedef enum WolfActorFamily {
     WOLF_ACTOR_GUARD = 0,
     WOLF_ACTOR_OFFICER,
@@ -67,10 +84,19 @@ struct WolfActor {
     /* C2 grid movement: the destination tile is reserved while traversing it. */
     WolfActorDirection movement_direction;
     bool movement_enabled;
+    bool movement_follow_path_arrows;
+    float movement_speed_world_per_tic;
     bool movement_in_progress;
     bool movement_waiting_for_door;
     uint16_t movement_door_tile_x;
     uint16_t movement_door_tile_y;
+    /* Shared humanoid AI state; the guard vertical slice owns these fields first. */
+    bool attack_mode;
+    bool ai_action_fired;
+    bool ai_score_awarded;
+    uint16_t ai_reaction_tics;
+    uint16_t ai_attack_cooldown;
+    uint32_t ai_random_state;
 };
 
 /* Initialise a live actor at its decoded map position and enter its first state. */
