@@ -47,6 +47,10 @@ endif()
 
 # SDL3_mixer provides the engine's positional effect playback. Build it against
 # the same SDL3 source dependency when a system package is not available.
+# The vendored SDL dependency above is static-only. SDL3_mixer otherwise
+# defaults BUILD_SHARED_LIBS to ON and requests the unavailable SDL3::SDL3-shared
+# package target, even though SDL3::SDL3 and SDL3::Headers already exist.
+set(BUILD_SHARED_LIBS OFF)
 find_package(SDL3_mixer CONFIG QUIET)
 if(NOT SDL3_mixer_FOUND)
     set(SDLMIXER_VENDORED ON CACHE BOOL "" FORCE)
