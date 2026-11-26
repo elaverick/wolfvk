@@ -60,7 +60,7 @@ bool wolf_actor_initialize(
 {
     if (actor == NULL || family < WOLF_ACTOR_GUARD || family >= WOLF_ACTOR_FAMILY_COUNT ||
         !isfinite(position_x) || !isfinite(position_z) || !isfinite(yaw_radians) ||
-        health <= 0) {
+        health <= 0 || !state_definition_is_valid(states, state_count, initial_state)) {
         return false;
     }
 
@@ -86,15 +86,21 @@ bool wolf_actor_update_tic(
     void *context)
 {
     const WolfActorStateDefinition *definition;
+    uint16_t entered_state;
 
     if (actor == NULL || !actor->active ||
         !state_definition_is_valid(states, state_count, actor->state_id)) {
         return false;
     }
 
-    definition = &states[actor->state_id];
+    entered_state = actor->state_id;
+    definition = &states[entered_state];
     if (definition->think != NULL) {
         definition->think(actor, context);
+    }
+    /* Sight and action callbacks may deliberately change state immediately. */
+    if (!actor->active || actor->state_id != entered_state) {
+        return true;
     }
     if (actor->state_elapsed_tics < UINT32_MAX) {
         ++actor->state_elapsed_tics;
