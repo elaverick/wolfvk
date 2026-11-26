@@ -1,5 +1,11 @@
 #include "unity.h"
 
+void test_audio_source_in_front_of_north_facing_listener_is_forward(void);
+void test_audio_source_to_east_of_north_facing_listener_is_right(void);
+void test_audio_listener_rotation_changes_relative_direction(void);
+void test_audio_relative_position_preserves_vertical_offset(void);
+void test_audio_relative_position_rejects_invalid_arguments(void);
+
 void test_window_creation(void);
 void test_window_is_resizable(void);
 void test_window_close_event_can_be_queued(void);
@@ -183,6 +189,11 @@ void test_weapon_scene_loader_rejects_invalid_arguments(void);
 int main(void)
 {
     UNITY_BEGIN();
+    RUN_TEST(test_audio_source_in_front_of_north_facing_listener_is_forward);
+    RUN_TEST(test_audio_source_to_east_of_north_facing_listener_is_right);
+    RUN_TEST(test_audio_listener_rotation_changes_relative_direction);
+    RUN_TEST(test_audio_relative_position_preserves_vertical_offset);
+    RUN_TEST(test_audio_relative_position_rejects_invalid_arguments);
     RUN_TEST(test_window_creation);
     RUN_TEST(test_window_is_resizable);
     RUN_TEST(test_window_close_event_can_be_queued);
