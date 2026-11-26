@@ -6,7 +6,7 @@
 
 **Implementation language and platform:** C17, Windows, SDL3 and Vulkan. Do not introduce C++.
 
-**Status:** C0 audit complete. C1 actor-animation implementation is committed on `main`; Windows CI verification is pending. C2 movement and collision have not started.
+**Status:** C0 audit complete. C1 actor-animation foundation passed the full Windows CI workflow. C2 movement and collision implementation is committed on `main`; its full Windows CI verification is pending.
 
 ## Goal
 
@@ -97,15 +97,17 @@ Each checkpoint is a commit boundary. Keep the changes small enough that a check
 
 ### Stage 2 — Shared actor movement and collision
 
-- [ ] Implement actor world position and movement in the same coordinate system used by the player and level.
-- [ ] Reproduce the original grid-oriented movement and direction selection required by the four enemy families.
-- [ ] Resolve wall, door and secret-pushwall collision consistently with current world state.
-- [ ] Implement actor collision/spacing rules needed to stop enemies occupying invalid or overlapping positions, guided by the original implementation.
-- [ ] Ensure actors cannot move through solid static objects where the original blocks them; distinguish blocking objects from passable decorations and pickups.
-- [ ] Make movement use elapsed game tics rather than render-frame delta.
-- [ ] Add tests for all cardinal directions, turning, blocked movement, wall sliding or stopping as appropriate, doors opening/closed, actor spacing and deterministic movement.
+**Progress (2026-11-26):** C2 movement is integrated into the main game loop and advances on the existing bounded 70 Hz clock. Patrol actors use the original 512 fixed-point-units-per-tic speed, the eight original compass directions and WL6 `ICONARROWS` (90–97) for tile-to-tile path selection. Destination tiles are reserved while actors traverse them. Collision checks include walls, blocking `statinfo[]` objects, diagonal corner cells, moving pushwall reservations, the animated door state, other actors and player clearance. Actors request doors to open and wait for the fully-open state before crossing, matching `TryWalk`/`T_Path` semantics. Eleven new movement tests cover all eight directions, original path arrows, walls and map edges, diagonal corners, static objects, doors, pushwalls, actor spacing, player clearance, deterministic tic stepping and invalid inputs. The complete suite now registers 219 tests. Code and tests are committed; the Windows workflow is pending, so C2 is not yet marked verified.
 
-**Checkpoint C2 — movement/collision:** Commit shared movement and collision code with its tests. Do not begin the complete enemy decision loop until this layer is stable.
+- [x] Implement actor world position and movement in the same coordinate system used by the player and level.
+- [x] Reproduce the original grid-oriented movement and direction selection required by the four enemy families, including the original info-plane path arrows.
+- [x] Resolve wall, door and secret-pushwall collision consistently with current world state.
+- [x] Implement actor collision/spacing rules needed to stop enemies occupying invalid or overlapping positions, guided by the original implementation.
+- [x] Ensure actors cannot move through solid static objects where the original blocks them; distinguish blocking objects from passable decorations and pickups.
+- [x] Make movement use elapsed game tics rather than render-frame delta.
+- [x] Add tests for all cardinal and diagonal directions, path arrows, blocked movement, doors opening/closed, pushwalls, actor spacing and deterministic movement.
+
+**Checkpoint C2 — movement/collision:** Implementation and regression coverage are committed on `main`. The full Windows build and complete CI suite must pass before C2 is declared verified or C3 begins.
 
 **Acceptance:** A controlled test actor can traverse valid corridors, cannot cross blocking geometry, responds correctly to door state and behaves deterministically at 70 Hz.
 
