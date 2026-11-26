@@ -79,7 +79,7 @@ void test_guard_perception_is_blocked_by_walls_and_alerts_after_reaction_delay(v
     TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 110u));
     TEST_ASSERT_EQUAL_UINT32(1u, actor_count);
     TEST_ASSERT_EQUAL_UINT16(WOLF_GUARD_STATE_STAND, actors[0].state_id);
-    TEST_ASSERT_EQUAL_INT(WOLF_ACTOR_DIRECTION_WEST, actors[0].movement_direction);
+    TEST_ASSERT_TRUE(actors[0].attack_mode);
 
     world.level.wall_tiles[4u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 1u;
     for (uint32_t tic = 0u; tic < 80u; ++tic) {
@@ -182,6 +182,42 @@ void test_player_gunfire_damages_guard_and_death_awards_score_and_drops_clip(voi
     }
     TEST_ASSERT_EQUAL_UINT16(WOLF_GUARD_STATE_DEAD, actors[0].state_id);
     TEST_ASSERT_TRUE(actors[0].active);
+
+    wolf_actor_collection_destroy(actors);
+}
+
+
+void test_guard_line_of_sight_uses_the_sliding_door_aperture(void)
+{
+    WolfLevel level = {0};
+    WolfWorldState world = {0};
+    WolfActor *actors = NULL;
+    uint32_t actor_count = 0u;
+    WolfEnemyAIEvents events = {0};
+    float player_x = tile_centre(2u, 8u);
+    float player_z = tile_centre(4u, 8u);
+
+    level.width = 8u;
+    level.height = 8u;
+    level.wall_tiles[4u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 90u;
+    level.object_tiles[4u * WOLF_LEVEL_PLANE_WIDTH + 4u] = 110u;
+    TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 8u));
+    TEST_ASSERT_TRUE(wolf_actor_collection_create(
+        &world.level, WOLF_DIFFICULTY_HARD, &actors, &actor_count));
+
+    world.doors[0].action = WOLF_DOOR_OPENING;
+    world.doors[0].position = 16384u;
+    for (uint32_t tic = 0u; tic < 80u; ++tic) {
+        TEST_ASSERT_TRUE(update_one_tic(
+            actors, actor_count, &world, player_x, player_z,
+            1.57079632679f, WOLF_DIFFICULTY_HARD, false, false, &events));
+    }
+    TEST_ASSERT_FALSE(actors[0].attack_mode);
+
+    world.doors[0].position = 49152u;
+    advance_until_alert(actors, actor_count, &world, player_x, player_z, &events);
+    TEST_ASSERT_TRUE(actors[0].attack_mode);
+    TEST_ASSERT_EQUAL_UINT32(1u, events.guard_alerts);
 
     wolf_actor_collection_destroy(actors);
 }
