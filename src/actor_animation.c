@@ -27,8 +27,9 @@ typedef struct ActorFamilyAnimation {
 }
 
 /*
- * The six walk-state entries follow the original grdpath/grdchase timing:
- * 10, 3, 8, 10, 3 and 8 tics. Each family uses its own named VOX animation.
+ * The six patrol-state entries follow the original path chain: 20, 5, 15,
+ * 20, 5 and 15 tics. Chase uses a different, shorter chain and is deferred
+ * until the guard AI stage. Each family uses its own named VOX animation.
  */
 static const ActorFamilyAnimation actor_families[] = {
     {"grd", WOLF_ACTOR_GUARD, {25, 25, 25, 25}, ACTOR_STATES("grd")},
