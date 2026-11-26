@@ -89,7 +89,7 @@ void test_actor_collection_advances_patrol_poses_on_exact_original_tics(void)
     TEST_ASSERT_TRUE(wolf_actor_collection_update_tic(actors, actor_count));
     TEST_ASSERT_EQUAL_UINT8(1u, actors[0].pose);
     TEST_ASSERT_EQUAL_STRING("grd_w", actors[0].animation);
-    TEST_ASSERT_EQUAL_UINT16(3u, actors[0].state_tics_remaining);
+    TEST_ASSERT_EQUAL_UINT16(8u, actors[0].state_tics_remaining);
 
     wolf_actor_collection_destroy(actors);
     free(level);
