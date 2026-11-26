@@ -1,5 +1,9 @@
 #include "unity.h"
 
+/* The current tests need no per-test fixture setup or teardown. */
+void setUp(void) {}
+void tearDown(void) {}
+
 void test_audio_archive_decodes_and_concatenates_sample_pages(void);
 void test_audio_archive_rejects_invalid_index_page_offsets(void);
 void test_audio_archive_rejects_samples_outside_sound_page_range(void);
