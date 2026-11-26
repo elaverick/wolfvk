@@ -1,5 +1,6 @@
 #include "wolfvk/camera.h"
 #include "wolfvk/actor_animation.h"
+#include "wolfvk/enemy_ai.h"
 #include "wolfvk/actor_movement.h"
 #include "wolfvk/simulation_clock.h"
 #include "wolfvk/command_line.h"
@@ -477,6 +478,7 @@ int main(int argc, char *argv[])
     Uint64 previous_counter;
     int running = 1;
     bool use_was_down = false;
+    bool player_noise_pending = false;
     bool window_focused = true;
     bool weapon_assets_uploaded = false;
     float drawable_aspect_ratio = 16.0f / 9.0f;
@@ -829,6 +831,29 @@ int main(int argc, char *argv[])
                         &weapon_state, &world.player, fire_down, delta_seconds, &attack_events)) {
                     fprintf(stderr, "Weapon attack update failed.\n");
                     running = 0;
+                }
+                if (attack_events.gun_shots > 0u) {
+                    player_noise_pending = true;
+                    for (uint32_t shot = 0u; shot < attack_events.gun_shots; ++shot) {
+                        if (!wolf_enemy_ai_player_attack(
+                                actors, actor_count, &world,
+                                camera.position[0], camera.position[2],
+                                camera.yaw_radians, attacking_weapon)) {
+                            fprintf(stderr, "Could not resolve player gun attack against enemies.\\n");
+                            running = 0;
+                        }
+                    }
+                }
+                if (attack_events.knife_attacks > 0u) {
+                    for (uint32_t attack = 0u; attack < attack_events.knife_attacks; ++attack) {
+                        if (!wolf_enemy_ai_player_attack(
+                                actors, actor_count, &world,
+                                camera.position[0], camera.position[2],
+                                camera.yaw_radians, WOLF_WEAPON_KNIFE)) {
+                            fprintf(stderr, "Could not resolve player knife attack against enemies.\\n");
+                            running = 0;
+                        }
+                    }
                 }
                 if (audio_available && attack_events.gun_shots > 0u) {
                     const char *shot_sound = attacking_weapon == WOLF_WEAPON_PISTOL
