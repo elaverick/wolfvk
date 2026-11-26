@@ -1,6 +1,7 @@
 #include "unity.h"
 
 #include "wolfvk/actor_animation.h"
+#include "wolfvk/simulation_clock.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -93,6 +94,55 @@ void test_actor_collection_advances_patrol_poses_on_exact_original_tics(void)
 
     wolf_actor_collection_destroy(actors);
     free(level);
+}
+
+
+void test_actor_animation_is_independent_of_render_frame_partitioning(void)
+{
+    WolfLevel *level_a = calloc(1u, sizeof(*level_a));
+    WolfLevel *level_b = calloc(1u, sizeof(*level_b));
+    WolfActor *actors_a = NULL;
+    WolfActor *actors_b = NULL;
+    uint32_t count_a = 0u;
+    uint32_t count_b = 0u;
+    WolfSimulationClock clock_a = {0.0};
+    WolfSimulationClock clock_b = {0.0};
+
+    TEST_ASSERT_NOT_NULL(level_a);
+    TEST_ASSERT_NOT_NULL(level_b);
+    level_a->width = level_b->width = 4u;
+    level_a->height = level_b->height = 4u;
+    level_a->object_tiles[1u * WOLF_LEVEL_PLANE_WIDTH + 1u] = 112u;
+    level_b->object_tiles[1u * WOLF_LEVEL_PLANE_WIDTH + 1u] = 112u;
+    TEST_ASSERT_TRUE(wolf_actor_collection_create(
+        level_a, WOLF_DIFFICULTY_MEDIUM, &actors_a, &count_a));
+    TEST_ASSERT_TRUE(wolf_actor_collection_create(
+        level_b, WOLF_DIFFICULTY_MEDIUM, &actors_b, &count_b));
+    TEST_ASSERT_EQUAL_UINT32(1u, count_a);
+    TEST_ASSERT_EQUAL_UINT32(1u, count_b);
+
+    /* Both clocks receive one second, but as different render-frame partitions. */
+    for (uint32_t frame = 0u; frame < 10u; ++frame) {
+        uint32_t ticks = wolf_simulation_clock_advance(&clock_a, 0.1);
+        for (uint32_t tic = 0u; tic < ticks; ++tic) {
+            TEST_ASSERT_TRUE(wolf_actor_collection_update_tic(actors_a, count_a));
+        }
+    }
+    for (uint32_t frame = 0u; frame < 100u; ++frame) {
+        uint32_t ticks = wolf_simulation_clock_advance(&clock_b, 0.01);
+        for (uint32_t tic = 0u; tic < ticks; ++tic) {
+            TEST_ASSERT_TRUE(wolf_actor_collection_update_tic(actors_b, count_b));
+        }
+    }
+    TEST_ASSERT_EQUAL_UINT16(actors_a[0].state_id, actors_b[0].state_id);
+    TEST_ASSERT_EQUAL_UINT8(actors_a[0].pose, actors_b[0].pose);
+    TEST_ASSERT_EQUAL_UINT16(actors_a[0].state_tics_remaining, actors_b[0].state_tics_remaining);
+    TEST_ASSERT_EQUAL_UINT32(70u, actors_a[0].state_elapsed_tics);
+
+    wolf_actor_collection_destroy(actors_a);
+    wolf_actor_collection_destroy(actors_b);
+    free(level_a);
+    free(level_b);
 }
 
 void test_actor_collection_handles_empty_levels_and_invalid_arguments(void)
