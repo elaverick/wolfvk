@@ -746,12 +746,36 @@ int main(int argc, char *argv[])
                     &actor_clock, (double)delta_seconds);
 
                 for (uint32_t tic = 0u; tic < actor_tics && running; ++tic) {
-                    if (!wolf_actor_movement_update_tic(
+                    WolfEnemyAIEvents enemy_events;
+                    bool player_is_moving =
+                        wolf_input_key_down(input, SDL_SCANCODE_W) ||
+                        wolf_input_key_down(input, SDL_SCANCODE_A) ||
+                        wolf_input_key_down(input, SDL_SCANCODE_S) ||
+                        wolf_input_key_down(input, SDL_SCANCODE_D);
+                    bool made_noise = player_noise_pending;
+
+                    player_noise_pending = false;
+                    if (!wolf_enemy_ai_update_tic(
+                            actors, actor_count, &world,
+                            camera.position[0], camera.position[2],
+                            camera.yaw_radians, options.difficulty,
+                            player_is_moving, made_noise, &enemy_events) ||
+                        !wolf_actor_movement_update_tic(
                             actors, actor_count, &world,
                             camera.position[0], camera.position[2]) ||
                         !wolf_actor_collection_update_tic(actors, actor_count)) {
-                        fprintf(stderr, "Actor movement or state update failed.\n");
+                        fprintf(stderr, "Enemy AI, actor movement or state update failed.\\n");
                         running = 0;
+                    }
+                    if (audio_available && enemy_events.guard_alerts > 0u) {
+                        (void)wolf_audio_play(&audio, "HALTSND",
+                            (WolfAudioVector3){enemy_events.alert_source_x,
+                                WOLF_WORLD_EYE_HEIGHT, enemy_events.alert_source_z});
+                    }
+                    if (audio_available && enemy_events.guard_shots > 0u) {
+                        (void)wolf_audio_play(&audio, "NAZIFIRESND",
+                            (WolfAudioVector3){enemy_events.shot_source_x,
+                                WOLF_WORLD_EYE_HEIGHT, enemy_events.shot_source_z});
                     }
                 }
                 if (running && actor_tics > 0u &&
