@@ -140,6 +140,65 @@ void test_voxel_scene_places_models_on_their_tiles(void)
     (void)remove("./" TEST_SUBJECT ".vox");
 }
 
+
+void test_voxel_scene_preloads_and_selects_runtime_actor_walk_poses(void)
+{
+    static const WolfVoxVoxel pose_a[] = {{32u, 32u, 4u, 2u}};
+    static const WolfVoxVoxel pose_b[] = {{10u, 10u, 4u, 2u}, {50u, 50u, 4u, 3u}};
+    static const WolfVoxVoxel *const poses[] = {pose_a, pose_a, pose_b, pose_a};
+    static const uint32_t pose_counts[] = {1u, 1u, 2u, 1u};
+    const TestVoxAnimation animations[] = {{"grd_w", 4u, poses, pose_counts}};
+    WolfLevelObject object = make_object("grd", "grd_w", 0u, 4u, 5u, 0.5f);
+    WolfLevel *level = calloc(1u, sizeof(*level));
+    WolfVoxelScene scene;
+    WolfActor actor = {0};
+    VulkanModelInstance *actor_instances = NULL;
+    VulkanModelInstance *static_instances = NULL;
+    uint32_t actor_count = 0u;
+    uint32_t static_count = 99u;
+    const WolfVoxelPoseMesh *selected_pose = NULL;
+
+    TEST_ASSERT_NOT_NULL(level);
+    level->width = WOLF_LEVEL_PLANE_WIDTH;
+    level->height = WOLF_LEVEL_PLANE_HEIGHT;
+    TEST_ASSERT_TRUE(test_vox_write_file("./grd.vox", animations, 1u));
+    TEST_ASSERT_TRUE(wolf_voxel_scene_load(&scene, &object, 1u, "."));
+    TEST_ASSERT_EQUAL_UINT32(4u, scene.pose_count);
+    TEST_ASSERT_TRUE(wolf_voxel_scene_build_instances(
+        &scene, level, &object, 1u, &static_instances, &static_count));
+    TEST_ASSERT_EQUAL_UINT32(0u, static_count);
+    TEST_ASSERT_NULL(static_instances);
+
+    actor.active = true;
+    actor.family = WOLF_ACTOR_GUARD;
+    actor.position_x = 12.5f;
+    actor.position_z = -8.0f;
+    actor.yaw_radians = 1.25f;
+    actor.pose = 2u;
+    (void)snprintf(actor.animation, sizeof(actor.animation), "%s", "grd_w");
+    TEST_ASSERT_TRUE(wolf_voxel_scene_build_actor_instances(
+        &scene, &actor, 1u, &actor_instances, &actor_count));
+    TEST_ASSERT_EQUAL_UINT32(1u, actor_count);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 12.5f, actor_instances[0].position[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, -8.0f, actor_instances[0].position[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 1.25f, actor_instances[0].yaw_radians);
+    for (uint32_t index = 0u; index < scene.pose_count; ++index) {
+        if (scene.poses[index].pose == 2u &&
+            strcmp(scene.poses[index].animation, "grd_w") == 0) {
+            selected_pose = &scene.poses[index];
+            break;
+        }
+    }
+    TEST_ASSERT_NOT_NULL(selected_pose);
+    TEST_ASSERT_EQUAL_UINT32(selected_pose->first_quad, actor_instances[0].first_quad);
+    TEST_ASSERT_EQUAL_UINT32(selected_pose->quad_count, actor_instances[0].quad_count);
+
+    free(actor_instances);
+    wolf_voxel_scene_destroy(&scene);
+    free(level);
+    (void)remove("./grd.vox");
+}
+
 void test_voxel_scene_rejects_invalid_arguments(void)
 {
     WolfLevel *level = calloc(1u, sizeof(*level));
