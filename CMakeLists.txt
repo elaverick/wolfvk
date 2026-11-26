@@ -69,6 +69,7 @@ endif()
 add_executable(wolfvk
     src/main.c
     src/actor.c
+    src/actor_animation.c
     src/simulation_clock.c
     src/camera.c
     src/player_controller.c
@@ -168,6 +169,7 @@ if(BUILD_TESTING)
     add_executable(wolfvk_tests
         tests/test_main.c
         tests/test_actor.c
+        tests/test_actor_animation.c
         tests/test_simulation_clock.c
         tests/test_window.c
         tests/test_camera.c
@@ -193,6 +195,7 @@ if(BUILD_TESTING)
         tests/test_audio_events.c
         src/camera.c
         src/actor.c
+        src/actor_animation.c
         src/simulation_clock.c
         src/player_controller.c
         src/game_world.c
