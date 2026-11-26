@@ -671,6 +671,7 @@ static bool damage_guard(
 
     if (!actor->attack_mode) {
         actor->attack_mode = true;
+        actor->ai_first_attack = true;
         actor->movement_follow_path_arrows = false;
         actor->movement_speed_world_per_tic = WOLF_ENEMY_GUARD_BASE_SPEED * 3.0f;
     }
