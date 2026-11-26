@@ -47,6 +47,11 @@ jobs:
           cmake -S tools/sprite_voxelizer -B build-tools -A x64 -DBUILD_TESTING=OFF
           cmake --build build-tools --config Release --parallel
 
+      - name: Build WL6 audio extractor for the demo
+        run: |
+          cmake -S tools/audio_extractor -B build-audio -A x64 -DBUILD_TESTING=OFF
+          cmake --build build-audio --config Release --parallel
+
       - name: Package textured Windows demo
         if: success()
         shell: pwsh
@@ -55,6 +60,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
           Copy-Item -Path "build\Release\wolfvk.exe" -Destination $packageDir
           Copy-Item -Path "build-tools\Release\wolf_sprite_voxelizer.exe" -Destination $packageDir
+          Copy-Item -Path "build-audio\Release\wolf_audio_extractor.exe" -Destination $packageDir
           Copy-Item -Path "build\Release\shaders" -Destination $packageDir -Recurse
           Copy-Item -Path "THIRD_PARTY_NOTICES.txt" -Destination $packageDir
 
@@ -75,7 +81,12 @@ jobs:
           3. Build the voxel actors and objects from your VSWAP.WL6 (about 25 s):
                wolf_sprite_voxelizer.exe --vswap VSWAP.WL6 --output voxelizer-output --assets assets\voxels
              Without assets\voxels the game still runs, but with no actors or objects.
-          4. Run wolfvk.exe. Use --level N to select a one-based level number and
+          4. Install FFmpeg with libvorbis and add ffmpeg.exe to PATH. Extract the digitised
+             effects from VSWAP.WL6 into assets\sounds:
+               wolf_audio_extractor.exe --vswap VSWAP.WL6 --output assets\sounds
+             The extractor currently handles the original digitised effects; the AdLib
+             synthesised effects and music tracks are not yet converted.
+          5. Run wolfvk.exe. Use --level N to select a one-based level number and
              --difficulty 1-4 to choose which enemies appear (default 3).
 
           Controls
@@ -135,3 +146,28 @@ jobs:
 
       - name: Run tests
         run: ctest --test-dir build-tools -C Release --output-on-failure
+
+  # The offline WL6 audio extractor is validated using synthetic VSWAP pages.
+  audio-extractor:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: cmake -S tools/audio_extractor -B build-audio -A x64 -DBUILD_TESTING=ON
+
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S tools/audio_extractor -B build-audio -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+
+      - name: Build
+        run: cmake --build build-audio --config Release --parallel
+
+      - name: Run tests
+        run: ctest --test-dir build-audio -C Release --output-on-failure
