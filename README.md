@@ -71,7 +71,7 @@ The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the wor
 
 ## Automated tests
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The game test harness currently registers 207 Unity test cases (including the SwiftShader-backed renderer integration tests, audio-event coverage, actor-state and animation tests, and fixed-tic clock tests). The standalone audio-extractor harness adds 13 tests for VSWAP page reconstruction, malformed archives, original DigiMap aliases, AdLib chunk parsing and OPL synthesis. The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, pickups add seven, audio event mappings add five, firing adds five, the actor-state foundation adds eight, and the fixed-tic simulation clock adds six:
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The game test harness currently registers 208 Unity test cases (including the SwiftShader-backed renderer integration tests, audio-event coverage, actor-state and animation tests, and fixed-tic clock tests). The standalone audio-extractor harness adds 13 tests for VSWAP page reconstruction, malformed archives, original DigiMap aliases, AdLib chunk parsing and OPL synthesis. The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, pickups add seven, audio event mappings add five, firing adds five, the actor-state foundation adds eight, and the fixed-tic simulation clock adds six:
 
 - 3 SDL3 window and event tests
 - 4 camera projection tests
@@ -120,7 +120,7 @@ CTest runs the suite in Windows CI. The world-state tests cover original door or
 
 [![Windows build and tests](https://github.com/elaverick/WolfVK/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/elaverick/WolfVK/actions/workflows/build.yml)
 
-The C1 actor-animation integration and its 207-test suite are committed on `main`, but have not yet been verified by a reported Windows Actions result. The previous green run does not cover these commits.
+The C1 actor-animation integration and its 208-test suite are committed on `main`, but have not yet been verified by a reported Windows Actions result. The previous green run does not cover these commits.
 
 ## Build locally
 
