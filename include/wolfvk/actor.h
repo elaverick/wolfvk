@@ -93,6 +93,7 @@ struct WolfActor {
     /* Shared humanoid AI state; the guard vertical slice owns these fields first. */
     bool attack_mode;
     bool ai_action_fired;
+    bool ai_first_attack;
     bool ai_score_awarded;
     uint16_t ai_reaction_tics;
     uint16_t ai_attack_cooldown;
