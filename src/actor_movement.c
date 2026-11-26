@@ -189,9 +189,21 @@ static bool begin_next_tile(
     uint32_t actor_count,
     WolfWorldState *world)
 {
-    int target_x = (int)actor->tile_x + direction_x[actor->movement_direction];
-    int target_y = (int)actor->tile_y + direction_y[actor->movement_direction];
+    uint16_t path_marker = world->level.object_tiles[
+        (size_t)actor->tile_y * WOLF_LEVEL_PLANE_WIDTH + actor->tile_x];
+    int target_x;
+    int target_y;
 
+    /* WL_STATE.C SelectPathDir reads the eight ICONARROWS from the current tile. */
+    if (path_marker >= 90u && path_marker <= 97u) {
+        actor->movement_direction = (WolfActorDirection)(path_marker - 90u);
+    }
+    target_x = (int)actor->tile_x + direction_x[actor->movement_direction];
+    target_y = (int)actor->tile_y + direction_y[actor->movement_direction];
+
+    if (actor->movement_direction == WOLF_ACTOR_DIRECTION_NONE) {
+        return true;
+    }
     if (target_x < 0 || target_y < 0 ||
         target_x >= world->level.width || target_y >= world->level.height) {
         actor->movement_enabled = false;
