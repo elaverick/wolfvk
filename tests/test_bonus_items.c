@@ -206,6 +206,7 @@ void test_bonus_collection_reports_each_original_sound_event(void)
     level.height = TEST_MAP_SIZE;
     level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 48u;
     TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 98u));
+    world.player.health = 50;
 
     TEST_ASSERT_TRUE(wolf_world_state_collect_bonuses_with_events(
         &world, tile_centre_world(2) - 0.5f * WOLF_WORLD_TILE_SIZE,
