@@ -243,7 +243,9 @@ void test_actor_collection_uses_officer_and_ss_specific_state_chains(void)
     for (uint32_t tic = 0u; tic < 10u; ++tic) {
         TEST_ASSERT_TRUE(wolf_actor_collection_update_tic(actors, actor_count));
     }
-    TEST_ASSERT_EQUAL_UINT16(WOLF_OFFICER_STATE_PAIN_LAST, actors[0].state_id);
+    TEST_ASSERT_EQUAL_UINT16(WOLF_OFFICER_STATE_CHASE_FIRST, actors[0].state_id);
+    TEST_ASSERT_TRUE(wolf_actor_collection_set_state(
+        &actors[0], WOLF_OFFICER_STATE_PAIN_LAST));
     TEST_ASSERT_EQUAL_UINT16(10u, actors[0].state_tics_remaining);
     for (uint32_t tic = 0u; tic < 10u; ++tic) {
         TEST_ASSERT_TRUE(wolf_actor_collection_update_tic(actors, actor_count));
@@ -283,7 +285,9 @@ void test_actor_collection_uses_officer_and_ss_specific_state_chains(void)
     for (uint32_t tic = 0u; tic < 10u; ++tic) {
         TEST_ASSERT_TRUE(wolf_actor_collection_update_tic(actors, actor_count));
     }
-    TEST_ASSERT_EQUAL_UINT16(WOLF_SS_STATE_PAIN_LAST, actors[1].state_id);
+    TEST_ASSERT_EQUAL_UINT16(WOLF_SS_STATE_CHASE_FIRST, actors[1].state_id);
+    TEST_ASSERT_TRUE(wolf_actor_collection_set_state(
+        &actors[1], WOLF_SS_STATE_PAIN_LAST));
     TEST_ASSERT_EQUAL_UINT16(10u, actors[1].state_tics_remaining);
     for (uint32_t tic = 0u; tic < 10u; ++tic) {
         TEST_ASSERT_TRUE(wolf_actor_collection_update_tic(actors, actor_count));
