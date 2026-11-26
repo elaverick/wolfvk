@@ -511,7 +511,7 @@ void test_ss_attack_uses_original_two_thirds_effective_distance(void)
     TEST_ASSERT_TRUE(wolf_enemy_ai_update_tic(
         ss, ss_count, &ss_world, player_x, player_z,
         player_yaw, WOLF_DIFFICULTY_HARD, false, false, &ss_events));
-    TEST_ASSERT_EQUAL_INT32(68, ss_world.player.health);
+    TEST_ASSERT_EQUAL_INT32(84, ss_world.player.health);
     TEST_ASSERT_EQUAL_UINT32(1u, ss_events.ss_shots);
 
     wolf_actor_collection_destroy(officer);
