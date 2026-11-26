@@ -93,7 +93,7 @@ void test_actor_movement_stops_at_solid_walls_and_map_boundaries(void)
     TEST_ASSERT_FLOAT_WITHIN(0.001f, world_coordinate(4u, 8u), actor.position_x);
 
     TEST_ASSERT_TRUE(wolf_actor_movement_set_direction(&actor, WOLF_ACTOR_DIRECTION_EAST));
-    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 60u);
+    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 160u);
     TEST_ASSERT_EQUAL_UINT16(7u, actor.tile_x);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, world_coordinate(7u, 8u), actor.position_x);
 }
