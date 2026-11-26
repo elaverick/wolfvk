@@ -67,6 +67,7 @@ struct WolfActor {
     /* C2 grid movement: the destination tile is reserved while traversing it. */
     WolfActorDirection movement_direction;
     bool movement_enabled;
+    bool movement_in_progress;
     bool movement_waiting_for_door;
     uint16_t movement_door_tile_x;
     uint16_t movement_door_tile_y;
