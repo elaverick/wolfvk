@@ -82,7 +82,7 @@ Each checkpoint is a commit boundary. Keep the changes small enough that a check
 
 ### Stage 1 — Actor animation and deterministic state timing
 
-**Progress (2026-11-26):** C1 implementation is now integrated. The application creates independent runtime instances for guards, officers, SS soldiers and mutants from the existing difficulty-filtered WL6 placements. Standing actors use their standing pose; patrol actors cycle the six original walk-state entries (10, 3, 8, 10, 3 and 8 tics) on the bounded 70 Hz clock. Each actor selects a pre-meshed shared VOX pose range and retains its own transform and timing. Static objects remain on the existing placement path. The simulation pauses when the window loses focus. The implementation and 208-test suite are committed; Windows CI has not yet reported a result, so C1 is awaiting verification.
+**Progress (2026-11-26):** C1 implementation is now integrated. The application creates independent runtime instances for guards, officers, SS soldiers and mutants from the existing difficulty-filtered WL6 placements. Standing actors use their standing pose; patrol actors cycle the six original patrol-state entries (20, 5, 15, 20, 5 and 15 tics) on the bounded 70 Hz clock. Each actor selects a pre-meshed shared VOX pose range and retains its own transform and timing. Static objects remain on the existing placement path. The simulation pauses when the window loses focus. The implementation and 208-test suite are committed; Windows CI has not yet reported a result, so C1 is awaiting verification.
 
 - [x] Extend the existing actor representation so an actor can hold a current animation/state, elapsed tic count and required per-instance state.
 - [x] Implement deterministic state advancement at the original 70 Hz simulation rate, independent of display refresh rate.
@@ -91,7 +91,7 @@ Each checkpoint is a commit boundary. Keep the changes small enough that a check
 - [x] Preserve static object placement/rendering while runtime humanoid actors select their own valid animated poses.
 - [x] Add tests for state entry, duration, transition, looping, one-shot sequences, pause/focus behaviour and missing animation data.
 
-**Checkpoint C1 — animation/state foundation:** Implementation, integration and tests are committed on `main` (test registration checkpoint `3a117caaba6b2ded99a518236c7a2a7be4962534`). The application now advances patrol animation at 70 Hz and renders the selected per-instance pose. The full Windows workflow must pass before C1 is declared verified or C2 begins.
+**Checkpoint C1 — animation/state foundation:** Implementation, integration and tests are committed on `main` (test registration checkpoint `3a117caaba6b2ded99a518236c7a2a7be4962534`). The application now advances the original patrol animation at 70 Hz and renders the selected per-instance pose. The distinct 10, 3, 8, 10, 3, 8-tic chase cycle remains for the later AI stage. The full Windows workflow must pass before C1 is declared verified or C2 begins.
 
 **Acceptance:** Implementation and regression coverage are in place for deterministic original voxel-pose animation at 70 Hz, frame-partition independence, inactive-window pause, missing assets and preservation of static object rendering. Final acceptance remains conditional on a successful Windows build and the complete CI suite for the C1 commit.
 
