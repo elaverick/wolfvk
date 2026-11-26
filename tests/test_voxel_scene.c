@@ -230,3 +230,59 @@ void test_voxel_scene_rejects_invalid_arguments(void)
     wolf_voxel_scene_destroy(NULL);
     free(level);
 }
+
+
+void test_voxel_scene_preloads_officer_and_ss_combat_poses(void)
+{
+    static const WolfVoxVoxel *const poses[] = {
+        one_voxel, one_voxel, two_voxels, one_voxel
+    };
+    static const uint32_t pose_counts[] = {1u, 1u, 2u, 1u};
+    const TestVoxAnimation officer_animations[] = {
+        {"ofc_w", 4u, poses, pose_counts},
+        {"ofc_shoot", 3u, poses, pose_counts},
+        {"ofc_pain", 2u, poses, pose_counts},
+        {"ofc_die", 4u, poses, pose_counts},
+        {"ofc_dead", 1u, poses, pose_counts}
+    };
+    const TestVoxAnimation ss_animations[] = {
+        {"ss_w", 4u, poses, pose_counts},
+        {"ss_shoot", 3u, poses, pose_counts},
+        {"ss_pain", 2u, poses, pose_counts},
+        {"ss_die", 3u, poses, pose_counts},
+        {"ss_dead", 1u, poses, pose_counts}
+    };
+    WolfLevelObject objects[2];
+    WolfVoxelScene scene;
+    const WolfVoxelPoseMesh *officer_last_death_pose = NULL;
+    const WolfVoxelPoseMesh *ss_last_shot_pose = NULL;
+
+    objects[0] = make_object("ofc", "ofc_w", 0u, 2u, 2u, 0.0f);
+    objects[1] = make_object("ss", "ss_w", 0u, 3u, 2u, 0.0f);
+    TEST_ASSERT_TRUE(test_vox_write_file("./ofc.vox", officer_animations, 5u));
+    TEST_ASSERT_TRUE(test_vox_write_file("./ss.vox", ss_animations, 5u));
+
+    TEST_ASSERT_TRUE(wolf_voxel_scene_load(&scene, objects, 2u, "."));
+    TEST_ASSERT_EQUAL_UINT32(27u, scene.pose_count);
+    TEST_ASSERT_EQUAL_UINT32(0u, scene.unavailable_pose_count);
+    for (uint32_t index = 0u; index < scene.pose_count; ++index) {
+        if (strcmp(scene.poses[index].subject, "ofc") == 0 &&
+            strcmp(scene.poses[index].animation, "ofc_die") == 0 &&
+            scene.poses[index].pose == 3u) {
+            officer_last_death_pose = &scene.poses[index];
+        }
+        if (strcmp(scene.poses[index].subject, "ss") == 0 &&
+            strcmp(scene.poses[index].animation, "ss_shoot") == 0 &&
+            scene.poses[index].pose == 2u) {
+            ss_last_shot_pose = &scene.poses[index];
+        }
+    }
+    TEST_ASSERT_NOT_NULL(officer_last_death_pose);
+    TEST_ASSERT_TRUE(officer_last_death_pose->available);
+    TEST_ASSERT_NOT_NULL(ss_last_shot_pose);
+    TEST_ASSERT_TRUE(ss_last_shot_pose->available);
+
+    wolf_voxel_scene_destroy(&scene);
+    (void)remove("./ofc.vox");
+    (void)remove("./ss.vox");
+}
