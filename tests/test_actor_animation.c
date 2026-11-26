@@ -144,6 +144,39 @@ void test_actor_animation_is_independent_of_render_frame_partitioning(void)
     free(level_b);
 }
 
+
+void test_actor_animation_does_not_advance_while_window_delta_is_paused(void)
+{
+    WolfLevel *level = calloc(1u, sizeof(*level));
+    WolfActor *actors = NULL;
+    uint32_t actor_count = 0u;
+    WolfSimulationClock clock = {0.0};
+    uint16_t remaining_before_pause;
+
+    TEST_ASSERT_NOT_NULL(level);
+    level->width = 4u;
+    level->height = 4u;
+    level->object_tiles[1u * WOLF_LEVEL_PLANE_WIDTH + 1u] = 112u;
+    TEST_ASSERT_TRUE(wolf_actor_collection_create(
+        level, WOLF_DIFFICULTY_MEDIUM, &actors, &actor_count));
+    TEST_ASSERT_EQUAL_UINT32(1u, actor_count);
+
+    for (uint32_t frame = 0u; frame < 3u; ++frame) {
+        uint32_t ticks = wolf_simulation_clock_advance(&clock, 1.0 / 70.0);
+        for (uint32_t tic = 0u; tic < ticks; ++tic) {
+            TEST_ASSERT_TRUE(wolf_actor_collection_update_tic(actors, actor_count));
+        }
+    }
+    remaining_before_pause = actors[0].state_tics_remaining;
+    for (uint32_t inactive_frame = 0u; inactive_frame < 100u; ++inactive_frame) {
+        TEST_ASSERT_EQUAL_UINT32(0u, wolf_simulation_clock_advance(&clock, 0.0));
+    }
+    TEST_ASSERT_EQUAL_UINT16(remaining_before_pause, actors[0].state_tics_remaining);
+
+    wolf_actor_collection_destroy(actors);
+    free(level);
+}
+
 void test_actor_collection_handles_empty_levels_and_invalid_arguments(void)
 {
     WolfLevel level = {0};
