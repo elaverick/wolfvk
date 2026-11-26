@@ -11,11 +11,32 @@
 
 typedef struct WolfEnemyAIEvents {
     uint32_t guard_alerts;
+    uint32_t officer_alerts;
+    uint32_t ss_alerts;
     uint32_t guard_shots;
+    uint32_t officer_shots;
+    uint32_t ss_shots;
+    uint32_t guard_deaths;
+    uint32_t officer_deaths;
+    uint32_t ss_deaths;
     float alert_source_x;
     float alert_source_z;
     float shot_source_x;
     float shot_source_z;
+    float officer_alert_source_x;
+    float officer_alert_source_z;
+    float ss_alert_source_x;
+    float ss_alert_source_z;
+    float officer_shot_source_x;
+    float officer_shot_source_z;
+    float ss_shot_source_x;
+    float ss_shot_source_z;
+    float guard_death_source_x;
+    float guard_death_source_z;
+    float officer_death_source_x;
+    float officer_death_source_z;
+    float ss_death_source_x;
+    float ss_death_source_z;
 } WolfEnemyAIEvents;
 
 /* Advance the shared perception and guard combat logic by one original 70 Hz tic. */
@@ -31,7 +52,7 @@ bool wolf_enemy_ai_update_tic(
     bool player_made_noise,
     WolfEnemyAIEvents *events);
 
-/* Resolve one player weapon event against the nearest visible guard in the view ray. */
+/* Resolve one player weapon event against the nearest visible supported humanoid in the view ray. */
 bool wolf_enemy_ai_player_attack(
     WolfActor *actors,
     uint32_t actor_count,
@@ -39,6 +60,7 @@ bool wolf_enemy_ai_player_attack(
     float player_world_x,
     float player_world_z,
     float player_yaw_radians,
-    WolfWeaponType weapon);
+    WolfWeaponType weapon,
+    WolfEnemyAIEvents *events);
 
 #endif
