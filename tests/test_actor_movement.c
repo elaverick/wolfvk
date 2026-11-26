@@ -83,13 +83,19 @@ void test_actor_movement_stops_at_solid_walls_and_map_boundaries(void)
     TEST_ASSERT_TRUE(create_actor(&actor, 1u, 3u, 3u, 0.0f));
     TEST_ASSERT_TRUE(wolf_actor_movement_set_direction(&actor, WOLF_ACTOR_DIRECTION_EAST));
     advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 60u);
-    TEST_ASSERT_EQUAL_UINT16(4u, actor.tile_x);
+    TEST_ASSERT_EQUAL_UINT16(3u, actor.tile_x);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, world_coordinate(3u, 8u), actor.position_x);
 
+    world.level.wall_tiles[3u * WOLF_LEVEL_PLANE_WIDTH + 4u] = 0u;
     TEST_ASSERT_TRUE(wolf_actor_movement_set_direction(&actor, WOLF_ACTOR_DIRECTION_EAST));
-    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 50u);
+    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 40u);
     TEST_ASSERT_EQUAL_UINT16(4u, actor.tile_x);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, world_coordinate(4u, 8u), actor.position_x);
+
+    TEST_ASSERT_TRUE(wolf_actor_movement_set_direction(&actor, WOLF_ACTOR_DIRECTION_EAST));
+    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 60u);
+    TEST_ASSERT_EQUAL_UINT16(7u, actor.tile_x);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, world_coordinate(7u, 8u), actor.position_x);
 }
 
 void test_actor_movement_respects_blocking_statics_but_ignores_passable_objects(void)
