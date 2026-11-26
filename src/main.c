@@ -744,8 +744,11 @@ int main(int argc, char *argv[])
                     &actor_clock, (double)delta_seconds);
 
                 for (uint32_t tic = 0u; tic < actor_tics && running; ++tic) {
-                    if (!wolf_actor_collection_update_tic(actors, actor_count)) {
-                        fprintf(stderr, "Animated actor state update failed.\n");
+                    if (!wolf_actor_movement_update_tic(
+                            actors, actor_count, &world,
+                            camera.position[0], camera.position[2]) ||
+                        !wolf_actor_collection_update_tic(actors, actor_count)) {
+                        fprintf(stderr, "Actor movement or state update failed.\n");
                         running = 0;
                     }
                 }
