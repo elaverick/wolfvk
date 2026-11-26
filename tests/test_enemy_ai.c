@@ -187,6 +187,79 @@ void test_player_gunfire_damages_guard_and_death_awards_score_and_drops_clip(voi
 }
 
 
+
+void test_guard_facing_direction_gates_detection_until_player_is_in_front(void)
+{
+    WolfWorldState world = {0};
+    WolfActor *actors = NULL;
+    uint32_t actor_count = 0u;
+    WolfEnemyAIEvents events = {0};
+
+    TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 108u));
+    for (uint32_t tic = 0u; tic < 80u; ++tic) {
+        TEST_ASSERT_TRUE(update_one_tic(
+            actors, actor_count, &world,
+            tile_centre(2u, 8u), tile_centre(4u, 8u),
+            0.0f, WOLF_DIFFICULTY_HARD, false, false, &events));
+    }
+    TEST_ASSERT_FALSE(actors[0].attack_mode);
+
+    advance_until_alert(
+        actors, actor_count, &world,
+        tile_centre(6u, 8u), tile_centre(4u, 8u), &events);
+    TEST_ASSERT_TRUE(actors[0].attack_mode);
+    TEST_ASSERT_EQUAL_UINT32(1u, events.guard_alerts);
+
+    wolf_actor_collection_destroy(actors);
+}
+
+void test_guard_revalidates_line_of_sight_at_the_shot_action_frame(void)
+{
+    WolfWorldState world = {0};
+    WolfActor *actors = NULL;
+    uint32_t actor_count = 0u;
+    WolfEnemyAIEvents events = {0};
+    int32_t initial_health;
+
+    TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 110u));
+    world.level.wall_tiles[4u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 1u;
+    actors[0].attack_mode = true;
+    TEST_ASSERT_TRUE(wolf_actor_collection_set_state(
+        &actors[0], WOLF_GUARD_STATE_SHOOT_ACTION));
+    initial_health = world.player.health;
+
+    TEST_ASSERT_TRUE(wolf_enemy_ai_update_tic(
+        actors, actor_count, &world,
+        tile_centre(2u, 8u), tile_centre(4u, 8u),
+        1.57079632679f, WOLF_DIFFICULTY_HARD, false, false, &events));
+    TEST_ASSERT_EQUAL_UINT32(0u, events.guard_shots);
+    TEST_ASSERT_EQUAL_INT32(initial_health, world.player.health);
+    TEST_ASSERT_TRUE(actors[0].ai_action_fired);
+
+    wolf_actor_collection_destroy(actors);
+}
+
+void test_first_player_hit_alerts_guard_and_enters_pain_state(void)
+{
+    WolfWorldState world = {0};
+    WolfActor *actors = NULL;
+    uint32_t actor_count = 0u;
+
+    TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 108u));
+    TEST_ASSERT_TRUE(wolf_enemy_ai_player_attack(
+        actors, actor_count, &world,
+        tile_centre(2u, 8u), tile_centre(4u, 8u),
+        1.57079632679f, WOLF_WEAPON_PISTOL));
+    TEST_ASSERT_TRUE(actors[0].attack_mode);
+    TEST_ASSERT_TRUE(actors[0].health > 0);
+    TEST_ASSERT_TRUE(actors[0].health < 25);
+    TEST_ASSERT_TRUE(
+        actors[0].state_id == WOLF_GUARD_STATE_PAIN_FIRST ||
+        actors[0].state_id == WOLF_GUARD_STATE_PAIN_LAST);
+
+    wolf_actor_collection_destroy(actors);
+}
+
 void test_guard_line_of_sight_uses_the_sliding_door_aperture(void)
 {
     WolfLevel level = {0};
