@@ -37,6 +37,6 @@ bool wolf_audio_relative_position(
      */
     relative_position->x = offset_x * cosine_yaw + offset_z * sine_yaw;
     relative_position->y = offset_y;
-    relative_position->z = offset_x * sine_yaw - offset_z * cosine_yaw;
+    relative_position->z = -offset_x * sine_yaw + offset_z * cosine_yaw;
     return true;
 }
