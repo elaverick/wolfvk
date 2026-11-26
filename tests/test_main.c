@@ -1,6 +1,14 @@
 #include "unity.h"
 
 void test_actor_initialization_copies_spawn_data_and_enters_state(void);
+void test_actor_movement_traverses_all_eight_grid_directions(void);
+void test_actor_movement_stops_at_solid_walls_and_map_boundaries(void);
+void test_actor_movement_respects_blocking_statics_but_ignores_passable_objects(void);
+void test_actor_movement_waits_for_door_to_fully_open_before_crossing(void);
+void test_actor_movement_prevents_actor_overlap_and_reserves_destination_tiles(void);
+void test_actor_movement_keeps_clearance_from_the_player(void);
+void test_actor_movement_is_repeatable_for_identical_tic_sequences(void);
+void test_actor_movement_rejects_invalid_arguments_and_directions(void);
 void test_actor_collection_spawns_four_humanoid_families_with_original_health(void);
 void test_actor_collection_uses_standing_state_and_mutant_difficulty_health(void);
 void test_actor_collection_advances_patrol_poses_on_exact_original_tics(void);
@@ -407,6 +415,14 @@ int main(void)
     RUN_TEST(test_weapon_chaingun_fires_every_six_tics_and_twice_per_tap);
     RUN_TEST(test_weapon_switches_to_the_knife_when_the_bullets_run_out);
     RUN_TEST(test_actor_initialization_copies_spawn_data_and_enters_state);
+    RUN_TEST(test_actor_movement_traverses_all_eight_grid_directions);
+    RUN_TEST(test_actor_movement_stops_at_solid_walls_and_map_boundaries);
+    RUN_TEST(test_actor_movement_respects_blocking_statics_but_ignores_passable_objects);
+    RUN_TEST(test_actor_movement_waits_for_door_to_fully_open_before_crossing);
+    RUN_TEST(test_actor_movement_prevents_actor_overlap_and_reserves_destination_tiles);
+    RUN_TEST(test_actor_movement_keeps_clearance_from_the_player);
+    RUN_TEST(test_actor_movement_is_repeatable_for_identical_tic_sequences);
+    RUN_TEST(test_actor_movement_rejects_invalid_arguments_and_directions);
     RUN_TEST(test_actor_collection_spawns_four_humanoid_families_with_original_health);
     RUN_TEST(test_actor_collection_uses_standing_state_and_mutant_difficulty_health);
     RUN_TEST(test_actor_collection_advances_patrol_poses_on_exact_original_tics);
