@@ -90,7 +90,7 @@ void test_adlib_archive_rejects_short_and_non_monotonic_headers(void)
     TEST_ASSERT_FALSE(wolf_audio_adlib_archive_decode(
         header, header_size - 1u, audio_data, audio_size,
         &archive, error_message, sizeof(error_message)));
-    TEST_ASSERT_NOT_NULL(strstr(error_message, "invalid or incomplete"));
+    TEST_ASSERT_NOT_NULL(strstr(error_message, "Invalid or incomplete"));
 
     write_u32(header + 88u * 4u, 10u);
     TEST_ASSERT_FALSE(wolf_audio_adlib_archive_decode(

@@ -29,9 +29,9 @@ All 60 retail WL6 levels were loaded at the hardest difficulty, which places eve
 
 ### Spatial audio
 
-The engine uses SDL3_mixer for positional playback. Each effect gets an independent mixer track, so concurrent weapon and world sounds do not replace one another. The listener follows the player camera, and world-space emitters are transformed into listener-relative coordinates before being passed to SDL3_mixer. Weapon-fire events and pickup events are sent through this common sound interface; future enemy sounds can use the same API with the enemy's world position.
+The engine uses SDL3_mixer for positional playback. Each effect gets an independent mixer track, so concurrent weapon and world sounds do not replace one another. The listener follows the player camera, and world-space emitters are transformed into listener-relative coordinates before being passed to SDL3_mixer. Weapon fire, each pickup type, opening and closing doors, starting a secret-wall movement and failed Use actions are connected to named original WL6 effects.
 
-Extracted sound files are loaded by their original WL6 sound names from `assets/sounds`. Run the [WL6 audio extractor](tools/audio_extractor/README.md) against your own `VSWAP.WL6` file to produce OGG Vorbis assets. FFmpeg with `libvorbis` is required by the extractor. The current converter handles the digitised sample effects listed in the original `DigiMap`; PC-speaker and AdLib-only sound effects, plus the 27 AdLib music tracks, still require OPL synthesis and are not yet converted. The `assets/music` folder is reserved for those music OGGs.
+Extracted sound files are loaded by their original WL6 sound names from `assets/sounds`. Run the [WL6 audio extractor](tools/audio_extractor/README.md) using your own `VSWAP.WL6`, `AUDIOHED.WL6` and `AUDIOT.WL6` files to produce OGG Vorbis assets. FFmpeg with `libvorbis` is required. The extractor renders all 87 AdLib effects through the pinned Opal OPL3 emulator, then exports the digitised samples listed in the original `DigiMap` over their matching names so the original recordings take precedence. The 27 AdLib music tracks are not yet converted; the `assets/music` folder remains reserved for them.
 
 ### Status bar
 
@@ -71,7 +71,7 @@ The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the wor
 
 ## Automated tests
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The game test harness currently registers 176 Unity test cases (including the SwiftShader-backed renderer integration tests). The standalone audio-extractor harness adds six more tests for VSWAP page reconstruction, malformed archive handling and original DigiMap aliases. The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, pickups add six, and firing adds five:
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The game test harness currently registers 178 Unity test cases (including the SwiftShader-backed renderer integration tests and audio-event coverage). The standalone audio-extractor harness adds 13 tests for VSWAP page reconstruction, malformed archives, original DigiMap aliases, AdLib chunk parsing and OPL synthesis. The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, pickups add seven, audio event mappings add five, and firing adds five:
 
 - 3 SDL3 window and event tests
 - 4 camera projection tests
@@ -87,9 +87,10 @@ The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedica
 - 5 keyboard, mouse and gamepad input tests, including held mouse-button state
 - 5 VGAGRAPH decoder tests: Huffman expansion, Mode X plane order, sparse chunks and malformed files
 - 8 player-state tests: the original new-game values, health, ammunition, weapon, key and extra-life rules, plus face-glance timing
-- 6 pickup tests: the statinfo bonus table, the original grab range, every item's effect, items left on the floor when not needed, and weapon choice limited to weapons picked up
+- 7 pickup tests: the statinfo bonus table, the original grab range, every item's effect, items left on the floor when not needed, weapon choice limited to weapons picked up, and reporting the exact item collected for audio
 - 6 status bar tests: every number, key, face and weapon position, the face for each damage level, palette expansion and the integer-scale layout
 - 18 world-state tests for doors, keys, secret pushwalls and their original timing/material behaviour
+- 5 audio event tests for door transitions, secret-wall starts, and original pickup-to-sound mapping
 - 18 Vulkan selection and renderer tests, including the SwiftShader-backed frame submission test, the model transform, a frame that draws placed model instances, and frames that draw and re-upload the status bar
 - 18 weapon tests: original 70 Hz/six-tic attack timing, automatic repeat, weapon selection, pose selection, view-model anchoring, all 20 named VOX poses and partial-asset fallback, plus firing: the shot frame, one bullet per shot, a fresh press per pistol or knife attack, machine gun and chaingun fire rates, and the switch to the knife when the bullets run out
 
@@ -107,8 +108,8 @@ CTest runs the suite in Windows CI. The world-state tests cover original door or
 | WASD movement and mouse-look | Implemented; movement uses swept boundary resolution and wall sliding |
 | Sliding doors, keys and secret pushwalls | Implemented; original WL6 tile/marker mappings and timings have regression coverage |
 | Voxel actors and static objects | Implemented: placed by the original info-plane and difficulty rules, standing in their spawn pose. Verified locally on all 60 retail levels and passed in [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985). Pickups are implemented; animation and AI come later |
-| Spatial audio | SDL3_mixer voice pool and listener-relative spatialisation are wired into weapon and pickup events. Runtime playback requires extracted OGG assets in `assets/sounds`; full AdLib/PC-speaker and music conversion remains outstanding |
-| WL6 audio extractor | Implemented for the digitised VSWAP sound samples; six standalone tests cover archive decoding and DigiMap naming. Uses FFmpeg/libvorbis to write OGG. AdLib-only effects and the 27 music tracks are not yet rendered |
+| Spatial audio | SDL3_mixer voice pool and listener-relative spatialisation are wired into weapons, pickups, doors, secret walls and failed Use actions. Runtime playback requires the 87 named OGG effects in `assets/sounds`, generated from the original WL6 archives |
+| WL6 audio extractor | Renders all 87 AdLib effects through the pinned Opal OPL3 emulator and exports VSWAP digitised samples over matching names. Thirteen standalone tests cover decoding, DigiMap names and synthesis. Uses FFmpeg/libvorbis; the 27 music tracks remain outstanding |
 | Player voxel weapons | Implemented: knife, pistol, machine gun and chaingun, camera-anchored overlay, original attack timing, keyboard/mouse/gamepad firing. Eleven weapon tests added; current CI result pending. Firing uses ammunition as in `T_Attack`; no damage yet |
 | Sprite voxelizer | Builds and passes its tests on Windows and Linux in [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985) |
 | Windows demo | Packaged with the game, the voxelizer and the shaders by [Actions run 43931333985](https://github.com/elaverick/WolfVK/actions/runs/43931333985) |
@@ -166,5 +167,5 @@ Use `--level N` to select a one-based level number; omit it to load the first le
 
 `tools/sprite_voxelizer` is a standalone offline tool, not part of the game build. It extracts all 436 WL6 sprites from `VSWAP.WL6`, removes painted floor shadows, and rebuilds every pose as a 64×64×64 MagicaVoxel model. Eight-way rotation sets are carved into one solid; camera-facing frames get depth from the actor's own body or a fitted profile. Each actor or object is written as a single `.vox` file holding all of its animations, and every model is validated against the original frames. A dependency-free HTML viewer (`tools/sprite_voxelizer/viewer`) shows the results in 3D. `--assets <dir>` installs the subject files where the game loads them. See [its README](tools/sprite_voxelizer/README.md). The output is derived from your own game data and is not committed.
 
-`tools/audio_extractor` is a standalone offline C17 tool. It reads the VSWAP DigiList and emits named OGG files for all digitised sound effects using FFmpeg/libvorbis. It never modifies the original WL6 file. It currently does not render the remaining AdLib/PC-speaker sound chunks or music tracks; see [its README](tools/audio_extractor/README.md) for the exact scope and command line.
+`tools/audio_extractor` is a standalone offline C17 tool. It renders the 87 original AdLib sound effects through the pinned Opal OPL3 emulator and exports the digitised VSWAP DigiMap aliases over matching filenames, using FFmpeg/libvorbis. It does not modify the original WL6 files. The 27 original AdLib music tracks remain outstanding; see [its README](tools/audio_extractor/README.md) for the archive files and command line.
 

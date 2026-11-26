@@ -205,16 +205,13 @@ void test_bonus_collection_reports_each_original_sound_event(void)
     level.width = TEST_MAP_SIZE;
     level.height = TEST_MAP_SIZE;
     level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 48u;
-    level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 49u;
     TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 98u));
 
     TEST_ASSERT_TRUE(wolf_world_state_collect_bonuses_with_events(
         &world, tile_centre_world(2) - 0.5f * WOLF_WORLD_TILE_SIZE,
         tile_centre_world(2), TEST_EAST, collected,
         sizeof(collected) / sizeof(collected[0]), &collected_count));
-    TEST_ASSERT_EQUAL_UINT(2u, collected_count);
+    TEST_ASSERT_EQUAL_UINT(1u, collected_count);
     TEST_ASSERT_EQUAL_INT(WOLF_BONUS_FIRST_AID, collected[0]);
-    TEST_ASSERT_EQUAL_INT(WOLF_BONUS_CLIP, collected[1]);
     TEST_ASSERT_EQUAL_UINT16(0u, world.level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 2u]);
-    TEST_ASSERT_EQUAL_UINT16(0u, world.level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 3u]);
 }

@@ -81,11 +81,11 @@ jobs:
           3. Build the voxel actors and objects from your VSWAP.WL6 (about 25 s):
                wolf_sprite_voxelizer.exe --vswap VSWAP.WL6 --output voxelizer-output --assets assets\voxels
              Without assets\voxels the game still runs, but with no actors or objects.
-          4. Install FFmpeg with libvorbis and add ffmpeg.exe to PATH. Extract the digitised
-             effects from VSWAP.WL6 into assets\sounds:
-               wolf_audio_extractor.exe --vswap VSWAP.WL6 --output assets\sounds
-             The extractor currently handles the original digitised effects; the AdLib
-             synthesised effects and music tracks are not yet converted.
+          4. Copy AUDIOHED.WL6 and AUDIOT.WL6 from your WL6 installation as well.
+             Install FFmpeg with libvorbis and add ffmpeg.exe to PATH, then extract
+             the original AdLib and digitised effects into assets\sounds:
+               wolf_audio_extractor.exe --vswap VSWAP.WL6 --audiohed AUDIOHED.WL6 --audiot AUDIOT.WL6 --output assets\sounds
+             The 27 AdLib music tracks are not yet converted.
           5. Run wolfvk.exe. Use --level N to select a one-based level number and
              --difficulty 1-4 to choose which enemies appear (default 3).
 

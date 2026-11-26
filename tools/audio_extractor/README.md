@@ -1,12 +1,17 @@
 # WL6 Audio Extractor
 
-`tools/audio_extractor` is a standalone C17 tool for extracting the digitised sound effects stored in the original Wolfenstein 3D WL6 `VSWAP.WL6` archive.
+`tools/audio_extractor` is a standalone C17 tool for converting the original Wolfenstein 3D WL6 sound effects into OGG Vorbis assets that WolfVK can load.
 
-It reads the final VSWAP DigiList page, follows each sample's page and byte-length entry, concatenates the original unsigned 8-bit mono PCM data, and encodes a named OGG Vorbis file for every original `DigiMap` event. Reused samples are exported under each of their original sound names. The source sample rate is 7,000 Hz, matching the original Wolf3D SoundBlaster driver.
+It supports both original effect formats:
+
+- Digitised PCM effects from the final VSWAP DigiList page. These are 8-bit unsigned mono samples at 7,000 Hz, as used by the original SoundBlaster path.
+- AdLib effects from the 87 original sound chunks in `AUDIOHED.WL6` / `AUDIOT.WL6`. The tool renders these through the pinned C11 Opal OPL3 emulator to 16-bit mono PCM at 44,100 Hz.
+
+The extractor writes the 87 named WL6 sound effects. Where a sound has an original digitised recording, that recording is written after the synthesised version and takes precedence. This preserves the original DigiMap aliases while also supplying the effects that exist only in the AdLib bank.
 
 ## Build
 
-A C17 compiler, CMake 3.24 or newer and Git are required. The tests use the pinned Unity framework fetched by CMake.
+A C17 compiler, CMake 3.24 or newer and Git are required. CMake fetches the pinned Opal OPL emulator and the pinned Unity test framework.
 
 Windows:
 
@@ -26,16 +31,18 @@ ctest --test-dir build-audio --output-on-failure
 
 ## Extract
 
-Install FFmpeg with its `libvorbis` encoder and make the `ffmpeg` executable available in `PATH`. Then, from the game directory containing your own WL6 files, run:
+Install FFmpeg with its `libvorbis` encoder and make the `ffmpeg` executable available in `PATH`. Run the extractor from the directory containing your own retail WL6 files:
 
 ```powershell
-build-audio\Release\wolf_audio_extractor.exe --vswap VSWAP.WL6 --output assets\sounds
+build-audio\Release\wolf_audio_extractor.exe --vswap VSWAP.WL6 --audiohed AUDIOHED.WL6 --audiot AUDIOT.WL6 --output assets\sounds
 ```
 
-The tool writes files such as `ATKPISTOLSND.ogg`, `ATKMACHINEGUNSND.ogg` and `YEAHSND.ogg` to `assets/sounds`. You can override the FFmpeg executable with `--ffmpeg <path>` and the destination with `--output <directory>`.
+The tool writes named files such as `ATKPISTOLSND.ogg`, `GETAMMOSND.ogg`, `HEALTH2SND.ogg`, `OPENDOORSND.ogg`, `PUSHWALLSND.ogg` and `DONOTHINGSND.ogg` into `assets/sounds`. The game loads the original 87 sound names from this directory. `--audiohed` and `--audiot` must be supplied together; they are required to produce AdLib-only effects. `--ffmpeg <path>` overrides the FFmpeg executable and `--output <directory>` changes the destination.
 
-The extractor does not copy or modify any original game files. It only reads `VSWAP.WL6` and writes derived audio to the chosen output directory.
+The command reads `VSWAP.WL6`, `AUDIOHED.WL6` and `AUDIOT.WL6`, and writes derived OGG files. It never modifies the original WL6 files. If you omit the audio archive arguments, it retains the original digitised-only extraction behaviour.
 
 ## Current scope
 
-This first extractor covers the digitised PCM effects listed by the original WL6 `DigiMap`. The remaining sound IDs use the original PC-speaker or AdLib synthesis data in `AUDIOHED.WL6` / `AUDIOT.WL6`. The 27 music entries also use the original AdLib sequencer format. Those synthesised sound effects and music tracks are not converted by this tool yet; they must be rendered through an OPL-compatible synthesiser before being encoded as OGG. The engine's separate `assets/music` directory is reserved for those tracks.
+The 87 AdLib effects and the digitised effects listed in the original DigiMap are converted. Digitised samples take precedence over the matching AdLib-synthesised effect. The 27 original AdLib music tracks are not yet converted; they use the separate music sequencer format and remain outside this effects extractor. PC-speaker-only playback is also not separately emulated: WolfVK uses the AdLib sound bank as its synthesised fallback.
+
+The standalone test harness covers VSWAP digitised-page reconstruction, malformed audio archives, original DigiMap aliases, AdLib chunk parsing and OPL rendering.

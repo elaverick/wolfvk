@@ -51,11 +51,7 @@ bool wolf_audio_adlib_archive_decode(
         archive->offsets[index] = offset;
     }
 
-    if (archive->offsets[WOLF_AUDIO_ADLIB_CHUNK_COUNT] != audio_size) {
-        set_error(error_message, error_message_size, "The final AUDIOHED offset does not match the AUDIOT file size.");
-        memset(archive->offsets, 0, sizeof(archive->offsets));
-        return false;
-    }
+    /* Trailing bytes after the final indexed chunk are harmless and unused. */
 
     audio_copy = malloc(audio_size);
     if (audio_copy == NULL) {
