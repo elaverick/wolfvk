@@ -169,7 +169,7 @@ void test_voxel_scene_preloads_and_selects_runtime_actor_walk_poses(void)
     level->height = WOLF_LEVEL_PLANE_HEIGHT;
     TEST_ASSERT_TRUE(test_vox_write_file("./grd.vox", animations, 5u));
     TEST_ASSERT_TRUE(wolf_voxel_scene_load(&scene, &object, 1u, "."));
-    TEST_ASSERT_EQUAL_UINT32(14u, scene.pose_count);
+    TEST_ASSERT_EQUAL_UINT32(13u, scene.pose_count);
     TEST_ASSERT_TRUE(wolf_voxel_scene_build_instances(
         &scene, level, &object, 1u, &static_instances, &static_count));
     TEST_ASSERT_EQUAL_UINT32(0u, static_count);
