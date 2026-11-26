@@ -46,6 +46,7 @@ bool wolf_actor_movement_set_direction(
     actor->movement_direction = direction;
     actor->movement_enabled = direction != WOLF_ACTOR_DIRECTION_NONE;
     actor->movement_waiting_for_door = false;
+    actor->movement_in_progress = false;
     return true;
 }
 
@@ -169,6 +170,7 @@ static bool can_reserve_destination(
             actor->movement_door_tile_y = target_y;
             actor->tile_x = target_x;
             actor->tile_y = target_y;
+            actor->movement_in_progress = true;
             return true;
         }
         return false;
@@ -176,6 +178,7 @@ static bool can_reserve_destination(
 
     actor->tile_x = target_x;
     actor->tile_y = target_y;
+    actor->movement_in_progress = true;
     return true;
 }
 
@@ -231,26 +234,24 @@ static bool advance_actor(
     }
 
     /* The actor reserves the next tile before moving, as the original actorat grid did. */
-    {
-        float current_center_x;
-        float current_center_z;
-        tile_center(world, actor->tile_x, actor->tile_y, &current_center_x, &current_center_z);
-        delta_x = current_center_x - actor->position_x;
-        delta_z = current_center_z - actor->position_z;
-        if (fabsf(delta_x) < 0.0001f && fabsf(delta_z) < 0.0001f) {
-            if (!begin_next_tile(actor, actor_index, actors, actor_count, world)) {
-                return true;
-            }
-            if (actor->movement_waiting_for_door) {
-                return true;
-            }
-            tile_center(world, actor->tile_x, actor->tile_y, &target_x, &target_z);
-            delta_x = target_x - actor->position_x;
-            delta_z = target_z - actor->position_z;
-        } else {
-            target_x = current_center_x;
-            target_z = current_center_z;
+    if (!actor->movement_in_progress) {
+        if (!begin_next_tile(actor, actor_index, actors, actor_count, world)) {
+            return true;
         }
+        if (actor->movement_waiting_for_door) {
+            return true;
+        }
+        actor->movement_in_progress = true;
+    }
+
+    tile_center(world, actor->tile_x, actor->tile_y, &target_x, &target_z);
+    delta_x = target_x - actor->position_x;
+    delta_z = target_z - actor->position_z;
+    if (fabsf(delta_x) < 0.0001f && fabsf(delta_z) < 0.0001f) {
+        actor->position_x = target_x;
+        actor->position_z = target_z;
+        actor->movement_in_progress = false;
+        return true;
     }
 
     next_x = actor->position_x;
@@ -275,6 +276,10 @@ static bool advance_actor(
 
     actor->position_x = next_x;
     actor->position_z = next_z;
+    if (fabsf(target_x - next_x) < 0.0001f &&
+        fabsf(target_z - next_z) < 0.0001f) {
+        actor->movement_in_progress = false;
+    }
     actor->yaw_radians = yaw_for_direction(actor->movement_direction);
     return true;
 }
