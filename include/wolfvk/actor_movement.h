@@ -3,6 +3,7 @@
 
 #include "wolfvk/actor.h"
 #include "wolfvk/game_world.h"
+#include "wolfvk/world.h"
 
 #include <stdbool.h>
 #include <stdint.h>
