@@ -131,7 +131,7 @@ struct WolfActor {
     bool movement_waiting_for_door;
     uint16_t movement_door_tile_x;
     uint16_t movement_door_tile_y;
-    /* Shared humanoid AI state; the guard vertical slice owns these fields first. */
+    /* Shared perception, combat and animation state for supported humanoid enemy families. */
     bool attack_mode;
     bool ai_action_fired;
     bool ai_first_attack;
