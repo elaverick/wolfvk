@@ -14,7 +14,7 @@ endif()
 include(FetchContent)
 include(CTest)
 
-find_package(SDL3 CONFIG QUIET)
+find_package(SDL3 3.4.0 CONFIG QUIET)
 find_package(Vulkan REQUIRED)
 find_program(GLSLC_EXECUTABLE NAMES glslc
     HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin"
@@ -29,7 +29,7 @@ if(NOT SDL3_FOUND)
     FetchContent_Declare(
         SDL3
         GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-        GIT_TAG release-3.2.10
+        GIT_TAG release-3.4.20
         GIT_SHALLOW TRUE
     )
     FetchContent_MakeAvailable(SDL3)
@@ -80,6 +80,7 @@ add_executable(wolfvk
     src/vga_graphics.c
     src/status_bar.c
     src/bonus_items.c
+    src/audio.c
     src/audio_spatial.c
 )
 target_include_directories(wolfvk PRIVATE include)
