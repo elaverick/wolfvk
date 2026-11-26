@@ -2,6 +2,25 @@
 
 #include <string.h>
 
+static WolfAudioVector3 world_tile_centre(
+    uint8_t tile_x,
+    uint8_t tile_y,
+    uint16_t map_width,
+    uint16_t map_height)
+{
+    WolfAudioVector3 position = {0.0f, WOLF_WORLD_EYE_HEIGHT, 0.0f};
+
+    if (map_width == 0u || map_height == 0u) {
+        return position;
+    }
+
+    position.x = ((float)tile_x + 0.5f - (float)map_width * 0.5f) *
+        WOLF_WORLD_TILE_SIZE;
+    position.z = ((float)tile_y + 0.5f - (float)map_height * 0.5f) *
+        WOLF_WORLD_TILE_SIZE;
+    return position;
+}
+
 void wolf_audio_world_snapshot_capture(
     const WolfWorldState *world,
     WolfAudioWorldSnapshot *snapshot)
@@ -18,16 +37,22 @@ void wolf_audio_world_snapshot_capture(
     snapshot->door_count = world->door_count < WOLF_WORLD_MAX_DOORS
         ? world->door_count
         : WOLF_WORLD_MAX_DOORS;
+    snapshot->map_width = world->level.width;
+    snapshot->map_height = world->level.height;
     for (uint16_t index = 0u; index < snapshot->door_count; ++index) {
         snapshot->door_actions[index] = world->doors[index].action;
+        snapshot->door_tile_x[index] = world->doors[index].tile_x;
+        snapshot->door_tile_y[index] = world->doors[index].tile_y;
     }
     snapshot->pushwall_active = world->pushwall.active;
+    snapshot->pushwall_tile_x = world->pushwall.source_x;
+    snapshot->pushwall_tile_y = world->pushwall.source_y;
 }
 
 size_t wolf_audio_world_snapshot_diff(
     const WolfAudioWorldSnapshot *previous,
     const WolfAudioWorldSnapshot *current,
-    WolfAudioWorldEvent *events,
+    WolfAudioWorldEventInfo *events,
     size_t output_capacity)
 {
     size_t event_count = 0u;
@@ -54,18 +79,30 @@ size_t wolf_audio_world_snapshot_diff(
 
         if (current_action == WOLF_DOOR_OPENING) {
             if (event_count < output_capacity) {
-                events[event_count++] = WOLF_AUDIO_WORLD_DOOR_OPENED;
+                events[event_count].type = WOLF_AUDIO_WORLD_DOOR_OPENED;
+                events[event_count].source_position = world_tile_centre(
+                    current->door_tile_x[index], current->door_tile_y[index],
+                    current->map_width, current->map_height);
+                ++event_count;
             }
         } else if (current_action == WOLF_DOOR_CLOSING) {
             if (event_count < output_capacity) {
-                events[event_count++] = WOLF_AUDIO_WORLD_DOOR_CLOSED;
+                events[event_count].type = WOLF_AUDIO_WORLD_DOOR_CLOSED;
+                events[event_count].source_position = world_tile_centre(
+                    current->door_tile_x[index], current->door_tile_y[index],
+                    current->map_width, current->map_height);
+                ++event_count;
             }
         }
     }
 
     if (!previous->pushwall_active && current->pushwall_active &&
         event_count < output_capacity) {
-        events[event_count++] = WOLF_AUDIO_WORLD_SECRET_WALL_STARTED;
+        events[event_count].type = WOLF_AUDIO_WORLD_SECRET_WALL_STARTED;
+        events[event_count].source_position = world_tile_centre(
+            current->pushwall_tile_x, current->pushwall_tile_y,
+            current->map_width, current->map_height);
+        ++event_count;
     }
 
     return event_count;

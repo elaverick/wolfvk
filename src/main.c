@@ -62,11 +62,10 @@ static void load_audio_assets(WolfAudio *audio)
 static void play_world_audio_events(
     WolfAudio *audio,
     const WolfAudioWorldSnapshot *previous,
-    const WolfWorldState *world,
-    WolfAudioVector3 source_position)
+    const WolfWorldState *world)
 {
     WolfAudioWorldSnapshot current;
-    WolfAudioWorldEvent events[WOLF_WORLD_MAX_DOORS + 1u];
+    WolfAudioWorldEventInfo events[WOLF_WORLD_MAX_DOORS + 1u];
     size_t event_count;
 
     if (audio == NULL || previous == NULL || world == NULL) {
@@ -78,10 +77,10 @@ static void play_world_audio_events(
         previous, &current, events, sizeof(events) / sizeof(events[0]));
 
     for (size_t index = 0u; index < event_count; ++index) {
-        const char *sound_name = wolf_audio_world_event_sound(events[index]);
+        const char *sound_name = wolf_audio_world_event_sound(events[index].type);
 
         if (sound_name != NULL) {
-            (void)wolf_audio_play(audio, sound_name, source_position);
+            (void)wolf_audio_play(audio, sound_name, events[index].source_position);
         }
     }
 }
@@ -820,9 +819,7 @@ int main(int argc, char *argv[])
             use_was_down = use_down;
 
             if (audio_available) {
-                play_world_audio_events(
-                    &audio, &audio_world_before, &world,
-                    (WolfAudioVector3){camera.position[0], camera.position[1], camera.position[2]});
+                play_world_audio_events(&audio, &audio_world_before, &world);
             }
 
             (void)wolf_player_state_update_face(&world.player, delta_seconds);

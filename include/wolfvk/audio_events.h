@@ -3,6 +3,8 @@
 
 #include "wolfvk/bonus_items.h"
 #include "wolfvk/game_world.h"
+#include "wolfvk/audio_spatial.h"
+#include "wolfvk/world.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -20,9 +22,20 @@ typedef enum WolfAudioWorldEvent {
  */
 typedef struct WolfAudioWorldSnapshot {
     WolfDoorAction door_actions[WOLF_WORLD_MAX_DOORS];
+    uint8_t door_tile_x[WOLF_WORLD_MAX_DOORS];
+    uint8_t door_tile_y[WOLF_WORLD_MAX_DOORS];
     uint16_t door_count;
+    uint16_t map_width;
+    uint16_t map_height;
     bool pushwall_active;
+    uint8_t pushwall_tile_x;
+    uint8_t pushwall_tile_y;
 } WolfAudioWorldSnapshot;
+
+typedef struct WolfAudioWorldEventInfo {
+    WolfAudioWorldEvent type;
+    WolfAudioVector3 source_position;
+} WolfAudioWorldEventInfo;
 
 /* Capture the current door actions and secret-wall movement state. */
 void wolf_audio_world_snapshot_capture(
@@ -33,7 +46,7 @@ void wolf_audio_world_snapshot_capture(
 size_t wolf_audio_world_snapshot_diff(
     const WolfAudioWorldSnapshot *previous,
     const WolfAudioWorldSnapshot *current,
-    WolfAudioWorldEvent *events,
+    WolfAudioWorldEventInfo *events,
     size_t output_capacity);
 
 /* Map an event to the exact named sound exported from a retail WL6 DigiMap. */

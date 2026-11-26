@@ -6,37 +6,50 @@ void test_audio_world_snapshot_detects_door_open_and_close_transitions(void)
 {
     WolfAudioWorldSnapshot previous = {0};
     WolfAudioWorldSnapshot current = {0};
-    WolfAudioWorldEvent events[WOLF_WORLD_MAX_DOORS + 1u];
+    WolfAudioWorldEventInfo events[WOLF_WORLD_MAX_DOORS + 1u];
 
     previous.door_count = 1u;
     previous.door_actions[0] = WOLF_DOOR_CLOSED;
     current.door_count = 1u;
     current.door_actions[0] = WOLF_DOOR_OPENING;
+    current.map_width = 5u;
+    current.map_height = 5u;
+    current.door_tile_x[0] = 2u;
+    current.door_tile_y[0] = 2u;
 
     TEST_ASSERT_EQUAL_UINT(1u, wolf_audio_world_snapshot_diff(
         &previous, &current, events, sizeof(events) / sizeof(events[0])));
-    TEST_ASSERT_EQUAL_INT(WOLF_AUDIO_WORLD_DOOR_OPENED, events[0]);
-    TEST_ASSERT_EQUAL_STRING("OPENDOORSND", wolf_audio_world_event_sound(events[0]));
+    TEST_ASSERT_EQUAL_INT(WOLF_AUDIO_WORLD_DOOR_OPENED, events[0].type);
+    TEST_ASSERT_EQUAL_STRING("OPENDOORSND", wolf_audio_world_event_sound(events[0].type));
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, events[0].source_position.x);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, WOLF_WORLD_EYE_HEIGHT, events[0].source_position.y);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, events[0].source_position.z);
 
     previous = current;
     current.door_actions[0] = WOLF_DOOR_CLOSING;
     TEST_ASSERT_EQUAL_UINT(1u, wolf_audio_world_snapshot_diff(
         &previous, &current, events, sizeof(events) / sizeof(events[0])));
-    TEST_ASSERT_EQUAL_INT(WOLF_AUDIO_WORLD_DOOR_CLOSED, events[0]);
-    TEST_ASSERT_EQUAL_STRING("CLOSEDOORSND", wolf_audio_world_event_sound(events[0]));
+    TEST_ASSERT_EQUAL_INT(WOLF_AUDIO_WORLD_DOOR_CLOSED, events[0].type);
+    TEST_ASSERT_EQUAL_STRING("CLOSEDOORSND", wolf_audio_world_event_sound(events[0].type));
 }
 
 void test_audio_world_snapshot_detects_secret_wall_start_once(void)
 {
     WolfAudioWorldSnapshot previous = {0};
     WolfAudioWorldSnapshot current = {0};
-    WolfAudioWorldEvent events[WOLF_WORLD_MAX_DOORS + 1u];
+    WolfAudioWorldEventInfo events[WOLF_WORLD_MAX_DOORS + 1u];
 
     current.pushwall_active = true;
+    current.map_width = 5u;
+    current.map_height = 5u;
+    current.pushwall_tile_x = 1u;
+    current.pushwall_tile_y = 3u;
     TEST_ASSERT_EQUAL_UINT(1u, wolf_audio_world_snapshot_diff(
         &previous, &current, events, sizeof(events) / sizeof(events[0])));
-    TEST_ASSERT_EQUAL_INT(WOLF_AUDIO_WORLD_SECRET_WALL_STARTED, events[0]);
-    TEST_ASSERT_EQUAL_STRING("PUSHWALLSND", wolf_audio_world_event_sound(events[0]));
+    TEST_ASSERT_EQUAL_INT(WOLF_AUDIO_WORLD_SECRET_WALL_STARTED, events[0].type);
+    TEST_ASSERT_EQUAL_STRING("PUSHWALLSND", wolf_audio_world_event_sound(events[0].type));
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, -3.2f, events[0].source_position.x);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.2f, events[0].source_position.z);
 
     previous = current;
     current.pushwall_active = true;
@@ -48,7 +61,7 @@ void test_audio_world_snapshot_ignores_door_animation_without_state_change(void)
 {
     WolfAudioWorldSnapshot previous = {0};
     WolfAudioWorldSnapshot current = {0};
-    WolfAudioWorldEvent events[WOLF_WORLD_MAX_DOORS + 1u];
+    WolfAudioWorldEventInfo events[WOLF_WORLD_MAX_DOORS + 1u];
 
     previous.door_count = 1u;
     current.door_count = 1u;
@@ -63,7 +76,7 @@ void test_audio_world_snapshot_handles_multiple_transitions_and_invalid_inputs(v
 {
     WolfAudioWorldSnapshot previous = {0};
     WolfAudioWorldSnapshot current = {0};
-    WolfAudioWorldEvent events[WOLF_WORLD_MAX_DOORS + 1u];
+    WolfAudioWorldEventInfo events[WOLF_WORLD_MAX_DOORS + 1u];
 
     previous.door_count = 2u;
     previous.door_actions[0] = WOLF_DOOR_CLOSED;
@@ -75,9 +88,9 @@ void test_audio_world_snapshot_handles_multiple_transitions_and_invalid_inputs(v
 
     TEST_ASSERT_EQUAL_UINT(3u, wolf_audio_world_snapshot_diff(
         &previous, &current, events, sizeof(events) / sizeof(events[0])));
-    TEST_ASSERT_EQUAL_INT(WOLF_AUDIO_WORLD_DOOR_OPENED, events[0]);
-    TEST_ASSERT_EQUAL_INT(WOLF_AUDIO_WORLD_DOOR_CLOSED, events[1]);
-    TEST_ASSERT_EQUAL_INT(WOLF_AUDIO_WORLD_SECRET_WALL_STARTED, events[2]);
+    TEST_ASSERT_EQUAL_INT(WOLF_AUDIO_WORLD_DOOR_OPENED, events[0].type);
+    TEST_ASSERT_EQUAL_INT(WOLF_AUDIO_WORLD_DOOR_CLOSED, events[1].type);
+    TEST_ASSERT_EQUAL_INT(WOLF_AUDIO_WORLD_SECRET_WALL_STARTED, events[2].type);
     TEST_ASSERT_NULL(wolf_audio_world_event_sound((WolfAudioWorldEvent)99));
     TEST_ASSERT_EQUAL_UINT(0u, wolf_audio_world_snapshot_diff(
         NULL, &current, events, sizeof(events) / sizeof(events[0])));
