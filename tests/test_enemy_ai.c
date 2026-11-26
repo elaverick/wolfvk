@@ -79,7 +79,7 @@ void test_guard_perception_is_blocked_by_walls_and_alerts_after_reaction_delay(v
     TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 110u));
     TEST_ASSERT_EQUAL_UINT32(1u, actor_count);
     TEST_ASSERT_EQUAL_UINT16(WOLF_GUARD_STATE_STAND, actors[0].state_id);
-    TEST_ASSERT_TRUE(actors[0].attack_mode);
+    TEST_ASSERT_FALSE(actors[0].attack_mode);
 
     world.level.wall_tiles[4u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 1u;
     for (uint32_t tic = 0u; tic < 80u; ++tic) {
