@@ -1,5 +1,12 @@
 #include "unity.h"
 
+void test_simulation_clock_emits_one_tick_per_seventieth_second(void);
+void test_simulation_clock_is_independent_of_frame_partitioning(void);
+void test_simulation_clock_caps_catch_up_after_a_long_frame(void);
+void test_simulation_clock_retains_fractional_time_between_frames(void);
+void test_simulation_clock_rejects_invalid_time_and_arguments(void);
+void test_simulation_clock_reset_discards_fractional_time(void);
+
 void test_audio_source_in_front_of_north_facing_listener_is_forward(void);
 void test_audio_source_to_east_of_north_facing_listener_is_right(void);
 void test_audio_listener_rotation_changes_relative_direction(void);
@@ -382,5 +389,11 @@ int main(void)
     RUN_TEST(test_weapon_machinegun_fires_every_twelve_tics_while_held);
     RUN_TEST(test_weapon_chaingun_fires_every_six_tics_and_twice_per_tap);
     RUN_TEST(test_weapon_switches_to_the_knife_when_the_bullets_run_out);
+    RUN_TEST(test_simulation_clock_emits_one_tick_per_seventieth_second);
+    RUN_TEST(test_simulation_clock_is_independent_of_frame_partitioning);
+    RUN_TEST(test_simulation_clock_caps_catch_up_after_a_long_frame);
+    RUN_TEST(test_simulation_clock_retains_fractional_time_between_frames);
+    RUN_TEST(test_simulation_clock_rejects_invalid_time_and_arguments);
+    RUN_TEST(test_simulation_clock_reset_discards_fractional_time);
     return UNITY_END();
 }
