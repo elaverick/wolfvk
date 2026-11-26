@@ -110,7 +110,8 @@ void test_actor_pain_sequence_transitions_to_a_persistent_dead_pose(void)
     TEST_ASSERT_TRUE(actor.active);
     TEST_ASSERT_EQUAL_UINT16(3u, actor.state_id);
     TEST_ASSERT_EQUAL_STRING("grd_dead", actor.animation);
-    TEST_ASSERT_EQUAL_UINT32(3u, counts.enter_calls);
+    /* This test starts directly in pain, so only pain and dead are entered. */
+    TEST_ASSERT_EQUAL_UINT32(2u, counts.enter_calls);
 }
 
 void test_actor_terminal_state_removes_the_actor_after_its_final_tic(void)
