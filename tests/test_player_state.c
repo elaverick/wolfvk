@@ -101,6 +101,51 @@ void test_player_state_keys_and_extra_lives(void)
     TEST_ASSERT_EQUAL_INT32(9, player.lives);
 }
 
+void test_player_state_face_wait_uses_one_original_random_tic_threshold(void)
+{
+    WolfPlayerState player;
+    float threshold_seconds;
+    uint8_t initial_wait;
+
+    wolf_player_state_new_game(&player, 0u);
+    initial_wait = player.face_wait_ticks;
+    threshold_seconds = ((float)initial_wait + 0.25f) /
+        WOLF_PLAYER_FACE_TICKS_PER_SECOND;
+
+    /* Many render frames cannot resample the wait and accelerate the glance. */
+    for (int frame = 0; frame < 30; ++frame) {
+        TEST_ASSERT_FALSE(wolf_player_state_update_face(&player, threshold_seconds / 60.0f));
+        TEST_ASSERT_EQUAL_UINT8(initial_wait, player.face_wait_ticks);
+    }
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, (float)initial_wait + 0.25f, player.face_ticks);
+
+    /* The original comparison is strict: the face changes only after the threshold. */
+    TEST_ASSERT_TRUE(wolf_player_state_update_face(&player, 0.01f));
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, player.face_ticks);
+    TEST_ASSERT_TRUE(player.face_frame < 3u);
+}
+
+void test_player_state_face_wait_is_reselected_after_each_glance(void)
+{
+    WolfPlayerState player;
+    uint8_t initial_wait;
+    uint32_t initial_random_state;
+
+    wolf_player_state_new_game(&player, 0u);
+    initial_wait = player.face_wait_ticks;
+    initial_random_state = player.random_state;
+
+    while (player.face_ticks <= (float)player.face_wait_ticks) {
+        (void)wolf_player_state_update_face(&player, 1.0f / WOLF_PLAYER_FACE_TICKS_PER_SECOND);
+    }
+
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, player.face_ticks);
+    TEST_ASSERT_TRUE(player.face_frame < 3u);
+    TEST_ASSERT_TRUE(player.random_state != initial_random_state);
+    TEST_ASSERT_TRUE(player.face_wait_ticks <= UINT8_MAX);
+    TEST_ASSERT_TRUE(initial_wait <= UINT8_MAX);
+}
+
 void test_player_state_face_glances_only_ahead_left_or_right(void)
 {
     WolfPlayerState player;
