@@ -1,4 +1,5 @@
 #include "wolfvk/actor_animation.h"
+#include "wolfvk/actor_movement.h"
 
 #include "wolfvk/world.h"
 
@@ -37,6 +38,27 @@ static const ActorFamilyAnimation actor_families[] = {
     {"ss", WOLF_ACTOR_SS, {100, 100, 100, 100}, ACTOR_STATES("ss")},
     {"mut", WOLF_ACTOR_MUTANT, {45, 55, 55, 65}, ACTOR_STATES("mut")}
 };
+
+#define WOLF_ACTOR_TWO_PI 6.28318530717958647692f
+
+static WolfActorDirection direction_from_yaw(float yaw)
+{
+    static const float direction_yaws[8] = {
+        1.57079632679f, 0.78539816339f, 0.0f, -0.78539816339f,
+        -1.57079632679f, -2.35619449019f, 3.14159265359f, 2.35619449019f
+    };
+    WolfActorDirection best = WOLF_ACTOR_DIRECTION_EAST;
+    float smallest_error = WOLF_ACTOR_TWO_PI;
+
+    for (unsigned int direction = 0u; direction < 8u; ++direction) {
+        float error = fabsf(remainderf(yaw - direction_yaws[direction], WOLF_ACTOR_TWO_PI));
+        if (error < smallest_error) {
+            smallest_error = error;
+            best = (WolfActorDirection)direction;
+        }
+    }
+    return best;
+}
 
 static const ActorFamilyAnimation *find_family(const char *subject)
 {
@@ -118,6 +140,13 @@ bool wolf_actor_collection_create(
                 level_origin_z + ((float)object->tile_y + 0.5f) * WOLF_WORLD_TILE_SIZE,
                 object->yaw_radians, starting_health(family, difficulty),
                 family->states, WOLF_ACTOR_FAMILY_STATE_COUNT, initial_state, NULL)) {
+            free(objects);
+            free(created);
+            return false;
+        }
+        if (initial_state != 0u &&
+            !wolf_actor_movement_set_direction(
+                &created[created_count], direction_from_yaw(object->yaw_radians))) {
             free(objects);
             free(created);
             return false;
