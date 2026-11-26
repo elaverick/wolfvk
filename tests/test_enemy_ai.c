@@ -95,7 +95,7 @@ void test_guard_perception_is_blocked_by_walls_and_alerts_after_reaction_delay(v
     TEST_ASSERT_TRUE(actors[0].attack_mode);
     TEST_ASSERT_EQUAL_UINT16(WOLF_GUARD_STATE_CHASE_FIRST, actors[0].state_id);
     TEST_ASSERT_EQUAL_UINT32(1u, events.guard_alerts);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, WOLF_ENEMY_GUARD_BASE_SPEED * 3.0f,
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, WOLF_ACTOR_PATROL_SPEED_WORLD_PER_TIC * 3.0f,
         actors[0].movement_speed_world_per_tic);
 
     wolf_actor_collection_destroy(actors);
