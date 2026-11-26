@@ -35,6 +35,23 @@ if(NOT SDL3_FOUND)
     FetchContent_MakeAvailable(SDL3)
 endif()
 
+# SDL3_mixer provides the engine's positional effect playback. Build it against
+# the same SDL3 source dependency when a system package is not available.
+find_package(SDL3_mixer CONFIG QUIET)
+if(NOT SDL3_mixer_FOUND)
+    set(SDLMIXER_VENDORED ON CACHE BOOL "" FORCE)
+    set(SDLMIXER_SAMPLES OFF CACHE BOOL "" FORCE)
+    set(SDLMIXER_TESTS OFF CACHE BOOL "" FORCE)
+    set(SDLMIXER_INSTALL OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        SDL3_mixer
+        GIT_REPOSITORY https://github.com/libsdl-org/SDL_mixer.git
+        GIT_TAG release-3.2.4
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(SDL3_mixer)
+endif()
+
 add_executable(wolfvk
     src/main.c
     src/camera.c
@@ -66,7 +83,7 @@ add_executable(wolfvk
     src/audio_spatial.c
 )
 target_include_directories(wolfvk PRIVATE include)
-target_link_libraries(wolfvk PRIVATE SDL3::SDL3 Vulkan::Vulkan)
+target_link_libraries(wolfvk PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer Vulkan::Vulkan)
 if(NOT MSVC)
     target_link_libraries(wolfvk PRIVATE m)
 endif()
@@ -183,7 +200,7 @@ if(BUILD_TESTING)
     )
     add_dependencies(wolfvk_tests wolfvk_shaders)
     target_include_directories(wolfvk_tests PRIVATE include src)
-    target_link_libraries(wolfvk_tests PRIVATE SDL3::SDL3 Vulkan::Vulkan unity)
+    target_link_libraries(wolfvk_tests PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer Vulkan::Vulkan unity)
     if(NOT MSVC)
         target_link_libraries(wolfvk_tests PRIVATE m)
     endif()
