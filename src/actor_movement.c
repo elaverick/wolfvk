@@ -45,6 +45,9 @@ bool wolf_actor_movement_set_direction(
     }
     actor->movement_direction = direction;
     actor->movement_enabled = direction != WOLF_ACTOR_DIRECTION_NONE;
+    if (actor->movement_speed_world_per_tic <= 0.0f) {
+        actor->movement_speed_world_per_tic = WOLF_ACTOR_PATROL_SPEED_WORLD_PER_TIC;
+    }
     actor->movement_waiting_for_door = false;
     actor->movement_in_progress = false;
     return true;
@@ -194,7 +197,7 @@ static bool begin_next_tile(
     int target_y;
 
     /* WL_STATE.C SelectPathDir reads the eight ICONARROWS from the current tile. */
-    if (path_marker >= 90u && path_marker <= 97u) {
+    if (actor->movement_follow_path_arrows && path_marker >= 90u && path_marker <= 97u) {
         actor->movement_direction = (WolfActorDirection)(path_marker - 90u);
     }
     target_x = (int)actor->tile_x + direction_x[actor->movement_direction];
@@ -228,11 +231,14 @@ static bool advance_actor(
     float next_z;
     float delta_x;
     float delta_z;
-    float speed = WOLF_ACTOR_PATROL_SPEED_WORLD_PER_TIC;
+    float speed = actor->movement_speed_world_per_tic > 0.0f
+        ? actor->movement_speed_world_per_tic
+        : WOLF_ACTOR_PATROL_SPEED_WORLD_PER_TIC;
 
     if (actor->tile_x >= world->level.width || actor->tile_y >= world->level.height ||
         actor->movement_direction < WOLF_ACTOR_DIRECTION_EAST ||
-        actor->movement_direction > WOLF_ACTOR_DIRECTION_NONE) {
+        actor->movement_direction > WOLF_ACTOR_DIRECTION_NONE ||
+        !isfinite(actor->movement_speed_world_per_tic)) {
         return false;
     }
     if (!actor->movement_enabled || actor->movement_direction == WOLF_ACTOR_DIRECTION_NONE) {
