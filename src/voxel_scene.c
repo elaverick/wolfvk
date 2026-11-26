@@ -231,8 +231,14 @@ bool wolf_voxel_scene_load(
 
                 (void)snprintf(animation_name, sizeof(animation_name), "%s%s",
                     object->subject, actor_animations[animation_index].suffix);
+                uint8_t required_pose_count = actor_animations[animation_index].pose_count;
+
+                if (strcmp(object->subject, "ofc") == 0 &&
+                    strcmp(actor_animations[animation_index].suffix, "_die") == 0) {
+                    required_pose_count = 4u;
+                }
                 for (uint8_t pose_index = 0u;
-                     pose_index < actor_animations[animation_index].pose_count;
+                     pose_index < required_pose_count;
                      ++pose_index) {
                     bool already_present = false;
 
