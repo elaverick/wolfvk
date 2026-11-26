@@ -201,6 +201,64 @@ void test_actor_movement_is_repeatable_for_identical_tic_sequences(void)
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, actor_a.position_z, actor_b.position_z);
 }
 
+void test_actor_movement_follows_original_info_plane_path_arrows(void)
+{
+    WolfLevel level = open_level();
+    WolfWorldState world = {0};
+    WolfActor actor;
+
+    /* ICONARROWS + 2 is north in the original WL6 dirtype ordering. */
+    level.object_tiles[3u * WOLF_LEVEL_PLANE_WIDTH + 4u] = 92u;
+    TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 0u));
+    TEST_ASSERT_TRUE(create_actor(&actor, 1u, 3u, 3u, 1.57079632679f));
+    TEST_ASSERT_TRUE(wolf_actor_movement_set_direction(&actor, WOLF_ACTOR_DIRECTION_EAST));
+    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 40u);
+    TEST_ASSERT_EQUAL_UINT16(4u, actor.tile_x);
+    TEST_ASSERT_EQUAL_UINT16(3u, actor.tile_y);
+    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 40u);
+    TEST_ASSERT_EQUAL_UINT16(4u, actor.tile_x);
+    TEST_ASSERT_EQUAL_UINT16(2u, actor.tile_y);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, actor.yaw_radians);
+}
+
+void test_actor_movement_cannot_cut_diagonal_corners(void)
+{
+    WolfLevel level = open_level();
+    WolfWorldState world = {0};
+    WolfActor actor;
+
+    level.wall_tiles[3u * WOLF_LEVEL_PLANE_WIDTH + 4u] = 1u;
+    TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 0u));
+    TEST_ASSERT_TRUE(create_actor(&actor, 1u, 3u, 3u, 0.78539816339f));
+    TEST_ASSERT_TRUE(wolf_actor_movement_set_direction(
+        &actor, WOLF_ACTOR_DIRECTION_NORTH_EAST));
+    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 50u);
+    TEST_ASSERT_EQUAL_UINT16(3u, actor.tile_x);
+    TEST_ASSERT_EQUAL_UINT16(3u, actor.tile_y);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, world_coordinate(3u, 8u), actor.position_x);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, world_coordinate(3u, 8u), actor.position_z);
+}
+
+void test_actor_movement_respects_the_moving_secret_pushwall_reservation(void)
+{
+    WolfLevel level = open_level();
+    WolfWorldState world = {0};
+    WolfActor actor;
+
+    TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 0u));
+    world.pushwall.active = true;
+    world.pushwall.source_x = 4u;
+    world.pushwall.source_y = 3u;
+    world.pushwall.wall_tile = 1u;
+    world.pushwall.direction_x = 1;
+    world.pushwall.direction_y = 0;
+    TEST_ASSERT_TRUE(create_actor(&actor, 1u, 3u, 3u, 1.57079632679f));
+    TEST_ASSERT_TRUE(wolf_actor_movement_set_direction(&actor, WOLF_ACTOR_DIRECTION_EAST));
+    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 50u);
+    TEST_ASSERT_EQUAL_UINT16(3u, actor.tile_x);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, world_coordinate(3u, 8u), actor.position_x);
+}
+
 void test_actor_movement_rejects_invalid_arguments_and_directions(void)
 {
     WolfActor actor;
