@@ -10,7 +10,6 @@
 
 #define WOLF_ENEMY_TWO_PI 6.28318530717958647692f
 #define WOLF_ENEMY_GUARD_BASE_SPEED WOLF_ACTOR_PATROL_SPEED_WORLD_PER_TIC
-#define WOLF_ENEMY_PLAYER_COLLISION_RADIUS 0.34375f
 #define WOLF_ENEMY_ACTOR_RADIUS 0.20f
 #define WOLF_ENEMY_SHOT_RANGE_TILES 64.0f
 #define WOLF_ENEMY_GUN_AIM_RADIUS_TILES 0.16f
@@ -300,8 +299,7 @@ static int32_t guard_attack_damage(
     int damage;
 
     if (player_is_moving) {
-        hit_chance = (player_can_see_guard ? 160 : 160) -
-            distance * (player_can_see_guard ? 16 : 8);
+        hit_chance = 160 - distance * (player_can_see_guard ? 16 : 8);
     } else {
         hit_chance = 256 - distance * (player_can_see_guard ? 16 : 8);
     }
