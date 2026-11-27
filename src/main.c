@@ -10,6 +10,7 @@
 #include "wolfvk/level_geometry.h"
 #include "wolfvk/level_objects.h"
 #include "wolfvk/player_controller.h"
+#include "wolfvk/player_death.h"
 #include "wolfvk/screen_layout.h"
 #include "wolfvk/status_bar.h"
 #include "wolfvk/vga_graphics.h"
@@ -524,6 +525,9 @@ int main(int argc, char *argv[])
     WolfSimulationClock actor_clock = {0.0};
     WolfWeaponScene weapon_scene = {0};
     WolfWeaponState weapon_state;
+    WolfPlayerDeath player_death = {0};
+    float death_killer_x = 0.0f;
+    float death_killer_z = 0.0f;
     WolfAudio audio = {0};
     bool audio_available = false;
     StatusBarDisplay status_bar = {0};
@@ -783,10 +787,11 @@ int main(int argc, char *argv[])
             WolfAudioWorldSnapshot audio_world_before;
 
             wolf_audio_world_snapshot_capture(&world, &audio_world_before);
-            if (!wolf_world_state_update(
+            if (player_death.phase == WOLF_PLAYER_DEATH_ACTIVE &&
+                (!wolf_world_state_update(
                     &world, delta_seconds, camera.position[0], camera.position[2],
                     &dynamic_geometry_changed) ||
-                !wolf_player_update(&camera, input, &world, delta_seconds)) {
+                 !wolf_player_update(&camera, input, &world, delta_seconds))) {
                 fprintf(stderr, "Player, door or pushwall update failed.\n");
                 running = 0;
             }
@@ -797,8 +802,9 @@ int main(int argc, char *argv[])
              * from causing an unbounded catch-up loop.
              */
             {
-                uint32_t actor_tics = wolf_simulation_clock_advance(
-                    &actor_clock, (double)delta_seconds);
+                uint32_t actor_tics = player_death.phase == WOLF_PLAYER_DEATH_ACTIVE
+                    ? wolf_simulation_clock_advance(&actor_clock, (double)delta_seconds)
+                    : 0u;
 
                 for (uint32_t tic = 0u; tic < actor_tics && running; ++tic) {
                     WolfEnemyAIEvents enemy_events;
@@ -822,6 +828,20 @@ int main(int argc, char *argv[])
                         fprintf(stderr, "Enemy AI, actor movement or state update failed.\\n");
                         running = 0;
                     }
+                    if (enemy_events.player_killed &&
+                        wolf_player_death_begin(&player_death)) {
+                        death_killer_x = enemy_events.killer_position_x;
+                        death_killer_z = enemy_events.killer_position_z;
+                        camera.yaw_radians = atan2f(
+                            death_killer_x - camera.position[0],
+                            -(death_killer_z - camera.position[2]));
+                        weapon_state.firing = false;
+                        weapon_state.attack_frame = 0u;
+                        if (audio_available) {
+                            (void)wolf_audio_play(&audio, "PLAYERDEATHSND",
+                                (WolfAudioVector3){camera.position[0], camera.position[1], camera.position[2]});
+                        }
+                    }
                     if (audio_available) {
                         play_enemy_audio_events(&audio, &enemy_events);
                     }
@@ -838,10 +858,11 @@ int main(int argc, char *argv[])
             {
                 WolfBonusType collected_bonuses[9];
                 size_t collected_bonus_count = 0u;
-                bool collected = wolf_world_state_collect_bonuses_with_events(
-                    &world, camera.position[0], camera.position[2], camera.yaw_radians,
-                    collected_bonuses, sizeof(collected_bonuses) / sizeof(collected_bonuses[0]),
-                    &collected_bonus_count);
+                bool collected = player_death.phase == WOLF_PLAYER_DEATH_ACTIVE &&
+                    wolf_world_state_collect_bonuses_with_events(
+                        &world, camera.position[0], camera.position[2], camera.yaw_radians,
+                        collected_bonuses, sizeof(collected_bonuses) / sizeof(collected_bonuses[0]),
+                        &collected_bonus_count);
 
                 if (collected &&
                     !update_model_instances(
