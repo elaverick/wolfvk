@@ -413,6 +413,20 @@ bool vulkan_renderer_set_status_bar(
     return vulkan_renderer_status_bar_set(renderer, rgba_pixels, border_rgba);
 }
 
+/* Clamp the damage palette effect before the next frame records its fragment push constant. */
+void vulkan_renderer_set_damage_flash(VulkanRenderer *renderer, float intensity)
+{
+    if (renderer == NULL) {
+        return;
+    }
+    if (intensity < 0.0f) {
+        intensity = 0.0f;
+    } else if (intensity > 1.0f) {
+        intensity = 1.0f;
+    }
+    renderer->damage_flash_intensity = intensity;
+}
+
 /* Store the latest camera matrix for the next submitted frame without rebuilding the pipeline. */
 bool vulkan_renderer_set_view_projection(
     VulkanRenderer *renderer,
