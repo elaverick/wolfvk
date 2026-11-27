@@ -102,10 +102,12 @@ jobs:
           and marked secret pushwalls; locked doors require their matching key.
           The four voxel weapons are anchored to the player's view and use the original
           six-tic attack animation timing. Each shot uses a bullet, and the knife comes
-          out when they run out; shots do no damage yet. Walk towards keys, health,
-          ammunition, weapons and treasure to pick them up; you start with the knife and
-          pistol, and 1-4 select only weapons you have found. Actors remain in their
-          spawn poses; enemy AI is follow-on work.
+          out when they run out. Player shots and knife strikes can damage guards,
+          officers, SS soldiers and mutants; kills award score and can drop ammunition.
+          The four enemy families use shared 70 Hz perception and pursuit with their
+          original family-specific attack, pain and death sequences. Walk towards keys,
+          health, ammunition, weapons and treasure to pick them up; you start with the
+          knife and pistol, and 1-4 select only weapons you have found.
           The original status bar is drawn at a whole-number scale below the view;
           integer scaling of the 3D scene remains a follow-on step.
           '@
