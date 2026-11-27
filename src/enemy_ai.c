@@ -755,10 +755,16 @@ static void drop_enemy_item(
     WolfWorldState *world,
     uint16_t item_marker)
 {
-    int centre_x = (int)actor->tile_x;
-    int centre_y = (int)actor->tile_y;
+    /*
+     * KillActor in WL_STATE.C recalculates tilex/tiley from the actor's
+     * current world position before dropping an item. WolfVK's tile_x/y
+     * fields reserve the next destination as soon as movement begins, so
+     * they can be one tile ahead of the actor's visible position.
+     */
+    int centre_x = (int)floorf(map_x(world, actor->position_x));
+    int centre_y = (int)floorf(map_y(world, actor->position_z));
 
-    /* DropItem first tries the actor tile, then searches its surrounding 3x3 cells. */
+    /* DropItem first tries the actor's physical tile, then searches its surrounding 3x3 cells. */
     for (int radius = 0; radius <= 1; ++radius) {
         for (int y = centre_y - radius; y <= centre_y + radius; ++y) {
             for (int x = centre_x - radius; x <= centre_x + radius; ++x) {
