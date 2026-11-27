@@ -391,6 +391,12 @@ bool vulkan_renderer_set_weapon_pose(
 }
 
 /* Upload the original indexed wall pages before any frame references textured geometry. */
+/* Hide the view model during the player's death animation. */
+void vulkan_renderer_hide_weapon(VulkanRenderer *renderer)
+{
+    vulkan_renderer_weapon_hide(renderer);
+}
+
 bool vulkan_renderer_set_wall_textures(
     VulkanRenderer *renderer,
     const uint8_t *rgba_pages,
