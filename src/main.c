@@ -459,6 +459,11 @@ static void play_enemy_audio_events(
         (void)wolf_audio_play(audio, "SSFIRESND",
             (WolfAudioVector3){events->ss_shot_source_x, WOLF_WORLD_EYE_HEIGHT, events->ss_shot_source_z});
     }
+    /* Mutants use the ordinary Nazi gunfire cue and remain silent on first sighting. */
+    if (events->mutant_shots > 0u) {
+        (void)wolf_audio_play(audio, "NAZIFIRESND",
+            (WolfAudioVector3){events->mutant_shot_source_x, WOLF_WORLD_EYE_HEIGHT, events->mutant_shot_source_z});
+    }
     if (events->guard_deaths > 0u) {
         (void)wolf_audio_play(audio, "DEATHSCREAM1SND",
             (WolfAudioVector3){events->guard_death_source_x, WOLF_WORLD_EYE_HEIGHT, events->guard_death_source_z});
@@ -470,6 +475,10 @@ static void play_enemy_audio_events(
     if (events->ss_deaths > 0u) {
         (void)wolf_audio_play(audio, "LEBENSND",
             (WolfAudioVector3){events->ss_death_source_x, WOLF_WORLD_EYE_HEIGHT, events->ss_death_source_z});
+    }
+    if (events->mutant_deaths > 0u) {
+        (void)wolf_audio_play(audio, "DEATHSCREAM1SND",
+            (WolfAudioVector3){events->mutant_death_source_x, WOLF_WORLD_EYE_HEIGHT, events->mutant_death_source_z});
     }
 }
 
