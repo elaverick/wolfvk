@@ -807,7 +807,8 @@ int main(int argc, char *argv[])
                     ? wolf_simulation_clock_advance(&actor_clock, (double)delta_seconds)
                     : 0u;
 
-                for (uint32_t tic = 0u; tic < actor_tics && running; ++tic) {
+                for (uint32_t tic = 0u; tic < actor_tics && running &&
+                     player_death.phase == WOLF_PLAYER_DEATH_ACTIVE; ++tic) {
                     WolfEnemyAIEvents enemy_events;
                     bool player_is_moving =
                         wolf_input_key_down(input, SDL_SCANCODE_W) ||
@@ -899,6 +900,8 @@ int main(int argc, char *argv[])
                 float death_progress;
 
                 wolf_player_death_update(&player_death, &world.player, delta_seconds);
+                /* Do not let a held fire button become a fresh restart press. */
+                weapon_state.fire_was_down = fire_down;
                 death_progress = player_death.elapsed_seconds / 1.35f;
                 if (death_progress > 1.0f) {
                     death_progress = 1.0f;
