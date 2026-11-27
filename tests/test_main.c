@@ -192,6 +192,7 @@ void test_level_object_block_flags_match_original_wl6_statinfo(void);
 void test_level_objects_reject_invalid_arguments(void);
 void test_voxel_scene_meshes_each_shared_pose_once(void);
 void test_voxel_scene_preloads_officer_and_ss_combat_poses(void);
+void test_voxel_scene_preloads_all_four_mutant_shots_and_death_poses(void);
 void test_voxel_scene_preloads_and_selects_runtime_actor_walk_poses(void);
 void test_voxel_scene_marks_missing_files_and_poses_unavailable(void);
 void test_voxel_scene_places_models_on_their_tiles(void);
@@ -388,6 +389,7 @@ int main(void)
     RUN_TEST(test_voxel_scene_meshes_each_shared_pose_once);
     RUN_TEST(test_voxel_scene_preloads_and_selects_runtime_actor_walk_poses);
     RUN_TEST(test_voxel_scene_preloads_officer_and_ss_combat_poses);
+    RUN_TEST(test_voxel_scene_preloads_all_four_mutant_shots_and_death_poses);
     RUN_TEST(test_voxel_scene_marks_missing_files_and_poses_unavailable);
     RUN_TEST(test_voxel_scene_places_models_on_their_tiles);
     RUN_TEST(test_voxel_scene_rejects_invalid_arguments);
