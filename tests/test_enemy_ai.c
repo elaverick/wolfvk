@@ -572,7 +572,7 @@ void test_mutant_alerts_at_original_chase_speed_and_fires_on_both_action_frames(
     float player_x = tile_centre(2u, 8u);
     float player_z = tile_centre(4u, 8u);
 
-    TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 216u));
+    TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 218u));
     actors[0].health = 1000;
     advance_until_alert(actors, actor_count, &world, player_x, player_z, &events);
     TEST_ASSERT_TRUE(actors[0].attack_mode);
