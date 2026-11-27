@@ -1254,10 +1254,6 @@ static bool record_command_buffer(
     vkCmdPushConstants(
         command_buffer, renderer->pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT,
         0, (uint32_t)sizeof(renderer->view_projection), renderer->view_projection);
-    vkCmdPushConstants(
-        command_buffer, renderer->pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT,
-        (uint32_t)sizeof(renderer->view_projection), sizeof(renderer->damage_flash_intensity),
-        &renderer->damage_flash_intensity);
 
     if (renderer->index_count > 0u) {
         vkCmdBindVertexBuffers(
@@ -1282,6 +1278,38 @@ static bool record_command_buffer(
         vkCmdClearAttachments(command_buffer, 1u, &clear_depth, 1u, &clear_rect);
         vulkan_renderer_weapon_record(renderer, command_buffer);
     }
+
+    if (renderer->death_fizzle_progress > 0.0f &&
+        renderer->death_fizzle_pipeline != VK_NULL_HANDLE) {
+        uint32_t pixel_size = layout.view.width / WOLF_ORIGINAL_SCREEN_WIDTH;
+
+        if (pixel_size == 0u) {
+            pixel_size = 1u;
+        }
+
+        /*
+         * Re-run a fullscreen pass over only the 3D view. The shader discards
+         * unrevealed blocks, exposing the red destination in the original
+         * game's pseudo-random fizzle order while leaving the status strip
+         * untouched.
+         */
+        vkCmdSetViewport(command_buffer, 0u, 1u, &view_viewport);
+        vkCmdSetScissor(command_buffer, 0u, 1u, &view_scissor);
+        vkCmdBindPipeline(
+            command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->death_fizzle_pipeline);
+        vkCmdPushConstants(
+            command_buffer, renderer->pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT,
+            (uint32_t)sizeof(renderer->view_projection),
+            (uint32_t)sizeof(renderer->death_fizzle_progress),
+            &renderer->death_fizzle_progress);
+        vkCmdPushConstants(
+            command_buffer, renderer->pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT,
+            (uint32_t)sizeof(renderer->view_projection) +
+                (uint32_t)sizeof(renderer->death_fizzle_progress),
+            (uint32_t)sizeof(pixel_size), &pixel_size);
+        vkCmdDraw(command_buffer, 3u, 1u, 0u, 0u);
+    }
+
     vulkan_renderer_status_bar_record_draw(renderer, command_buffer, &layout);
     vkCmdEndRenderPass(command_buffer);
 
