@@ -26,6 +26,7 @@ struct VulkanRenderer {
     VkPipelineLayout pipeline_layout;
     VkPipeline graphics_pipeline;
     VkPipeline weapon_pipeline;
+    VkPipeline death_fizzle_pipeline;
     VkFramebuffer *framebuffers;
 
     VkImage depth_image;
@@ -50,7 +51,7 @@ struct VulkanRenderer {
     uint32_t quad_count;
     VkDeviceSize vertex_buffer_size;
     float view_projection[16];
-    float damage_flash_intensity;
+    float death_fizzle_progress;
 
     /* Voxel models live in their own buffers so animating doors never re-copies them. */
     VkBuffer model_vertex_buffer;
