@@ -170,7 +170,6 @@ void test_actor_inside_doorway_reopens_a_closing_door(void)
 
     TEST_ASSERT_EQUAL(WOLF_DOOR_OPENING, world.doors[0].action);
     TEST_ASSERT_TRUE(actor.movement_in_progress);
-    wolf_actor_collection_destroy(NULL);
 }
 
 void test_actor_movement_prevents_actor_overlap_and_reserves_destination_tiles(void)
