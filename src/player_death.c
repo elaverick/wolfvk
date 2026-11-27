@@ -68,6 +68,7 @@ void wolf_player_death_prepare_restart(WolfPlayerDeath *death, WolfPlayerState *
     player->health = WOLF_PLAYER_MAX_HEALTH;
     player->ammo = WOLF_PLAYER_START_AMMO;
     player->keys = 0u;
+    player->treasure_count = 0u;
     player->weapon = WOLF_WEAPON_PISTOL;
     player->best_weapon = WOLF_WEAPON_PISTOL;
     player->chosen_weapon = WOLF_WEAPON_PISTOL;
