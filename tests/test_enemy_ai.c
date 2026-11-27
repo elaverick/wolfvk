@@ -517,3 +517,134 @@ void test_ss_attack_uses_original_two_thirds_effective_distance(void)
     wolf_actor_collection_destroy(officer);
     wolf_actor_collection_destroy(ss);
 }
+
+
+void test_mutant_uses_original_two_shot_state_chain_and_animation_timing(void)
+{
+    WolfWorldState world = {0};
+    WolfActor *actors = NULL;
+    uint32_t actor_count = 0u;
+
+    TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 216u));
+    TEST_ASSERT_EQUAL_UINT32(1u, actor_count);
+    TEST_ASSERT_EQUAL(WOLF_ACTOR_MUTANT, actors[0].family);
+    TEST_ASSERT_EQUAL_UINT16(WOLF_MUTANT_STATE_STAND, actors[0].state_id);
+    TEST_ASSERT_EQUAL_INT32(65, actors[0].health);
+
+    TEST_ASSERT_TRUE(wolf_actor_collection_set_state(
+        &actors[0], WOLF_MUTANT_STATE_SHOOT_FIRST));
+    TEST_ASSERT_EQUAL_STRING("mut_shoot", actors[0].animation);
+    TEST_ASSERT_EQUAL_UINT8(0u, actors[0].pose);
+    TEST_ASSERT_EQUAL_UINT16(6u, actors[0].state_tics_remaining);
+    for (uint32_t tic = 0u; tic < 6u; ++tic) {
+        TEST_ASSERT_TRUE(wolf_actor_collection_update_tic(actors, actor_count));
+    }
+    TEST_ASSERT_EQUAL_UINT16(14u, actors[0].state_id);
+    TEST_ASSERT_EQUAL_UINT8(1u, actors[0].pose);
+    TEST_ASSERT_EQUAL_UINT16(20u, actors[0].state_tics_remaining);
+
+    for (uint32_t tic = 0u; tic < 20u; ++tic) {
+        TEST_ASSERT_TRUE(wolf_actor_collection_update_tic(actors, actor_count));
+    }
+    TEST_ASSERT_EQUAL_UINT16(WOLF_MUTANT_STATE_SHOOT_ACTION_2, actors[0].state_id);
+    TEST_ASSERT_EQUAL_UINT8(2u, actors[0].pose);
+    TEST_ASSERT_EQUAL_UINT16(10u, actors[0].state_tics_remaining);
+    for (uint32_t tic = 0u; tic < 10u; ++tic) {
+        TEST_ASSERT_TRUE(wolf_actor_collection_update_tic(actors, actor_count));
+    }
+    TEST_ASSERT_EQUAL_UINT16(16u, actors[0].state_id);
+    TEST_ASSERT_EQUAL_UINT8(3u, actors[0].pose);
+    TEST_ASSERT_EQUAL_UINT16(20u, actors[0].state_tics_remaining);
+    for (uint32_t tic = 0u; tic < 20u; ++tic) {
+        TEST_ASSERT_TRUE(wolf_actor_collection_update_tic(actors, actor_count));
+    }
+    TEST_ASSERT_EQUAL_UINT16(WOLF_MUTANT_STATE_CHASE_FIRST, actors[0].state_id);
+
+    wolf_actor_collection_destroy(actors);
+}
+
+void test_mutant_alerts_at_original_chase_speed_and_fires_on_both_action_frames(void)
+{
+    WolfWorldState world = {0};
+    WolfActor *actors = NULL;
+    uint32_t actor_count = 0u;
+    WolfEnemyAIEvents events = {0};
+    float player_x = tile_centre(2u, 8u);
+    float player_z = tile_centre(4u, 8u);
+
+    TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 216u));
+    actors[0].health = 1000;
+    advance_until_alert(actors, actor_count, &world, player_x, player_z, &events);
+    TEST_ASSERT_TRUE(actors[0].attack_mode);
+    TEST_ASSERT_EQUAL_UINT16(WOLF_MUTANT_STATE_CHASE_FIRST, actors[0].state_id);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f,
+        WOLF_ACTOR_PATROL_SPEED_WORLD_PER_TIC * 3.0f,
+        actors[0].movement_speed_world_per_tic);
+
+    TEST_ASSERT_TRUE(wolf_actor_collection_set_state(
+        &actors[0], WOLF_MUTANT_STATE_SHOOT_ACTION_1));
+    TEST_ASSERT_TRUE(wolf_enemy_ai_update_tic(
+        actors, actor_count, &world, player_x, player_z,
+        1.57079632679f, WOLF_DIFFICULTY_HARD, false, false, &events));
+    TEST_ASSERT_EQUAL_UINT32(1u, events.mutant_shots);
+    TEST_ASSERT_EQUAL_UINT32(0u, events.guard_shots);
+    TEST_ASSERT_EQUAL_UINT32(0u, events.ss_shots);
+
+    TEST_ASSERT_TRUE(wolf_actor_collection_set_state(
+        &actors[0], WOLF_MUTANT_STATE_SHOOT_ACTION_2));
+    TEST_ASSERT_TRUE(wolf_enemy_ai_update_tic(
+        actors, actor_count, &world, player_x, player_z,
+        1.57079632679f, WOLF_DIFFICULTY_HARD, false, false, &events));
+    TEST_ASSERT_EQUAL_UINT32(1u, events.mutant_shots);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, actors[0].position_x, events.mutant_shot_source_x);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, actors[0].position_z, events.mutant_shot_source_z);
+
+    wolf_actor_collection_destroy(actors);
+}
+
+void test_mutant_damage_uses_original_pain_death_score_and_ammunition_drop(void)
+{
+    WolfWorldState pain_world = {0};
+    WolfWorldState death_world = {0};
+    WolfActor *pain_actor = NULL;
+    WolfActor *dead_actor = NULL;
+    uint32_t pain_count = 0u;
+    uint32_t dead_count = 0u;
+    WolfEnemyAIEvents events = {0};
+    float player_x = tile_centre(2u, 8u);
+    float player_z = tile_centre(4u, 8u);
+    size_t actor_tile = 4u * WOLF_LEVEL_PLANE_WIDTH + 4u;
+
+    TEST_ASSERT_TRUE(create_guard_world(&pain_world, &pain_actor, &pain_count, 216u));
+    pain_actor[0].health = 1000;
+    pain_actor[0].ai_random_state = 12288u;
+    TEST_ASSERT_TRUE(wolf_enemy_ai_player_attack(
+        pain_actor, pain_count, &pain_world, player_x, player_z,
+        1.57079632679f, WOLF_WEAPON_PISTOL, &events));
+    TEST_ASSERT_TRUE(pain_actor[0].attack_mode);
+    TEST_ASSERT_EQUAL_INT32(902, pain_actor[0].health);
+    TEST_ASSERT_EQUAL_UINT16(WOLF_MUTANT_STATE_PAIN_LAST, pain_actor[0].state_id);
+
+    TEST_ASSERT_TRUE(create_guard_world(&death_world, &dead_actor, &dead_count, 216u));
+    dead_actor[0].health = 1;
+    dead_actor[0].attack_mode = true;
+    dead_actor[0].ai_random_state = 12288u;
+    TEST_ASSERT_TRUE(wolf_enemy_ai_player_attack(
+        dead_actor, dead_count, &death_world, player_x, player_z,
+        1.57079632679f, WOLF_WEAPON_PISTOL, &events));
+    TEST_ASSERT_FALSE(dead_actor[0].shootable);
+    TEST_ASSERT_EQUAL_UINT16(WOLF_MUTANT_STATE_DIE_FIRST, dead_actor[0].state_id);
+    TEST_ASSERT_EQUAL_INT32(700, death_world.player.score);
+    TEST_ASSERT_EQUAL_UINT32(1u, events.mutant_deaths);
+    TEST_ASSERT_EQUAL_UINT16(WOLF_LEVEL_STATIC_EXTRA_CLIP,
+        death_world.level.object_tiles[actor_tile]);
+
+    for (uint32_t tic = 0u; tic < 28u; ++tic) {
+        TEST_ASSERT_TRUE(wolf_actor_collection_update_tic(dead_actor, dead_count));
+    }
+    TEST_ASSERT_EQUAL_UINT16(WOLF_MUTANT_STATE_DEAD, dead_actor[0].state_id);
+    TEST_ASSERT_TRUE(dead_actor[0].active);
+
+    wolf_actor_collection_destroy(pain_actor);
+    wolf_actor_collection_destroy(dead_actor);
+}
