@@ -2,7 +2,7 @@
 
 #include "wolfvk/player_death.h"
 
-void test_player_death_starts_once_and_fades_the_red_flash(void)
+void test_player_death_fizzles_to_solid_red_and_holds_until_restart(void)
 {
     WolfPlayerDeath death = {0};
     WolfPlayerState player;
@@ -11,11 +11,21 @@ void test_player_death_starts_once_and_fades_the_red_flash(void)
     TEST_ASSERT_TRUE(wolf_player_death_begin(&death));
     TEST_ASSERT_FALSE(wolf_player_death_begin(&death));
     TEST_ASSERT_EQUAL_INT(WOLF_PLAYER_DEATH_ANIMATING, death.phase);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, death.red_flash);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, death.fizzle_progress);
 
     wolf_player_death_update(&death, &player, 0.5f);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.6296f, death.red_flash);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.5f, death.fizzle_progress);
+    TEST_ASSERT_EQUAL_INT(WOLF_PLAYER_DEATH_ANIMATING, death.phase);
     TEST_ASSERT_EQUAL_INT32(3, player.lives);
+
+    wolf_player_death_update(&death, &player, 0.6f);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, death.fizzle_progress);
+    TEST_ASSERT_EQUAL_INT(WOLF_PLAYER_DEATH_ANIMATING, death.phase);
+
+    wolf_player_death_update(&death, &player, 0.25f);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, death.fizzle_progress);
+    TEST_ASSERT_EQUAL_INT(WOLF_PLAYER_DEATH_WAITING_FOR_FIRE, death.phase);
+    TEST_ASSERT_EQUAL_INT32(2, player.lives);
 }
 
 void test_player_death_deducts_one_life_then_waits_for_fire(void)
