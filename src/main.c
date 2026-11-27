@@ -477,7 +477,7 @@ static void play_enemy_audio_events(
             (WolfAudioVector3){events->ss_death_source_x, WOLF_WORLD_EYE_HEIGHT, events->ss_death_source_z});
     }
     if (events->mutant_deaths > 0u) {
-        (void)wolf_audio_play(audio, "DEATHSCREAM1SND",
+        (void)wolf_audio_play(audio, "AHHHGSND",
             (WolfAudioVector3){events->mutant_death_source_x, WOLF_WORLD_EYE_HEIGHT, events->mutant_death_source_z});
     }
 }
