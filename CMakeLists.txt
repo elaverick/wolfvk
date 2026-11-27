@@ -95,6 +95,7 @@ add_executable(wolfvk
     src/weapon.c
     src/vulkan_renderer_weapon.c
     src/player_state.c
+    src/player_death.c
     src/screen_layout.c
     src/vga_graphics.c
     src/status_bar.c
@@ -193,6 +194,7 @@ if(BUILD_TESTING)
         tests/test_weapon.c
         tests/test_vga_graphics.c
         tests/test_player_state.c
+        tests/test_player_death.c
         tests/test_status_bar.c
         tests/test_bonus_items.c
         tests/test_audio_spatial.c
@@ -224,6 +226,7 @@ if(BUILD_TESTING)
         src/weapon.c
         src/vulkan_renderer_weapon.c
         src/player_state.c
+        src/player_death.c
         src/screen_layout.c
         src/vga_graphics.c
         src/status_bar.c
