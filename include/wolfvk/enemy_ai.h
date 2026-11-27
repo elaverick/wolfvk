@@ -17,6 +17,9 @@ typedef struct WolfEnemyAIEvents {
     uint32_t officer_shots;
     uint32_t ss_shots;
     uint32_t mutant_shots;
+    bool player_killed;
+    float killer_position_x;
+    float killer_position_z;
     uint32_t guard_deaths;
     uint32_t officer_deaths;
     uint32_t ss_deaths;
