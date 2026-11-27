@@ -35,12 +35,12 @@ typedef struct WolfEnemyProfile {
     int32_t score_value;
 } WolfEnemyProfile;
 
-/* Only the original guard, officer and SS families are enabled through C4. */
+/* Family profiles preserve the original state ranges, shot frames and chase speeds. */
 static bool enemy_profile_for_family(
     WolfActorFamily family,
     WolfEnemyProfile *profile)
 {
-    static const WolfEnemyProfile profiles[3] = {
+    static const WolfEnemyProfile profiles[WOLF_ACTOR_FAMILY_COUNT] = {
         {
             7u, 12u, 13u, 15u, 16u, 18u, 20u, 21u,
             {14u, 0u, 0u, 0u}, 1u, 3.0f, false, 100
@@ -52,10 +52,18 @@ static bool enemy_profile_for_family(
         {
             7u, 12u, 13u, 21u, 22u, 24u, 26u, 27u,
             {14u, 16u, 18u, 20u}, 4u, 4.0f, true, 500
+        },
+        {
+            WOLF_MUTANT_STATE_CHASE_FIRST, WOLF_MUTANT_STATE_CHASE_LAST,
+            WOLF_MUTANT_STATE_SHOOT_FIRST, WOLF_MUTANT_STATE_SHOOT_LAST,
+            WOLF_MUTANT_STATE_PAIN_FIRST, WOLF_MUTANT_STATE_DIE_FIRST,
+            WOLF_MUTANT_STATE_DIE_LAST, WOLF_MUTANT_STATE_DEAD,
+            {WOLF_MUTANT_STATE_SHOOT_ACTION_1, WOLF_MUTANT_STATE_SHOOT_ACTION_2, 0u, 0u},
+            2u, 3.0f, false, 700
         }
     };
 
-    if (profile == NULL || family < WOLF_ACTOR_GUARD || family > WOLF_ACTOR_SS) {
+    if (profile == NULL || family < WOLF_ACTOR_GUARD || family >= WOLF_ACTOR_FAMILY_COUNT) {
         return false;
     }
     *profile = profiles[(size_t)family];
@@ -680,6 +688,11 @@ static void enemy_shoot_player(
             events->ss_shot_source_x = actor->position_x;
             events->ss_shot_source_z = actor->position_z;
             break;
+        case WOLF_ACTOR_MUTANT:
+            ++events->mutant_shots;
+            events->mutant_shot_source_x = actor->position_x;
+            events->mutant_shot_source_z = actor->position_z;
+            break;
         default:
             break;
         }
@@ -808,6 +821,11 @@ static bool damage_enemy(
                 ++events->ss_deaths;
                 events->ss_death_source_x = actor->position_x;
                 events->ss_death_source_z = actor->position_z;
+                break;
+            case WOLF_ACTOR_MUTANT:
+                ++events->mutant_deaths;
+                events->mutant_death_source_x = actor->position_x;
+                events->mutant_death_source_z = actor->position_z;
                 break;
             default:
                 break;
