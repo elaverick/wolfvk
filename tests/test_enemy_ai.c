@@ -574,6 +574,7 @@ void test_mutant_alerts_at_original_chase_speed_and_fires_on_both_action_frames(
 
     TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 218u));
     actors[0].health = 1000;
+    world.player.health = 100;
     advance_until_alert(actors, actor_count, &world, player_x, player_z, &events);
     TEST_ASSERT_TRUE(actors[0].attack_mode);
     TEST_ASSERT_EQUAL_UINT16(WOLF_MUTANT_STATE_CHASE_FIRST, actors[0].state_id);
@@ -581,12 +582,14 @@ void test_mutant_alerts_at_original_chase_speed_and_fires_on_both_action_frames(
         WOLF_ACTOR_PATROL_SPEED_WORLD_PER_TIC * 3.0f,
         actors[0].movement_speed_world_per_tic);
 
+    actors[0].ai_random_state = 12288u;
     TEST_ASSERT_TRUE(wolf_actor_collection_set_state(
         &actors[0], WOLF_MUTANT_STATE_SHOOT_ACTION_1));
     TEST_ASSERT_TRUE(wolf_enemy_ai_update_tic(
         actors, actor_count, &world, player_x, player_z,
         1.57079632679f, WOLF_DIFFICULTY_HARD, false, false, &events));
     TEST_ASSERT_EQUAL_UINT32(1u, events.mutant_shots);
+    TEST_ASSERT_EQUAL_INT32(84, world.player.health);
     TEST_ASSERT_EQUAL_UINT32(0u, events.guard_shots);
     TEST_ASSERT_EQUAL_UINT32(0u, events.ss_shots);
 
@@ -596,6 +599,7 @@ void test_mutant_alerts_at_original_chase_speed_and_fires_on_both_action_frames(
         actors, actor_count, &world, player_x, player_z,
         1.57079632679f, WOLF_DIFFICULTY_HARD, false, false, &events));
     TEST_ASSERT_EQUAL_UINT32(1u, events.mutant_shots);
+    TEST_ASSERT_EQUAL_INT32(59, world.player.health);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, actors[0].position_x, events.mutant_shot_source_x);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, actors[0].position_z, events.mutant_shot_source_z);
 
