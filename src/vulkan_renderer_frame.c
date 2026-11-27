@@ -870,7 +870,7 @@ static bool create_death_fizzle_pipeline(VulkanRenderer *renderer)
     vkDestroyShaderModule(renderer->device, fragment_shader, NULL);
     vkDestroyShaderModule(renderer->device, vertex_shader, NULL);
     if (result != VK_SUCCESS) {
-        fprintf(stderr, "Vulkan death fizzle pipeline creation failed (%d).\\n", result);
+        fprintf(stderr, "Vulkan death fizzle pipeline creation failed (%d).\n", result);
         return false;
     }
 
