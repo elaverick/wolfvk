@@ -972,9 +972,12 @@ int main(int argc, char *argv[])
                 weapon_state.fire_was_down = fire_down;
                 vulkan_renderer_hide_weapon(renderer);
             } else {
-                /* A new game or a restarted level always uses the standing eye position. */
+                /*
+                 * Keep the normal standing eye height, but preserve camera pitch:
+                 * wolf_player_update applies vertical mouse-look to this value.
+                 * Pitch is reset explicitly when a level is restarted after death.
+                 */
                 camera.position[1] = WOLF_WORLD_EYE_HEIGHT;
-                camera.pitch_radians = 0.0f;
             }
             vulkan_renderer_set_damage_flash(renderer, player_death.red_flash);
             /*
