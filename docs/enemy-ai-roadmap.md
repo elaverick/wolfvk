@@ -6,7 +6,7 @@
 
 **Implementation language and platform:** C17, Windows, SDL3 and Vulkan. Do not introduce C++.
 
-**Status:** C0–C4 are implemented and verified by the full Windows CI workflow. Guards, officers and SS soldiers now use the shared perception, pursuit and combat system. C5 mutant AI and C6 integration/fidelity remain.
+**Status:** C0–C5 are implemented and verified by the full Windows CI workflow. Guards, officers, SS soldiers and mutants now use the shared perception, pursuit and combat system with family-specific state chains. C6 four-family integration and in-game fidelity remain.
 
 ## Goal
 
@@ -143,15 +143,25 @@ Each checkpoint is a commit boundary. Keep the changes small enough that a check
 
 ### Stage 5 — Mutants
 
-- [ ] Add mutant-specific state definitions and animation sequences.
-- [ ] Reproduce the mutant's original attack behaviour and timing; do not assume it is identical to the guard/officer/SS attack implementation.
-- [ ] Reuse shared perception, pursuit, movement, collision, damage and death systems wherever the original behaviour permits.
-- [ ] Add tests for mutant-specific transitions, attack timing, damage, pain and death.
-- [ ] Verify mutant voxel poses and audio integration.
+- [x] Add mutant-specific state definitions and animation sequences.
+- [x] Reproduce the mutant's original attack behaviour and timing; do not assume it is identical to the guard/officer/SS attack implementation.
+- [x] Reuse shared perception, pursuit, movement, collision, damage and death systems wherever the original behaviour permits.
+- [x] Add tests for mutant-specific transitions, attack timing, damage, pain and death.
+- [x] Verify mutant voxel poses and audio integration.
 
-**Checkpoint C5 — mutants:** Commit the mutant implementation and its tests independently.
+**C5 behaviour recorded from the original source:**
 
-**Acceptance:** Mutants are fully playable and exhibit their original distinctive behaviour, while the other three enemy families continue to pass their tests.
+- Difficulty-dependent health: 45 / 55 / 55 / 65.
+- Chase speed: 3× the patrol speed.
+- Shooting states: four states with durations 6 / 20 / 10 / 20 tics; the first and third states fire.
+- Pain: two 10-tic states.
+- Death: four 7-tic states followed by a persistent dead pose.
+- Kill score: 700 points; death drops an ammunition clip.
+- Mutant gunfire uses `NAZIFIRESND`; the standard mutant death cue is `AHHHGSND`. Mutants do not play a first-sighting alert vocalisation.
+
+**Checkpoint C5 — mutants:** Committed in `329735992f770f3be7e66cccb17647fb82c87ee7`. The complete Windows workflow passed in [Actions run 45959113831](https://github.com/elaverick/WolfVK/actions/runs/45959113831), including the Windows x64 build, 239 Unity tests, Windows/Linux tool builds and tests, and packaged demo.
+
+**Acceptance:** C5 code, state/attack timing, damage, pain/death, voxel pose preload and audio integration are implemented and regression-tested. The three earlier enemy families continue to pass. Real-map encounter comparison and end-to-end in-game verification remain in C6.
 
 ### Stage 6 — Four-enemy integration and fidelity pass
 
