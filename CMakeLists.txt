@@ -110,7 +110,9 @@ if(NOT MSVC)
     target_link_libraries(wolfvk PRIVATE m)
 endif()
 
-set(SHADER_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
+# Keep compiler outputs separate from the runtime asset directory. The deployment target below
+# copies these generated files beside each executable on every build.
+set(SHADER_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/compiled_shaders")
 set(VERTEX_SHADER_SPIRV "${SHADER_OUTPUT_DIR}/triangle.vert.spv")
 set(FRAGMENT_SHADER_SPIRV "${SHADER_OUTPUT_DIR}/triangle.frag.spv")
 set(FIZZLE_VERTEX_SHADER_SPIRV "${SHADER_OUTPUT_DIR}/fizzle.vert.spv")
@@ -162,19 +164,6 @@ add_custom_target(wolfvk_shaders
         "${FRAGMENT_SHADER_SPIRV}"
         "${FIZZLE_VERTEX_SHADER_SPIRV}"
         "${FIZZLE_FRAGMENT_SHADER_SPIRV}"
-)
-add_dependencies(wolfvk wolfvk_shaders)
-add_custom_command(TARGET wolfvk POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:wolfvk>/shaders"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${VERTEX_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk>/shaders/triangle.vert.spv"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${FRAGMENT_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk>/shaders/triangle.frag.spv"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${FIZZLE_VERTEX_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk>/shaders/fizzle.vert.spv"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${FIZZLE_FRAGMENT_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk>/shaders/fizzle.frag.spv"
-    VERBATIM
 )
 if(MSVC)
     target_compile_options(wolfvk PRIVATE /W4 /WX)
@@ -264,20 +253,11 @@ if(BUILD_TESTING)
         src/audio_spatial.c
         src/audio_events.c
     )
-    add_dependencies(wolfvk_tests wolfvk_shaders)
     target_include_directories(wolfvk_tests PRIVATE include src)
     target_link_libraries(wolfvk_tests PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer Vulkan::Vulkan unity)
     if(NOT MSVC)
         target_link_libraries(wolfvk_tests PRIVATE m)
     endif()
-    add_custom_command(TARGET wolfvk_tests POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:wolfvk_tests>/shaders"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${VERTEX_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk_tests>/shaders/triangle.vert.spv"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${FRAGMENT_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk_tests>/shaders/triangle.frag.spv"
-        VERBATIM
-    )
     if(MSVC)
         target_compile_options(wolfvk_tests PRIVATE /W4 /WX)
     else()
@@ -286,4 +266,40 @@ if(BUILD_TESTING)
 
     add_test(NAME wolfvk_unit_tests COMMAND wolfvk_tests)
     set_tests_properties(wolfvk_unit_tests PROPERTIES TIMEOUT 30)
+endif()
+# Deploy every runtime shader on each build, even when the executable itself is already up to date.
+# The game and renderer integration tests load SPIR-V relative to their own executable paths.
+set(WOLFVK_SHADER_DEPLOY_COMMANDS
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:wolfvk>/shaders"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${VERTEX_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk>/shaders/triangle.vert.spv"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${FRAGMENT_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk>/shaders/triangle.frag.spv"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${FIZZLE_VERTEX_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk>/shaders/fizzle.vert.spv"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${FIZZLE_FRAGMENT_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk>/shaders/fizzle.frag.spv"
+)
+if(TARGET wolfvk_tests)
+    list(APPEND WOLFVK_SHADER_DEPLOY_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:wolfvk_tests>/shaders"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${VERTEX_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk_tests>/shaders/triangle.vert.spv"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${FRAGMENT_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk_tests>/shaders/triangle.frag.spv"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${FIZZLE_VERTEX_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk_tests>/shaders/fizzle.vert.spv"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${FIZZLE_FRAGMENT_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk_tests>/shaders/fizzle.frag.spv"
+    )
+endif()
+
+add_custom_target(wolfvk_shader_assets
+    ${WOLFVK_SHADER_DEPLOY_COMMANDS}
+    VERBATIM
+)
+add_dependencies(wolfvk_shader_assets wolfvk_shaders)
+add_dependencies(wolfvk wolfvk_shader_assets)
+if(TARGET wolfvk_tests)
+    add_dependencies(wolfvk_tests wolfvk_shader_assets)
 endif()
