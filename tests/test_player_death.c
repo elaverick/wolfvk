@@ -37,6 +37,7 @@ void test_player_death_deducts_one_life_then_waits_for_fire(void)
     TEST_ASSERT_TRUE(wolf_player_death_begin(&death));
     wolf_player_death_update(&death, &player, 2.0f);
     TEST_ASSERT_EQUAL_INT32(2, player.lives);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, death.fizzle_progress);
     TEST_ASSERT_EQUAL_INT(WOLF_PLAYER_DEATH_WAITING_FOR_FIRE, death.phase);
     TEST_ASSERT_TRUE(death.life_deducted);
     wolf_player_death_update(&death, &player, 2.0f);
@@ -55,6 +56,7 @@ void test_player_death_allows_the_original_final_life_but_defers_game_over(void)
     wolf_player_death_update(&death, &player, 2.0f);
     TEST_ASSERT_EQUAL_INT32(-1, player.lives);
     TEST_ASSERT_EQUAL_INT(WOLF_PLAYER_DEATH_NO_LIVES, death.phase);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, death.fizzle_progress);
     TEST_ASSERT_FALSE(wolf_player_death_fire_pressed(&death, &player));
 }
 
@@ -79,6 +81,7 @@ void test_player_death_restart_restores_original_loadout_and_preserves_totals(vo
     wolf_player_death_prepare_restart(&death, &player);
 
     TEST_ASSERT_EQUAL_INT(WOLF_PLAYER_DEATH_ACTIVE, death.phase);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, death.fizzle_progress);
     TEST_ASSERT_EQUAL_INT32(100, player.health);
     TEST_ASSERT_EQUAL_INT32(8, player.ammo);
     TEST_ASSERT_EQUAL_INT32(1, player.lives);
