@@ -71,11 +71,11 @@ The player can move with **WASD** and look with the mouse. Movement is relative 
 
 The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the working directory. Those original game files are not included in this repository or demo package; copy them from your own WL6 installation. The user-supplied retail map files were inspected: all 60 playable maps decode as 64×64 maps, each with exactly one valid player-start marker on a floor cell. Level 1 starts at tile (29, 57), facing east.
 
-**Demo:** C5 mutant AI is committed on `main` at `329735992f770f3be7e66cccb17647fb82c87ee7`. The complete Windows workflow passed in [Actions run 45959113831](https://github.com/elaverick/WolfVK/actions/runs/45959113831): Windows x64 build, all 239 Unity tests, Windows/Linux tool builds and tests, and the packaged Windows demo. C6 remains the four-family integration and in-game fidelity pass. Copy the three original WL6 files above beside the executable, run the voxelizer with `--assets assets\voxels` as the instructions describe, and then launch the game.
+**Demo:** C5 is complete. C6's automated four-family corridor/door integration and 30/144 FPS determinism tests are committed on `main`; the full Windows workflow passed all 241 Unity tests and packaged the latest demo in [Actions run 45963446803](https://github.com/elaverick/WolfVK/actions/runs/45963446803). Real-map encounter comparison and final in-game verification remain. Copy the three original WL6 files above beside the executable, run the voxelizer with `--assets assets\\voxels` as the instructions describe, and then launch the game.
 
 ## Automated tests
 
-The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The game test harness currently registers 239 Unity test cases (including the SwiftShader-backed renderer integration tests, audio-event coverage, actor-state and animation tests, fixed-tic clock tests, and the C2 movement/collision regression tests). The standalone audio-extractor harness adds 13 tests for VSWAP page reconstruction, malformed archives, original DigiMap aliases, AdLib chunk parsing and OPL synthesis. The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; C5 adds three mutant AI regression cases and one mutant voxel-pose preload case; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, pickups add seven, audio event mappings add five, firing adds five, the actor-state foundation adds eight, and the fixed-tic simulation clock adds six:
+The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedicated C unit-testing framework. The game test harness currently registers 241 Unity test cases (including the SwiftShader-backed renderer integration tests, audio spatial/event coverage, actor-state and animation tests, fixed-tic clock tests, C2 movement/collision regression tests, and two C6 mixed-family integration tests). The standalone audio-extractor harness adds 13 tests for VSWAP page reconstruction, malformed archives, original DigiMap aliases, AdLib chunk parsing and OPL synthesis. The weapon milestone adds eleven weapon controller, camera-transform and VOX-loader cases; C5 adds three mutant AI regression cases and one mutant voxel-pose preload case; C6 adds a shared-door four-family encounter test and a 30/144 FPS fixed-tic determinism test; the mouse-button tracking test adds one more to the previous 128-case suite, the status bar adds eighteen VGA decoder, player-state, status bar, layout and renderer cases, pickups add seven, audio event mappings add five, firing adds five, the actor-state foundation adds eight, and the fixed-tic simulation clock adds six:
 
 - 3 SDL3 window and event tests
 - 4 camera projection tests
@@ -94,6 +94,7 @@ The test harness uses [Unity](https://github.com/ThrowTheSwitch/Unity), a dedica
 - 7 pickup tests: the statinfo bonus table, the original grab range, every item's effect, items left on the floor when not needed, weapon choice limited to weapons picked up, and reporting the exact item collected for audio
 - 6 status bar tests: every number, key, face and weapon position, the face for each damage level, palette expansion and the integer-scale layout
 - 18 world-state tests for doors, keys, secret pushwalls and their original timing/material behaviour
+- 5 audio spatialisation tests for listener-relative direction, rotation, vertical offset and invalid inputs
 - 5 audio event tests for door transitions, secret-wall starts, and original pickup-to-sound mapping
 - 18 Vulkan selection and renderer tests, including the SwiftShader-backed frame submission test, the model transform, a frame that draws placed model instances, and frames that draw and re-upload the status bar
 - 18 weapon tests: original 70 Hz/six-tic attack timing, automatic repeat, weapon selection, pose selection, view-model anchoring, all 20 named VOX poses and partial-asset fallback, plus firing: the shot frame, one bullet per shot, a fresh press per pistol or knife attack, machine gun and chaingun fire rates, and the switch to the knife when the bullets run out
@@ -105,27 +106,27 @@ CTest runs the suite in Windows CI. The world-state tests cover original door or
 
 | Feature | Status |
 |---|---|
-| Windows x64 build | C5 passed the complete Windows build, 239-test suite and packaged-demo workflow in [Actions run 45959113831](https://github.com/elaverick/WolfVK/actions/runs/45959113831) |
+| Windows x64 build | C6 code/test checkpoint passed the complete Windows build, all 241 Unity tests, both tool suites and packaged-demo workflow in [Actions run 45963446803](https://github.com/elaverick/WolfVK/actions/runs/45963446803) |
 | SDL3 window and input | Implemented and tested; left mouse button state covered by a regression test |
-| Vulkan renderer and swapchain | Implemented and verified by the complete Windows CI workflow in [Actions run 45959113831](https://github.com/elaverick/WolfVK/actions/runs/45959113831) |
+| Vulkan renderer and swapchain | Implemented and verified by the complete Windows CI workflow in [Actions run 45963446803](https://github.com/elaverick/WolfVK/actions/runs/45963446803) |
 | Indexed quad rendering and depth testing | Implemented and tested |
 | Original WL6 map decoding and level selection | Implemented; 60 real WL6 maps inspected and synthetic original-format fixtures tested |
 | Original VSWAP wall-page decoding | Implemented; 64×64 indexed pages converted to RGBA through the original palette |
 | Original wall textures on exposed faces | Implemented; horizontal/vertical page pairing and directional UV mapping tested |
 | WASD movement and mouse-look | Implemented; movement uses swept boundary resolution and wall sliding |
 | Sliding doors, keys and secret pushwalls | Implemented; original WL6 tile/marker mappings and timings have regression coverage |
-| Voxel actors and static objects | All four humanoid families use independent runtime actors, original 70 Hz animation poses and eight-way movement. Shared perception, pursuit and combat are implemented with family-specific state chains, damage, pain, death, score, drops and audio; C6 integration/fidelity remains |
+| Voxel actors and static objects | All four humanoid families use independent runtime actors, original 70 Hz animation poses and eight-way movement. Shared perception, pursuit and combat are implemented with family-specific state chains, damage, pain, death, score, drops and audio. C6's synthetic shared-door encounter and 30/144 FPS determinism tests pass; real WL6 encounter comparison and in-game acceptance remain |
 | Spatial audio | SDL3_mixer voice pool and listener-relative spatialisation cover weapons, pickups, doors, secret walls, failed Use actions and all four enemy families, including mutant gunfire and its original death cue. Runtime playback requires the 87 named OGG effects in `assets/sounds`, generated from the original WL6 archives |
 | WL6 audio extractor | Renders all 87 AdLib effects through the pinned Opal OPL3 emulator and exports VSWAP digitised samples over matching names. Thirteen standalone tests cover decoding, DigiMap names and synthesis. Uses FFmpeg/libvorbis; the 27 music tracks remain outstanding |
 | Player voxel weapons | Implemented: knife, pistol, machine gun and chaingun, camera-anchored overlay, original attack timing, keyboard/mouse/gamepad firing. Shots and knife strikes resolve against all four humanoid enemy families, with damage, pain/death, score and ammunition drops |
 | Sprite voxelizer | Builds and passes its Windows and Linux test suites in [Actions run 45959113831](https://github.com/elaverick/WolfVK/actions/runs/45959113831) |
-| Windows demo | Latest package includes the game, voxelizer, audio extractor and shaders; packaged successfully in [Actions run 45959113831](https://github.com/elaverick/WolfVK/actions/runs/45959113831) |
+| Windows demo | Latest package includes the game, voxelizer, audio extractor and shaders; packaged successfully in [Actions run 45963446803](https://github.com/elaverick/WolfVK/actions/runs/45963446803) |
 | Original status bar | Implemented: decoded from VGAGRAPH, drawn at an integer scale below the view and driven by the player state; original 70 Hz random face-glance timing covered by regression tests |
 | Integer texture scaling | Next milestone; not implemented for the 3D scene (the status bar already uses integer scaling) |
 
 [![Windows build and tests](https://github.com/elaverick/WolfVK/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/elaverick/WolfVK/actions/workflows/build.yml)
 
-C1–C5 are committed on `main`. The C5 checkpoint `329735992f770f3be7e66cccb17647fb82c87ee7` passed the complete Windows workflow in [Actions run 45959113831](https://github.com/elaverick/WolfVK/actions/runs/45959113831), including all 239 Unity tests, both standalone tool builds and test suites, and the packaged Windows demo. C6 four-family integration and fidelity verification remains.
+C1–C5 are complete on `main`. C6's automated integration slice is committed and verified: all 241 Unity tests, Windows/Linux tool builds and tests, and the packaged Windows demo passed in [Actions run 45963446803](https://github.com/elaverick/WolfVK/actions/runs/45963446803). The shared-door test exercises all four families together, and the fixed-tic regression compares 30 FPS and 144 FPS schedules. C6 remains open only for representative retail WL6 in-game validation and direct encounter comparison; the user must run and verify the packaged Windows build.
 
 ## Build locally
 
