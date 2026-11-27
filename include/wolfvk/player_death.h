@@ -15,7 +15,7 @@ typedef enum WolfPlayerDeathPhase {
 typedef struct WolfPlayerDeath {
     WolfPlayerDeathPhase phase;
     float elapsed_seconds;
-    float red_flash;
+    float fizzle_progress; /* 0 = clear view, 1 = fully revealed red view */
     bool life_deducted;
 } WolfPlayerDeath;
 
