@@ -25,6 +25,7 @@
 
 #include "game_palette.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -893,11 +894,83 @@ int main(int argc, char *argv[])
                 wolf_input_key_down(input, SDL_SCANCODE_LCTRL) ||
                 wolf_input_gamepad_button_down(input, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER) ||
                 wolf_input_gamepad_axis(input, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) > 0.35f;
+
+            if (player_death.phase == WOLF_PLAYER_DEATH_ANIMATING) {
+                float death_progress;
+
+                wolf_player_death_update(&player_death, &world.player, delta_seconds);
+                death_progress = player_death.elapsed_seconds / 1.35f;
+                if (death_progress > 1.0f) {
+                    death_progress = 1.0f;
+                }
+                /* The original faces the killer; the added view fall gives the death a clear visual finish. */
+                camera.position[1] = WOLF_WORLD_EYE_HEIGHT - 0.85f * death_progress;
+                camera.pitch_radians = -0.75f * death_progress;
+                vulkan_renderer_hide_weapon(renderer);
+            } else if (player_death.phase == WOLF_PLAYER_DEATH_WAITING_FOR_FIRE) {
+                bool fresh_fire_press = fire_down && !weapon_state.fire_was_down;
+
+                weapon_state.fire_was_down = fire_down;
+                vulkan_renderer_hide_weapon(renderer);
+                if (fresh_fire_press) {
+                    WolfPlayerState saved_player = world.player;
+                    uint16_t texture_page_count = world.texture_page_count;
+
+                    /* SetupGameLevel rebuilds the same map; retain only run-wide totals. */
+                    wolf_actor_collection_destroy(actors);
+                    actors = NULL;
+                    actor_count = 0u;
+                    if (!wolf_world_state_init(&world, &level, texture_page_count)) {
+                        fprintf(stderr, "Could not reset the current level after player death.\\n");
+                        running = 0;
+                    } else {
+                        world.player = saved_player;
+                        wolf_player_death_prepare_restart(&player_death, &world.player);
+                        if (!build_scene_geometry(
+                                &world, environment_quads, &scene_quads, &scene_quad_count,
+                                &base_quad_count, &dynamic_quad_count, &player_start) ||
+                            !vulkan_renderer_set_quads(renderer, scene_quads, scene_quad_count) ||
+                            !wolf_actor_collection_create(
+                                &world.level, options.difficulty, &actors, &actor_count) ||
+                            !update_model_instances(
+                                renderer, &world, options.difficulty, &voxel_scene,
+                                actors, actor_count)) {
+                            fprintf(stderr, "Could not rebuild the current level after player death.\\n");
+                            running = 0;
+                        } else {
+                            geometry_revision = wolf_world_state_geometry_revision(&world);
+                            camera.position[0] =
+                                -((float)level.width * WOLF_WORLD_TILE_SIZE) * 0.5f +
+                                ((float)player_start.tile_x + 0.5f) * WOLF_WORLD_TILE_SIZE;
+                            camera.position[1] = WOLF_WORLD_EYE_HEIGHT;
+                            camera.position[2] =
+                                -((float)level.height * WOLF_WORLD_TILE_SIZE) * 0.5f +
+                                ((float)player_start.tile_y + 0.5f) * WOLF_WORLD_TILE_SIZE;
+                            camera.yaw_radians = player_start.yaw_radians;
+                            camera.pitch_radians = 0.0f;
+                            wolf_weapon_state_initialize(&weapon_state);
+                            wolf_simulation_clock_reset(&actor_clock);
+                            player_noise_pending = false;
+                            use_was_down = false;
+                            dynamic_geometry_changed = false;
+                            (void)refresh_status_bar(renderer, &status_bar, &world.player);
+                        }
+                    }
+                }
+            } else if (player_death.phase == WOLF_PLAYER_DEATH_NO_LIVES) {
+                weapon_state.fire_was_down = fire_down;
+                vulkan_renderer_hide_weapon(renderer);
+            } else {
+                /* A new game or a restarted level always uses the standing eye position. */
+                camera.position[1] = WOLF_WORLD_EYE_HEIGHT;
+                camera.pitch_radians = 0.0f;
+            }
             /*
              * Keys 1-4 choose among the weapons picked up so far, as CheckWeaponChange
              * does. As in the original, the weapon cannot change part-way through an attack.
              */
             for (int weapon = WOLF_WEAPON_KNIFE;
+                 player_death.phase == WOLF_PLAYER_DEATH_ACTIVE &&
                  !weapon_state.firing && weapon <= WOLF_WEAPON_CHAINGUN;
                  ++weapon) {
                 if (wolf_input_key_down(input, (SDL_Scancode)(SDL_SCANCODE_1 + weapon))) {
@@ -909,7 +982,8 @@ int main(int argc, char *argv[])
              * The player state owns the weapon in hand; picking up a better gun
              * also switches to it. The view model follows whichever is held.
              */
-            if (weapon_state.selected != world.player.weapon) {
+            if (player_death.phase == WOLF_PLAYER_DEATH_ACTIVE &&
+                weapon_state.selected != world.player.weapon) {
                 (void)wolf_weapon_state_select(&weapon_state, world.player.weapon);
             }
             /*
@@ -920,7 +994,9 @@ int main(int argc, char *argv[])
                 WolfWeaponAttackEvents attack_events;
                 WolfWeaponType attacking_weapon = weapon_state.selected;
 
-                if (!wolf_weapon_state_update(
+                memset(&attack_events, 0, sizeof(attack_events));
+                if (player_death.phase == WOLF_PLAYER_DEATH_ACTIVE &&
+                    !wolf_weapon_state_update(
                         &weapon_state, &world.player, fire_down, delta_seconds, &attack_events)) {
                     fprintf(stderr, "Weapon attack update failed.\n");
                     running = 0;
@@ -978,9 +1054,10 @@ int main(int argc, char *argv[])
                 }
             }
             {
-                const WolfWeaponPose *pose = weapon_assets_uploaded
-                    ? wolf_weapon_scene_current_pose(&weapon_scene, &weapon_state)
-                    : NULL;
+                const WolfWeaponPose *pose =
+                    player_death.phase == WOLF_PLAYER_DEATH_ACTIVE && weapon_assets_uploaded
+                        ? wolf_weapon_scene_current_pose(&weapon_scene, &weapon_state)
+                        : NULL;
                 int drawable_width = 0;
                 int drawable_height = 0;
                 WolfScreenLayout layout;
@@ -1007,7 +1084,8 @@ int main(int argc, char *argv[])
             use_down = wolf_input_key_down(input, SDL_SCANCODE_E) ||
                 wolf_input_key_down(input, SDL_SCANCODE_SPACE) ||
                 wolf_input_gamepad_button_down(input, SDL_GAMEPAD_BUTTON_NORTH);
-            if (use_down && (!use_was_down ||
+            if (player_death.phase == WOLF_PLAYER_DEATH_ACTIVE &&
+                use_down && (!use_was_down ||
                 wolf_world_state_has_secret_wall_ahead(
                     &world, camera.position[0], camera.position[2],
                     camera.yaw_radians))) {
@@ -1027,7 +1105,9 @@ int main(int argc, char *argv[])
                 play_world_audio_events(&audio, &audio_world_before, &world);
             }
 
-            (void)wolf_player_state_update_face(&world.player, delta_seconds);
+            if (player_death.phase == WOLF_PLAYER_DEATH_ACTIVE) {
+                (void)wolf_player_state_update_face(&world.player, delta_seconds);
+            }
             if (running && !refresh_status_bar(renderer, &status_bar, &world.player)) {
                 fprintf(stderr, "Could not update the status bar.\n");
                 running = 0;
