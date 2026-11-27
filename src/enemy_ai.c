@@ -110,6 +110,25 @@ static uint8_t actor_random_byte(WolfActor *actor)
     return (uint8_t)(value >> 24);
 }
 
+/*
+ * WL_STATE.C SightPlayer uses a distinct random reaction window per class:
+ * guards 1..64 tics, officers 2 tics, and SS/mutants 1..43 tics.
+ */
+static uint16_t enemy_reaction_delay(WolfActor *actor)
+{
+    uint8_t random_value;
+
+    if (actor->family == WOLF_ACTOR_OFFICER) {
+        return 2u;
+    }
+
+    random_value = actor_random_byte(actor);
+    if (actor->family == WOLF_ACTOR_GUARD) {
+        return (uint16_t)(1u + random_value / 4u);
+    }
+    return (uint16_t)(1u + random_value / 6u);
+}
+
 static float map_x(const WolfWorldState *world, float world_x)
 {
     return world_x / WOLF_WORLD_TILE_SIZE + (float)world->level.width * 0.5f;
@@ -987,8 +1006,7 @@ bool wolf_enemy_ai_update_tic(
                 has_line_of_sight(world, actor->position_x, actor->position_z,
                     player_world_x, player_world_z)) ||
                 actor_can_see_player(actor, world, player_world_x, player_world_z)) {
-                actor->ai_reaction_tics =
-                    (uint16_t)(1u + actor_random_byte(actor) / 4u);
+                actor->ai_reaction_tics = enemy_reaction_delay(actor);
             }
         } else {
             if (enemy_state_is_shooting(&profile, actor->state_id)) {
