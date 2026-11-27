@@ -968,6 +968,7 @@ int main(int argc, char *argv[])
                 camera.position[1] = WOLF_WORLD_EYE_HEIGHT;
                 camera.pitch_radians = 0.0f;
             }
+            vulkan_renderer_set_damage_flash(renderer, player_death.red_flash);
             /*
              * Keys 1-4 choose among the weapons picked up so far, as CheckWeaponChange
              * does. As in the original, the weapon cannot change part-way through an attack.
