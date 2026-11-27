@@ -100,3 +100,11 @@ void vulkan_renderer_weapon_destroy(VulkanRenderer *renderer)
     renderer->weapon_quad_count = 0u;
     renderer->weapon_draw_quad_count = 0u;
 }
+
+/* Hide the current weapon without discarding its uploaded meshes or pose data. */
+void vulkan_renderer_weapon_hide(VulkanRenderer *renderer)
+{
+    if (renderer != NULL) {
+        renderer->weapon_draw_quad_count = 0u;
+    }
+}
