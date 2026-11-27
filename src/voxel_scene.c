@@ -186,10 +186,10 @@ bool wolf_voxel_scene_load(
     }
 
     /*
-     * Each humanoid may need four walking poses in addition to its spawn
-     * pose. Reserve five entries per object; duplicates are collapsed below.
+     * A mutant has the largest pose set: four walk, four shoot, two pain,
+     * four death and one dead pose. Reserve that worst case per object;
+     * the spawn pose and shared animation poses are deduplicated below.
      */
-    /* Mutants need 15 distinct entries: four walk, four shoot, two pain, four die and one dead pose. */
     if ((size_t)object_count > SIZE_MAX / 15u / sizeof(*scene->poses)) {
         return false;
     }
