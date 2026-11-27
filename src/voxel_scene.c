@@ -233,7 +233,8 @@ bool wolf_voxel_scene_load(
                     object->subject, actor_animations[animation_index].suffix);
                 uint8_t required_pose_count = actor_animations[animation_index].pose_count;
 
-                if (strcmp(object->subject, "ofc") == 0 &&
+                if ((strcmp(object->subject, "ofc") == 0 ||
+                     strcmp(object->subject, "mut") == 0) &&
                     strcmp(actor_animations[animation_index].suffix, "_die") == 0) {
                     required_pose_count = 4u;
                 }
