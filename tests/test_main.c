@@ -16,6 +16,7 @@ void test_guard_chase_uses_player_direction_and_moves_at_alert_speed(void);
 void test_guard_shooting_state_damages_player_and_emits_fire_event(void);
 void test_lethal_enemy_attack_reports_the_killer_position(void);
 void test_player_gunfire_damages_guard_and_death_awards_score_and_drops_clip(void);
+void test_guard_drop_uses_physical_position_when_destination_is_reserved(void);
 void test_player_weapon_cannot_damage_guard_through_a_wall(void);
 void test_guard_line_of_sight_uses_the_sliding_door_aperture(void);
 void test_guard_facing_direction_gates_detection_until_player_is_in_front(void);
@@ -458,6 +459,7 @@ int main(void)
     RUN_TEST(test_guard_shooting_state_damages_player_and_emits_fire_event);
     RUN_TEST(test_lethal_enemy_attack_reports_the_killer_position);
     RUN_TEST(test_player_gunfire_damages_guard_and_death_awards_score_and_drops_clip);
+    RUN_TEST(test_guard_drop_uses_physical_position_when_destination_is_reserved);
     RUN_TEST(test_player_weapon_cannot_damage_guard_through_a_wall);
     RUN_TEST(test_guard_line_of_sight_uses_the_sliding_door_aperture);
     RUN_TEST(test_guard_facing_direction_gates_detection_until_player_is_in_front);
