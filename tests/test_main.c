@@ -250,7 +250,7 @@ void test_weapon_scene_loads_all_twenty_voxelizer_named_poses(void);
 void test_weapon_scene_keeps_available_subjects_when_one_file_is_missing(void);
 void test_weapon_scene_loader_rejects_invalid_arguments(void);
 
-void test_player_death_starts_once_and_fades_the_red_flash(void);
+void test_player_death_fizzles_to_solid_red_and_holds_until_restart(void);
 void test_player_death_deducts_one_life_then_waits_for_fire(void);
 void test_player_death_allows_the_original_final_life_but_defers_game_over(void);
 void test_player_death_restart_restores_original_loadout_and_preserves_totals(void);
@@ -505,7 +505,7 @@ int main(void)
     RUN_TEST(test_simulation_clock_retains_fractional_time_between_frames);
     RUN_TEST(test_simulation_clock_rejects_invalid_time_and_arguments);
     RUN_TEST(test_simulation_clock_reset_discards_fractional_time);
-    RUN_TEST(test_player_death_starts_once_and_fades_the_red_flash);
+    RUN_TEST(test_player_death_fizzles_to_solid_red_and_holds_until_restart);
     RUN_TEST(test_player_death_deducts_one_life_then_waits_for_fire);
     RUN_TEST(test_player_death_allows_the_original_final_life_but_defers_game_over);
     RUN_TEST(test_player_death_restart_restores_original_loadout_and_preserves_totals);
