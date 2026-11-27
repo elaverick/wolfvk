@@ -121,8 +121,8 @@ bool vulkan_renderer_set_view_projection(
     VulkanRenderer *renderer,
     const float view_projection[16]);
 
-/* Apply a subtle red palette shift to the 3D scene during player damage and death. */
-void vulkan_renderer_set_damage_flash(VulkanRenderer *renderer, float intensity);
+/* Progressively reveal the original red fizzle death screen over the 3D view. */
+void vulkan_renderer_set_death_fizzle(VulkanRenderer *renderer, float progress);
 
 /* Submit and present one frame. Returns false on an unrecoverable Vulkan error. */
 bool vulkan_renderer_draw_frame(VulkanRenderer *renderer);
