@@ -703,9 +703,9 @@ static bool create_graphics_pipelines(VulkanRenderer *renderer)
     depth_stencil.depthBoundsTestEnable = VK_FALSE;
     depth_stencil.stencilTestEnable = VK_FALSE;
 
-    view_projection_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    view_projection_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     view_projection_range.offset = 0;
-    view_projection_range.size = (uint32_t)sizeof(renderer->view_projection);
+    view_projection_range.size = (uint32_t)sizeof(renderer->view_projection) + sizeof(float);
 
     layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     layout_info.setLayoutCount = 1u;
@@ -1138,6 +1138,10 @@ static bool record_command_buffer(
     vkCmdPushConstants(
         command_buffer, renderer->pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT,
         0, (uint32_t)sizeof(renderer->view_projection), renderer->view_projection);
+    vkCmdPushConstants(
+        command_buffer, renderer->pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT,
+        (uint32_t)sizeof(renderer->view_projection), sizeof(renderer->damage_flash_intensity),
+        &renderer->damage_flash_intensity);
 
     if (renderer->index_count > 0u) {
         vkCmdBindVertexBuffers(
