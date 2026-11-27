@@ -149,6 +149,34 @@ void test_guard_shooting_state_damages_player_and_emits_fire_event(void)
     wolf_actor_collection_destroy(actors);
 }
 
+
+void test_lethal_enemy_attack_reports_the_killer_position(void)
+{
+    WolfWorldState world = {0};
+    WolfActor *actors = NULL;
+    uint32_t actor_count = 0u;
+    WolfEnemyAIEvents events = {0};
+    float player_x = tile_centre(3u, 8u);
+    float player_z = tile_centre(4u, 8u);
+    bool lethal_attack_reported = false;
+
+    TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 110u));
+    world.player.health = 1;
+    advance_until_alert(actors, actor_count, &world, player_x, player_z, &events);
+    for (uint32_t tic = 0u; tic < 400u && world.player.health > 0; ++tic) {
+        TEST_ASSERT_TRUE(update_one_tic(
+            actors, actor_count, &world, player_x, player_z,
+            1.57079632679f, WOLF_DIFFICULTY_HARD, false, false, &events));
+        lethal_attack_reported = lethal_attack_reported || events.player_killed;
+    }
+    TEST_ASSERT_EQUAL_INT32(0, world.player.health);
+    TEST_ASSERT_TRUE(lethal_attack_reported);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, actors[0].position_x, events.killer_position_x);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, actors[0].position_z, events.killer_position_z);
+
+    wolf_actor_collection_destroy(actors);
+}
+
 void test_player_gunfire_damages_guard_and_death_awards_score_and_drops_clip(void)
 {
     WolfWorldState world = {0};
