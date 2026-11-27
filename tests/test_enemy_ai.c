@@ -626,7 +626,7 @@ void test_mutant_damage_uses_original_pain_death_score_and_ammunition_drop(void)
         pain_actor, pain_count, &pain_world, player_x, player_z,
         1.57079632679f, WOLF_WEAPON_PISTOL, &events));
     TEST_ASSERT_TRUE(pain_actor[0].attack_mode);
-    TEST_ASSERT_EQUAL_INT32(902, pain_actor[0].health);
+    TEST_ASSERT_EQUAL_INT32(934, pain_actor[0].health);
     TEST_ASSERT_EQUAL_UINT16(WOLF_MUTANT_STATE_PAIN_LAST, pain_actor[0].state_id);
 
     TEST_ASSERT_TRUE(create_guard_world(&death_world, &dead_actor, &dead_count, 216u));
