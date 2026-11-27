@@ -64,6 +64,25 @@ typedef enum WolfSSState {
     WOLF_SS_STATE_COUNT = 28u
 } WolfSSState;
 
+/* Mutants use a shorter two-shot attack chain and four-frame death animation. */
+typedef enum WolfMutantState {
+    WOLF_MUTANT_STATE_STAND = 0u,
+    WOLF_MUTANT_STATE_PATROL_FIRST = 1u,
+    WOLF_MUTANT_STATE_PATROL_LAST = 6u,
+    WOLF_MUTANT_STATE_CHASE_FIRST = 7u,
+    WOLF_MUTANT_STATE_CHASE_LAST = 12u,
+    WOLF_MUTANT_STATE_SHOOT_FIRST = 13u,
+    WOLF_MUTANT_STATE_SHOOT_ACTION_1 = 13u,
+    WOLF_MUTANT_STATE_SHOOT_ACTION_2 = 15u,
+    WOLF_MUTANT_STATE_SHOOT_LAST = 16u,
+    WOLF_MUTANT_STATE_PAIN_FIRST = 17u,
+    WOLF_MUTANT_STATE_PAIN_LAST = 18u,
+    WOLF_MUTANT_STATE_DIE_FIRST = 19u,
+    WOLF_MUTANT_STATE_DIE_LAST = 22u,
+    WOLF_MUTANT_STATE_DEAD = 23u,
+    WOLF_MUTANT_STATE_COUNT = 24u
+} WolfMutantState;
+
 #define WOLF_ACTOR_STATE_MAX_COUNT WOLF_SS_STATE_COUNT
 
 typedef enum WolfActorFamily {
