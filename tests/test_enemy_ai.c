@@ -652,3 +652,119 @@ void test_mutant_damage_uses_original_pain_death_score_and_ammunition_drop(void)
     wolf_actor_collection_destroy(pain_actor);
     wolf_actor_collection_destroy(dead_actor);
 }
+
+
+/*
+ * Exercise all four families in one corridor encounter. A closed door blocks
+ * their shared sight trace; opening it lets each family alert, then each
+ * family reaches its own original shot-action state and emits its own event.
+ */
+void test_four_enemy_families_integrate_across_a_shared_door_encounter(void)
+{
+    WolfLevel level = {0};
+    WolfWorldState world = {0};
+    WolfActor *actors = NULL;
+    uint32_t actor_count = 0u;
+    WolfEnemyAIEvents events = {0};
+    uint32_t guard_alerts = 0u;
+    uint32_t officer_alerts = 0u;
+    uint32_t ss_alerts = 0u;
+    WolfActor *guard = NULL;
+    WolfActor *officer = NULL;
+    WolfActor *ss = NULL;
+    WolfActor *mutant = NULL;
+    const float player_x = tile_centre(12u, 14u);
+    const float player_z = tile_centre(4u, 8u);
+
+    level.width = 14u;
+    level.height = 8u;
+    level.wall_tiles[4u * WOLF_LEVEL_PLANE_WIDTH + 9u] = 90u;
+    level.object_tiles[4u * WOLF_LEVEL_PLANE_WIDTH + 1u] = 108u;
+    level.object_tiles[4u * WOLF_LEVEL_PLANE_WIDTH + 3u] = 118u;
+    level.object_tiles[4u * WOLF_LEVEL_PLANE_WIDTH + 5u] = 128u;
+    level.object_tiles[4u * WOLF_LEVEL_PLANE_WIDTH + 7u] = 216u;
+
+    TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 98u));
+    TEST_ASSERT_EQUAL_UINT8(1u, world.door_count);
+    TEST_ASSERT_TRUE(wolf_actor_collection_create(
+        &world.level, WOLF_DIFFICULTY_HARD, &actors, &actor_count));
+    TEST_ASSERT_EQUAL_UINT32(4u, actor_count);
+
+    for (uint32_t index = 0u; index < actor_count; ++index) {
+        actors[index].movement_direction = WOLF_ACTOR_DIRECTION_EAST;
+        switch (actors[index].family) {
+        case WOLF_ACTOR_GUARD:
+            guard = &actors[index];
+            break;
+        case WOLF_ACTOR_OFFICER:
+            officer = &actors[index];
+            break;
+        case WOLF_ACTOR_SS:
+            ss = &actors[index];
+            break;
+        case WOLF_ACTOR_MUTANT:
+            mutant = &actors[index];
+            break;
+        default:
+            break;
+        }
+    }
+
+    TEST_ASSERT_NOT_NULL(guard);
+    TEST_ASSERT_NOT_NULL(officer);
+    TEST_ASSERT_NOT_NULL(ss);
+    TEST_ASSERT_NOT_NULL(mutant);
+    TEST_ASSERT_EQUAL_INT32(25, guard->health);
+    TEST_ASSERT_EQUAL_INT32(50, officer->health);
+    TEST_ASSERT_EQUAL_INT32(100, ss->health);
+    TEST_ASSERT_EQUAL_INT32(65, mutant->health);
+
+    /* A closed door must prevent every family from acquiring line of sight. */
+    for (uint32_t tic = 0u; tic < 80u; ++tic) {
+        TEST_ASSERT_TRUE(wolf_enemy_ai_update_tic(
+            actors, actor_count, &world, player_x, player_z,
+            1.57079632679f, WOLF_DIFFICULTY_HARD, false, false, &events));
+    }
+    TEST_ASSERT_FALSE(guard->attack_mode);
+    TEST_ASSERT_FALSE(officer->attack_mode);
+    TEST_ASSERT_FALSE(ss->attack_mode);
+    TEST_ASSERT_FALSE(mutant->attack_mode);
+
+    /* Opening the shared doorway exposes the same corridor to all four enemies. */
+    world.doors[0].position = WOLF_WORLD_DOOR_OPEN_POSITION;
+    world.doors[0].action = WOLF_DOOR_OPEN;
+    for (uint32_t tic = 0u; tic < 80u; ++tic) {
+        TEST_ASSERT_TRUE(wolf_enemy_ai_update_tic(
+            actors, actor_count, &world, player_x, player_z,
+            1.57079632679f, WOLF_DIFFICULTY_HARD, false, false, &events));
+        guard_alerts += events.guard_alerts;
+        officer_alerts += events.officer_alerts;
+        ss_alerts += events.ss_alerts;
+    }
+    TEST_ASSERT_TRUE(guard->attack_mode);
+    TEST_ASSERT_TRUE(officer->attack_mode);
+    TEST_ASSERT_TRUE(ss->attack_mode);
+    TEST_ASSERT_TRUE(mutant->attack_mode);
+    TEST_ASSERT_EQUAL_UINT32(1u, guard_alerts);
+    TEST_ASSERT_EQUAL_UINT32(1u, officer_alerts);
+    TEST_ASSERT_EQUAL_UINT32(1u, ss_alerts);
+
+    /* Family-specific action frames must coexist in the same actor update. */
+    TEST_ASSERT_TRUE(wolf_actor_collection_set_state(
+        guard, WOLF_GUARD_STATE_SHOOT_ACTION));
+    TEST_ASSERT_TRUE(wolf_actor_collection_set_state(
+        officer, WOLF_OFFICER_STATE_SHOOT_ACTION));
+    TEST_ASSERT_TRUE(wolf_actor_collection_set_state(
+        ss, WOLF_SS_STATE_SHOOT_ACTION_1));
+    TEST_ASSERT_TRUE(wolf_actor_collection_set_state(
+        mutant, WOLF_MUTANT_STATE_SHOOT_ACTION_1));
+    TEST_ASSERT_TRUE(wolf_enemy_ai_update_tic(
+        actors, actor_count, &world, player_x, player_z,
+        1.57079632679f, WOLF_DIFFICULTY_HARD, false, false, &events));
+    TEST_ASSERT_EQUAL_UINT32(1u, events.guard_shots);
+    TEST_ASSERT_EQUAL_UINT32(1u, events.officer_shots);
+    TEST_ASSERT_EQUAL_UINT32(1u, events.ss_shots);
+    TEST_ASSERT_EQUAL_UINT32(1u, events.mutant_shots);
+
+    wolf_actor_collection_destroy(actors);
+}
