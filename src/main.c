@@ -960,7 +960,11 @@ int main(int argc, char *argv[])
                             player_noise_pending = false;
                             use_was_down = false;
                             dynamic_geometry_changed = false;
-                            (void)refresh_status_bar(renderer, &status_bar, &world.player);
+                            wolf_audio_world_snapshot_capture(&world, &audio_world_before);
+                            if (!refresh_status_bar(renderer, &status_bar, &world.player)) {
+                                fprintf(stderr, "Could not refresh the status bar after player death.\\n");
+                                running = 0;
+                            }
                         }
                     }
                 }
