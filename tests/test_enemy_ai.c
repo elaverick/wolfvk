@@ -259,6 +259,42 @@ void test_player_gunfire_damages_guard_and_death_awards_score_and_drops_clip(voi
 }
 
 
+void test_guard_drop_uses_physical_position_when_destination_is_reserved(void)
+{
+    WolfWorldState world = {0};
+    WolfActor *actors = NULL;
+    uint32_t actor_count = 0u;
+    const size_t physical_tile = 4u * WOLF_LEVEL_PLANE_WIDTH + 4u;
+    const size_t reserved_tile = 4u * WOLF_LEVEL_PLANE_WIDTH + 5u;
+    const float player_x = tile_centre(2u, 8u);
+    const float player_z = tile_centre(4u, 8u);
+
+    TEST_ASSERT_TRUE(create_guard_world(&world, &actors, &actor_count, 108u));
+
+    /*
+     * Movement reserves the destination tile before the actor's body has
+     * crossed the tile boundary. Simulate that in-flight state at death.
+     */
+    actors[0].tile_x = 5u;
+    actors[0].position_x = tile_centre(4u, 8u);
+    actors[0].position_z = tile_centre(4u, 8u);
+
+    for (uint32_t shot = 0u; shot < 100u && actors[0].shootable; ++shot) {
+        TEST_ASSERT_TRUE(wolf_enemy_ai_player_attack(
+            actors, actor_count, &world, player_x, player_z,
+            1.57079632679f, WOLF_WEAPON_PISTOL, NULL));
+    }
+
+    TEST_ASSERT_FALSE(actors[0].shootable);
+    TEST_ASSERT_EQUAL_UINT16(
+        WOLF_LEVEL_STATIC_EXTRA_CLIP, world.level.object_tiles[physical_tile]);
+    TEST_ASSERT_NOT_EQUAL(
+        WOLF_LEVEL_STATIC_EXTRA_CLIP, world.level.object_tiles[reserved_tile]);
+
+    wolf_actor_collection_destroy(actors);
+}
+
+
 
 void test_guard_facing_direction_gates_detection_until_player_is_in_front(void)
 {
