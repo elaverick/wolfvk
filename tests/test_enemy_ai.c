@@ -4,6 +4,7 @@
 #include "wolfvk/actor_movement.h"
 #include "wolfvk/enemy_ai.h"
 #include "wolfvk/game_world.h"
+#include "wolfvk/simulation_clock.h"
 #include "wolfvk/world.h"
 
 #include <math.h>
@@ -767,4 +768,125 @@ void test_four_enemy_families_integrate_across_a_shared_door_encounter(void)
     TEST_ASSERT_EQUAL_UINT32(1u, events.mutant_shots);
 
     wolf_actor_collection_destroy(actors);
+}
+
+
+typedef struct MixedEnemySimulationSnapshot {
+    WolfActor actors[4];
+    WolfPlayerState player;
+} MixedEnemySimulationSnapshot;
+
+/* Run the same four-family chase using a render clock at the requested rate. */
+static bool simulate_mixed_enemy_encounter(
+    uint32_t frames_per_second,
+    MixedEnemySimulationSnapshot *snapshot)
+{
+    WolfLevel level = {0};
+    WolfWorldState world = {0};
+    WolfActor *actors = NULL;
+    uint32_t actor_count = 0u;
+    WolfSimulationClock clock = {0};
+    const float player_x = tile_centre(7u, 14u);
+    const float player_z = tile_centre(7u, 14u);
+    uint32_t total_tics = 0u;
+    bool valid = true;
+
+    if (frames_per_second == 0u || snapshot == NULL) {
+        return false;
+    }
+
+    level.width = 14u;
+    level.height = 14u;
+    level.object_tiles[2u * WOLF_LEVEL_PLANE_WIDTH + 7u] = 108u;
+    level.object_tiles[7u * WOLF_LEVEL_PLANE_WIDTH + 12u] = 118u;
+    level.object_tiles[12u * WOLF_LEVEL_PLANE_WIDTH + 7u] = 128u;
+    level.object_tiles[7u * WOLF_LEVEL_PLANE_WIDTH + 2u] = 216u;
+    if (!wolf_world_state_init(&world, &level, 0u) ||
+        !wolf_actor_collection_create(
+            &world.level, WOLF_DIFFICULTY_HARD, &actors, &actor_count) ||
+        actor_count != 4u) {
+        wolf_actor_collection_destroy(actors);
+        return false;
+    }
+
+    for (uint32_t index = 0u; index < actor_count; ++index) {
+        uint16_t chase_state;
+
+        switch (actors[index].family) {
+        case WOLF_ACTOR_GUARD:
+            chase_state = WOLF_GUARD_STATE_CHASE_FIRST;
+            break;
+        case WOLF_ACTOR_OFFICER:
+            chase_state = WOLF_OFFICER_STATE_CHASE_FIRST;
+            break;
+        case WOLF_ACTOR_SS:
+            chase_state = WOLF_SS_STATE_CHASE_FIRST;
+            break;
+        case WOLF_ACTOR_MUTANT:
+            chase_state = WOLF_MUTANT_STATE_CHASE_FIRST;
+            break;
+        default:
+            wolf_actor_collection_destroy(actors);
+            return false;
+        }
+        if (!wolf_actor_collection_set_state(&actors[index], chase_state)) {
+            wolf_actor_collection_destroy(actors);
+            return false;
+        }
+        actors[index].attack_mode = true;
+        actors[index].movement_direction = WOLF_ACTOR_DIRECTION_NONE;
+        actors[index].movement_enabled = false;
+        actors[index].ai_attack_cooldown = 0u;
+    }
+
+    wolf_simulation_clock_reset(&clock);
+    for (uint32_t frame = 0u; frame < frames_per_second * 2u && valid; ++frame) {
+        uint32_t frame_tics = wolf_simulation_clock_advance(
+            &clock, 1.0 / (double)frames_per_second);
+
+        total_tics += frame_tics;
+        for (uint32_t tic = 0u; tic < frame_tics; ++tic) {
+            if (!wolf_enemy_ai_update_tic(
+                    actors, actor_count, &world, player_x, player_z,
+                    0.0f, WOLF_DIFFICULTY_HARD, false, false, NULL) ||
+                !wolf_actor_movement_update_tic(
+                    actors, actor_count, &world, player_x, player_z) ||
+                !wolf_actor_collection_update_tic(actors, actor_count)) {
+                valid = false;
+                break;
+            }
+        }
+    }
+
+    if (valid && total_tics == 140u) {
+        memset(snapshot, 0, sizeof(*snapshot));
+        memcpy(snapshot->actors, actors, sizeof(snapshot->actors));
+        snapshot->player = world.player;
+    } else {
+        valid = false;
+    }
+    wolf_actor_collection_destroy(actors);
+    return valid;
+}
+
+/* AI, movement, combat decisions and animation must consume the same 70 Hz tics at any render rate. */
+void test_four_enemy_families_are_deterministic_at_thirty_and_144_fps(void)
+{
+    MixedEnemySimulationSnapshot thirty_fps = {0};
+    MixedEnemySimulationSnapshot one_hundred_forty_four_fps = {0};
+
+    TEST_ASSERT_TRUE(simulate_mixed_enemy_encounter(30u, &thirty_fps));
+    TEST_ASSERT_TRUE(simulate_mixed_enemy_encounter(
+        144u, &one_hundred_forty_four_fps));
+    TEST_ASSERT_EQUAL_MEMORY(
+        thirty_fps.actors, one_hundred_forty_four_fps.actors,
+        sizeof(thirty_fps.actors));
+    TEST_ASSERT_EQUAL_INT32(
+        thirty_fps.player.health, one_hundred_forty_four_fps.player.health);
+    TEST_ASSERT_EQUAL_INT32(
+        thirty_fps.player.score, one_hundred_forty_four_fps.player.score);
+    TEST_ASSERT_EQUAL_INT32(
+        thirty_fps.player.ammo, one_hundred_forty_four_fps.player.ammo);
+    TEST_ASSERT_EQUAL_INT(
+        thirty_fps.player.weapon, one_hundred_forty_four_fps.player.weapon);
 }
