@@ -668,8 +668,10 @@ static void enemy_shoot_player(
     if (difficulty == WOLF_DIFFICULTY_BABY) {
         damage >>= 2;
     }
-    if (damage > 0) {
-        (void)wolf_player_state_take_damage(&world->player, damage);
+    if (damage > 0 && wolf_player_state_take_damage(&world->player, damage) && events != NULL) {
+        events->player_killed = true;
+        events->killer_position_x = actor->position_x;
+        events->killer_position_z = actor->position_z;
     }
     if (events != NULL) {
         switch (actor->family) {
