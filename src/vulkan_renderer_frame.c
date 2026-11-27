@@ -814,6 +814,7 @@ static bool create_death_fizzle_pipeline(VulkanRenderer *renderer)
     shader_stages[1].module = fragment_shader;
     shader_stages[1].pName = "main";
 
+    vertex_input.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
