@@ -189,10 +189,11 @@ bool wolf_voxel_scene_load(
      * Each humanoid may need four walking poses in addition to its spawn
      * pose. Reserve five entries per object; duplicates are collapsed below.
      */
-    if ((size_t)object_count > SIZE_MAX / 14u / sizeof(*scene->poses)) {
+    /* Mutants need 15 distinct entries: four walk, four shoot, two pain, four die and one dead pose. */
+    if ((size_t)object_count > SIZE_MAX / 15u / sizeof(*scene->poses)) {
         return false;
     }
-    scene->poses = calloc((size_t)object_count * 14u, sizeof(*scene->poses));
+    scene->poses = calloc((size_t)object_count * 15u, sizeof(*scene->poses));
     if (scene->poses == NULL) {
         return false;
     }
