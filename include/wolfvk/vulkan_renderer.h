@@ -93,6 +93,9 @@ bool vulkan_renderer_set_weapon_pose(
     uint32_t quad_count,
     const float view_projection[16]);
 
+/* Suppress the first-person weapon while the player death animation is active. */
+void vulkan_renderer_hide_weapon(VulkanRenderer *renderer);
+
 /* Build the column-major model transform for an instance: turn by its yaw, then move to its position. */
 void vulkan_renderer_model_matrix(const VulkanModelInstance *instance, float matrix[16]);
 
