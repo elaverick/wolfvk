@@ -68,6 +68,22 @@
     {prefix "_dead", 0u, 0u, WOLF_ACTOR_STATE_NONE, NULL, NULL} \
 }
 
+
+#define MUTANT_STATES(prefix) { \
+    ACTOR_BASE_STATES(prefix) \
+    {prefix "_shoot", 0u, 6u, 14u, NULL, NULL}, \
+    {prefix "_shoot", 1u, 20u, 15u, NULL, NULL}, \
+    {prefix "_shoot", 2u, 10u, 16u, NULL, NULL}, \
+    {prefix "_shoot", 3u, 20u, 7u, NULL, NULL}, \
+    {prefix "_pain", 0u, 10u, 7u, NULL, NULL}, \
+    {prefix "_pain", 1u, 10u, 7u, NULL, NULL}, \
+    {prefix "_die", 0u, 7u, 20u, NULL, NULL}, \
+    {prefix "_die", 1u, 7u, 21u, NULL, NULL}, \
+    {prefix "_die", 2u, 7u, 22u, NULL, NULL}, \
+    {prefix "_die", 3u, 7u, 23u, NULL, NULL}, \
+    {prefix "_dead", 0u, 0u, WOLF_ACTOR_STATE_NONE, NULL, NULL} \
+}
+
 typedef struct ActorFamilyAnimation {
     const char *subject;
     WolfActorFamily family;
@@ -81,7 +97,7 @@ static const ActorFamilyAnimation actor_families[] = {
     {"grd", WOLF_ACTOR_GUARD, {25, 25, 25, 25}, WOLF_GUARD_STATE_COUNT, GUARD_STATES("grd")},
     {"ofc", WOLF_ACTOR_OFFICER, {50, 50, 50, 50}, WOLF_OFFICER_STATE_COUNT, OFFICER_STATES("ofc")},
     {"ss", WOLF_ACTOR_SS, {100, 100, 100, 100}, WOLF_SS_STATE_COUNT, SS_STATES("ss")},
-    {"mut", WOLF_ACTOR_MUTANT, {45, 55, 55, 65}, WOLF_GUARD_STATE_COUNT, GUARD_STATES("mut")}
+    {"mut", WOLF_ACTOR_MUTANT, {45, 55, 55, 65}, WOLF_MUTANT_STATE_COUNT, MUTANT_STATES("mut")}
 };
 
 #define WOLF_ACTOR_TWO_PI 6.28318530717958647692f
