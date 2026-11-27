@@ -113,6 +113,8 @@ endif()
 set(SHADER_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
 set(VERTEX_SHADER_SPIRV "${SHADER_OUTPUT_DIR}/triangle.vert.spv")
 set(FRAGMENT_SHADER_SPIRV "${SHADER_OUTPUT_DIR}/triangle.frag.spv")
+set(FIZZLE_VERTEX_SHADER_SPIRV "${SHADER_OUTPUT_DIR}/fizzle.vert.spv")
+set(FIZZLE_FRAGMENT_SHADER_SPIRV "${SHADER_OUTPUT_DIR}/fizzle.frag.spv")
 
 add_custom_command(
     OUTPUT "${VERTEX_SHADER_SPIRV}"
@@ -134,8 +136,32 @@ add_custom_command(
     VERBATIM
 )
 
+add_custom_command(
+    OUTPUT "${FIZZLE_VERTEX_SHADER_SPIRV}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${SHADER_OUTPUT_DIR}"
+    COMMAND ${GLSLC_EXECUTABLE}
+        "${CMAKE_CURRENT_SOURCE_DIR}/shaders/fizzle.vert"
+        -o "${FIZZLE_VERTEX_SHADER_SPIRV}"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/fizzle.vert"
+    VERBATIM
+)
+
+add_custom_command(
+    OUTPUT "${FIZZLE_FRAGMENT_SHADER_SPIRV}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${SHADER_OUTPUT_DIR}"
+    COMMAND ${GLSLC_EXECUTABLE}
+        "${CMAKE_CURRENT_SOURCE_DIR}/shaders/fizzle.frag"
+        -o "${FIZZLE_FRAGMENT_SHADER_SPIRV}"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/fizzle.frag"
+    VERBATIM
+)
+
 add_custom_target(wolfvk_shaders
-    DEPENDS "${VERTEX_SHADER_SPIRV}" "${FRAGMENT_SHADER_SPIRV}"
+    DEPENDS
+        "${VERTEX_SHADER_SPIRV}"
+        "${FRAGMENT_SHADER_SPIRV}"
+        "${FIZZLE_VERTEX_SHADER_SPIRV}"
+        "${FIZZLE_FRAGMENT_SHADER_SPIRV}"
 )
 add_dependencies(wolfvk wolfvk_shaders)
 add_custom_command(TARGET wolfvk POST_BUILD
@@ -144,6 +170,10 @@ add_custom_command(TARGET wolfvk POST_BUILD
         "${VERTEX_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk>/shaders/triangle.vert.spv"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${FRAGMENT_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk>/shaders/triangle.frag.spv"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${FIZZLE_VERTEX_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk>/shaders/fizzle.vert.spv"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${FIZZLE_FRAGMENT_SHADER_SPIRV}" "$<TARGET_FILE_DIR:wolfvk>/shaders/fizzle.frag.spv"
     VERBATIM
 )
 if(MSVC)
