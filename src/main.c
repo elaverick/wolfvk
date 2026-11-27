@@ -952,6 +952,8 @@ int main(int argc, char *argv[])
                             camera.yaw_radians = player_start.yaw_radians;
                             camera.pitch_radians = 0.0f;
                             wolf_weapon_state_initialize(&weapon_state);
+                            /* The press that acknowledged death must not also fire the pistol. */
+                            weapon_state.fire_was_down = true;
                             wolf_simulation_clock_reset(&actor_clock);
                             player_noise_pending = false;
                             use_was_down = false;
