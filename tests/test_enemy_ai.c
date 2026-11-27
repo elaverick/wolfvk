@@ -68,6 +68,49 @@ static void advance_until_alert(
     }
 }
 
+/*
+ * SightPlayer's reaction windows differ by enemy class in the original game.
+ * Trigger perception once and inspect the queued delay before it expires.
+ */
+void test_enemy_reaction_delays_match_original_class_specific_ranges(void)
+{
+    static const struct {
+        uint16_t marker;
+        uint16_t maximum_delay;
+    } cases[] = {
+        {108u, 64u},  /* Guard: 1 + random / 4. */
+        {118u, 2u},   /* Officer: fixed two tics. */
+        {128u, 43u},  /* SS: 1 + random / 6. */
+        {216u, 43u}   /* Mutant: 1 + random / 6. */
+    };
+    const float player_x = tile_centre(3u, 8u);
+    const float player_z = tile_centre(4u, 8u);
+
+    for (size_t index = 0u; index < sizeof(cases) / sizeof(cases[0]); ++index) {
+        WolfWorldState world = {0};
+        WolfActor *actors = NULL;
+        uint32_t actor_count = 0u;
+
+        TEST_ASSERT_TRUE(create_guard_world(
+            &world, &actors, &actor_count, cases[index].marker));
+        TEST_ASSERT_EQUAL_UINT32(1u, actor_count);
+        actors[0].ai_random_state = 0x12345678u;
+
+        TEST_ASSERT_TRUE(wolf_enemy_ai_update_tic(
+            actors, actor_count, &world, player_x, player_z,
+            1.57079632679f, WOLF_DIFFICULTY_HARD, false, false, NULL));
+
+        TEST_ASSERT_FALSE(actors[0].attack_mode);
+        TEST_ASSERT_TRUE(actors[0].ai_reaction_tics >= 1u);
+        TEST_ASSERT_TRUE(actors[0].ai_reaction_tics <= cases[index].maximum_delay);
+        if (cases[index].marker == 118u) {
+            TEST_ASSERT_EQUAL_UINT16(2u, actors[0].ai_reaction_tics);
+        }
+
+        wolf_actor_collection_destroy(actors);
+    }
+}
+
 void test_guard_perception_is_blocked_by_walls_and_alerts_after_reaction_delay(void)
 {
     WolfWorldState world = {0};
