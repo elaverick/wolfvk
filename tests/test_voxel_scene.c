@@ -286,3 +286,45 @@ void test_voxel_scene_preloads_officer_and_ss_combat_poses(void)
     (void)remove("./ofc.vox");
     (void)remove("./ss.vox");
 }
+
+
+void test_voxel_scene_preloads_all_four_mutant_shots_and_death_poses(void)
+{
+    static const WolfVoxVoxel *const poses[] = {
+        one_voxel, one_voxel, two_voxels, one_voxel
+    };
+    static const uint32_t pose_counts[] = {1u, 1u, 2u, 1u};
+    const TestVoxAnimation mutant_animations[] = {
+        {"mut_w", 4u, poses, pose_counts},
+        {"mut_shoot", 4u, poses, pose_counts},
+        {"mut_pain", 2u, poses, pose_counts},
+        {"mut_die", 4u, poses, pose_counts},
+        {"mut_dead", 1u, poses, pose_counts}
+    };
+    WolfLevelObject object = make_object("mut", "mut_w", 0u, 3u, 2u, 0.0f);
+    WolfVoxelScene scene;
+    const WolfVoxelPoseMesh *last_shot_pose = NULL;
+    const WolfVoxelPoseMesh *last_death_pose = NULL;
+
+    TEST_ASSERT_TRUE(test_vox_write_file("./mut.vox", mutant_animations, 5u));
+    TEST_ASSERT_TRUE(wolf_voxel_scene_load(&scene, &object, 1u, "."));
+    TEST_ASSERT_EQUAL_UINT32(15u, scene.pose_count);
+    TEST_ASSERT_EQUAL_UINT32(0u, scene.unavailable_pose_count);
+    for (uint32_t index = 0u; index < scene.pose_count; ++index) {
+        if (strcmp(scene.poses[index].animation, "mut_shoot") == 0 &&
+            scene.poses[index].pose == 3u) {
+            last_shot_pose = &scene.poses[index];
+        }
+        if (strcmp(scene.poses[index].animation, "mut_die") == 0 &&
+            scene.poses[index].pose == 3u) {
+            last_death_pose = &scene.poses[index];
+        }
+    }
+    TEST_ASSERT_NOT_NULL(last_shot_pose);
+    TEST_ASSERT_TRUE(last_shot_pose->available);
+    TEST_ASSERT_NOT_NULL(last_death_pose);
+    TEST_ASSERT_TRUE(last_death_pose->available);
+
+    wolf_voxel_scene_destroy(&scene);
+    (void)remove("./mut.vox");
+}
