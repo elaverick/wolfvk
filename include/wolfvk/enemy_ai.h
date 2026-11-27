@@ -16,9 +16,11 @@ typedef struct WolfEnemyAIEvents {
     uint32_t guard_shots;
     uint32_t officer_shots;
     uint32_t ss_shots;
+    uint32_t mutant_shots;
     uint32_t guard_deaths;
     uint32_t officer_deaths;
     uint32_t ss_deaths;
+    uint32_t mutant_deaths;
     float alert_source_x;
     float alert_source_z;
     float shot_source_x;
@@ -31,15 +33,19 @@ typedef struct WolfEnemyAIEvents {
     float officer_shot_source_z;
     float ss_shot_source_x;
     float ss_shot_source_z;
+    float mutant_shot_source_x;
+    float mutant_shot_source_z;
     float guard_death_source_x;
     float guard_death_source_z;
     float officer_death_source_x;
     float officer_death_source_z;
     float ss_death_source_x;
     float ss_death_source_z;
+    float mutant_death_source_x;
+    float mutant_death_source_z;
 } WolfEnemyAIEvents;
 
-/* Advance guard, officer and SS perception/combat logic by one original 70 Hz tic. */
+/* Advance all four supported humanoid families by one original 70 Hz tic. */
 bool wolf_enemy_ai_update_tic(
     WolfActor *actors,
     uint32_t actor_count,
