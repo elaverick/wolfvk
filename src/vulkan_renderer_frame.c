@@ -705,7 +705,7 @@ static bool create_graphics_pipelines(VulkanRenderer *renderer)
 
     view_projection_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     view_projection_range.offset = 0;
-    view_projection_range.size = (uint32_t)sizeof(renderer->view_projection) + sizeof(float);
+    view_projection_range.size = (uint32_t)sizeof(renderer->view_projection) + 2u * (uint32_t)sizeof(float);
 
     layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     layout_info.setLayoutCount = 1u;
@@ -762,8 +762,118 @@ static bool create_graphics_pipelines(VulkanRenderer *renderer)
         fprintf(stderr, "Vulkan weapon overlay pipeline creation failed (%d).\n", result);
         return false;
     }
+    return create_death_fizzle_pipeline(renderer);
+}
+
+/*
+ * Draw the death wipe as a full-view pass. It has no vertex buffers, depth
+ * test or texture dependency, so red pixels cover geometry and empty space
+ * alike while leaving the status bar to its later, separate draw.
+ */
+static bool create_death_fizzle_pipeline(VulkanRenderer *renderer)
+{
+    VkShaderModule vertex_shader = VK_NULL_HANDLE;
+    VkShaderModule fragment_shader = VK_NULL_HANDLE;
+    VkPipelineShaderStageCreateInfo shader_stages[2] = {0};
+    VkPipelineVertexInputStateCreateInfo vertex_input = {0};
+    VkPipelineInputAssemblyStateCreateInfo input_assembly = {0};
+    VkPipelineViewportStateCreateInfo viewport_state = {0};
+    VkViewport viewport = {0};
+    VkRect2D scissor = {0};
+    VkPipelineRasterizationStateCreateInfo rasterizer = {0};
+    VkPipelineMultisampleStateCreateInfo multisampling = {0};
+    VkPipelineDepthStencilStateCreateInfo depth_stencil = {0};
+    VkPipelineColorBlendAttachmentState color_blend_attachment = {0};
+    VkPipelineColorBlendStateCreateInfo color_blending = {0};
+    const VkDynamicState dynamic_states[2] = {
+        VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR
+    };
+    VkPipelineDynamicStateCreateInfo dynamic_state = {0};
+    VkGraphicsPipelineCreateInfo pipeline_info = {0};
+    VkResult result;
+
+    if (!load_shader_module(renderer, "fizzle.vert.spv", &vertex_shader) ||
+        !load_shader_module(renderer, "fizzle.frag.spv", &fragment_shader)) {
+        if (vertex_shader != VK_NULL_HANDLE) {
+            vkDestroyShaderModule(renderer->device, vertex_shader, NULL);
+        }
+        if (fragment_shader != VK_NULL_HANDLE) {
+            vkDestroyShaderModule(renderer->device, fragment_shader, NULL);
+        }
+        return false;
+    }
+
+    shader_stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shader_stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+    shader_stages[0].module = vertex_shader;
+    shader_stages[0].pName = "main";
+    shader_stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shader_stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    shader_stages[1].module = fragment_shader;
+    shader_stages[1].pName = "main";
+
+    input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+    viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewport_state.viewportCount = 1u;
+    viewport_state.pViewports = &viewport;
+    viewport_state.scissorCount = 1u;
+    viewport_state.pScissors = &scissor;
+
+    dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamic_state.dynamicStateCount = 2u;
+    dynamic_state.pDynamicStates = dynamic_states;
+
+    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.cullMode = VK_CULL_MODE_NONE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer.lineWidth = 1.0f;
+
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+    depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depth_stencil.depthTestEnable = VK_FALSE;
+    depth_stencil.depthWriteEnable = VK_FALSE;
+
+    color_blend_attachment.blendEnable = VK_FALSE;
+    color_blend_attachment.colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+        VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    color_blending.attachmentCount = 1u;
+    color_blending.pAttachments = &color_blend_attachment;
+
+    pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipeline_info.stageCount = 2u;
+    pipeline_info.pStages = shader_stages;
+    pipeline_info.pVertexInputState = &vertex_input;
+    pipeline_info.pInputAssemblyState = &input_assembly;
+    pipeline_info.pViewportState = &viewport_state;
+    pipeline_info.pRasterizationState = &rasterizer;
+    pipeline_info.pMultisampleState = &multisampling;
+    pipeline_info.pDepthStencilState = &depth_stencil;
+    pipeline_info.pColorBlendState = &color_blending;
+    pipeline_info.pDynamicState = &dynamic_state;
+    pipeline_info.layout = renderer->pipeline_layout;
+    pipeline_info.renderPass = renderer->render_pass;
+    pipeline_info.subpass = 0u;
+
+    result = vkCreateGraphicsPipelines(
+        renderer->device, VK_NULL_HANDLE, 1u, &pipeline_info, NULL,
+        &renderer->death_fizzle_pipeline);
+    vkDestroyShaderModule(renderer->device, fragment_shader, NULL);
+    vkDestroyShaderModule(renderer->device, vertex_shader, NULL);
+    if (result != VK_SUCCESS) {
+        fprintf(stderr, "Vulkan death fizzle pipeline creation failed (%d).\\n", result);
+        return false;
+    }
+
     return true;
 }
+
 /* Pair each presentation image with the depth attachment used while that image is rendered. */
 static bool create_framebuffers(VulkanRenderer *renderer)
 {
