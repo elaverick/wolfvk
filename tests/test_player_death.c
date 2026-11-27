@@ -58,6 +58,7 @@ void test_player_death_restart_restores_original_loadout_and_preserves_totals(vo
     player.ammo = 0;
     player.lives = 2;
     player.score = 12345;
+    player.treasure_count = 7u;
     player.keys = WOLF_PLAYER_GOLD_KEY | WOLF_PLAYER_SILVER_KEY;
     player.weapon = WOLF_WEAPON_CHAINGUN;
     player.best_weapon = WOLF_WEAPON_CHAINGUN;
@@ -72,6 +73,7 @@ void test_player_death_restart_restores_original_loadout_and_preserves_totals(vo
     TEST_ASSERT_EQUAL_INT32(8, player.ammo);
     TEST_ASSERT_EQUAL_INT32(1, player.lives);
     TEST_ASSERT_EQUAL_INT32(12345, player.score);
+    TEST_ASSERT_EQUAL_UINT32(0u, player.treasure_count);
     TEST_ASSERT_EQUAL_UINT8(0u, player.keys);
     TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_PISTOL, player.weapon);
     TEST_ASSERT_EQUAL_INT(WOLF_WEAPON_PISTOL, player.best_weapon);
