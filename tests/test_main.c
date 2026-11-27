@@ -10,6 +10,7 @@ void test_mutant_uses_original_two_shot_state_chain_and_animation_timing(void);
 void test_mutant_alerts_at_original_chase_speed_and_fires_on_both_action_frames(void);
 void test_mutant_damage_uses_original_pain_death_score_and_ammunition_drop(void);
 void test_actor_initialization_copies_spawn_data_and_enters_state(void);
+void test_enemy_reaction_delays_match_original_class_specific_ranges(void);
 void test_guard_perception_is_blocked_by_walls_and_alerts_after_reaction_delay(void);
 void test_guard_chase_uses_player_direction_and_moves_at_alert_speed(void);
 void test_guard_shooting_state_damages_player_and_emits_fire_event(void);
@@ -450,6 +451,7 @@ int main(void)
     RUN_TEST(test_weapon_chaingun_fires_every_six_tics_and_twice_per_tap);
     RUN_TEST(test_weapon_switches_to_the_knife_when_the_bullets_run_out);
     RUN_TEST(test_actor_initialization_copies_spawn_data_and_enters_state);
+    RUN_TEST(test_enemy_reaction_delays_match_original_class_specific_ranges);
     RUN_TEST(test_guard_perception_is_blocked_by_walls_and_alerts_after_reaction_delay);
     RUN_TEST(test_guard_chase_uses_player_direction_and_moves_at_alert_speed);
     RUN_TEST(test_guard_shooting_state_damages_player_and_emits_fire_event);
