@@ -922,6 +922,8 @@ int main(int argc, char *argv[])
                     /* SetupGameLevel rebuilds the same map; retain only run-wide totals. */
                     wolf_actor_collection_destroy(actors);
                     actors = NULL;
+                    free(scene_quads);
+                    scene_quads = NULL;
                     actor_count = 0u;
                     if (!wolf_world_state_init(&world, &level, texture_page_count)) {
                         fprintf(stderr, "Could not reset the current level after player death.\\n");
