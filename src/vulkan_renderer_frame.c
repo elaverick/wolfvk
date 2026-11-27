@@ -563,6 +563,8 @@ static bool load_shader_module(
     return true;
 }
 
+static bool create_death_fizzle_pipeline(VulkanRenderer *renderer);
+
 /* Bind the quad vertex layout, depth testing and shaders into the pipeline reused by every level frame. */
 static bool create_graphics_pipelines(VulkanRenderer *renderer)
 {
