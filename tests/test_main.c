@@ -248,6 +248,8 @@ void test_weapon_scene_loader_rejects_invalid_arguments(void);
 
 void test_four_enemy_families_integrate_across_a_shared_door_encounter(void);
 
+void test_four_enemy_families_are_deterministic_at_thirty_and_144_fps(void);
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -491,5 +493,6 @@ int main(void)
     RUN_TEST(test_simulation_clock_rejects_invalid_time_and_arguments);
     RUN_TEST(test_simulation_clock_reset_discards_fractional_time);
     RUN_TEST(test_four_enemy_families_integrate_across_a_shared_door_encounter);
+    RUN_TEST(test_four_enemy_families_are_deterministic_at_thirty_and_144_fps);
     return UNITY_END();
 }
