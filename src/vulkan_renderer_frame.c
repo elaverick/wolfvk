@@ -1039,6 +1039,10 @@ static void destroy_swapchain_resources(VulkanRenderer *renderer)
     free(renderer->command_buffers);
     renderer->command_buffers = NULL;
 
+    if (renderer->death_fizzle_pipeline != VK_NULL_HANDLE) {
+        vkDestroyPipeline(renderer->device, renderer->death_fizzle_pipeline, NULL);
+        renderer->death_fizzle_pipeline = VK_NULL_HANDLE;
+    }
     if (renderer->weapon_pipeline != VK_NULL_HANDLE) {
         vkDestroyPipeline(renderer->device, renderer->weapon_pipeline, NULL);
         renderer->weapon_pipeline = VK_NULL_HANDLE;
