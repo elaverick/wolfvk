@@ -216,7 +216,13 @@ void test_renderer_creates_swapchain_and_presents_quads(void)
                 renderer, quads, (uint32_t)(sizeof(quads) / sizeof(quads[0])));
         }
         if (geometry_uploaded) {
+            /* Exercise partial, complete and reset states of the fullscreen fizzle pass. */
+            vulkan_renderer_set_death_fizzle(renderer, 0.35f);
             frame_rendered = vulkan_renderer_draw_frame(renderer);
+            vulkan_renderer_set_death_fizzle(renderer, 1.0f);
+            frame_rendered = frame_rendered && vulkan_renderer_draw_frame(renderer);
+            vulkan_renderer_set_death_fizzle(renderer, 0.0f);
+            frame_rendered = frame_rendered && vulkan_renderer_draw_frame(renderer);
         }
     }
 
