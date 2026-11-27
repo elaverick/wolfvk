@@ -112,14 +112,12 @@ jobs:
           integer scaling of the 3D scene remains a follow-on step.
           '@
           Set-Content -LiteralPath (Join-Path $packageDir "README.txt") -Value $instructions -Encoding utf8
-          Compress-Archive -Path (Join-Path $packageDir "*") -DestinationPath "build\WolfVK-textured-demo-windows-x64.zip" -Force
-
       - name: Upload textured Windows demo
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: WolfVK-textured-demo-windows-x64
-          path: build/WolfVK-textured-demo-windows-x64.zip
+          path: demo-package/
           if-no-files-found: error
           retention-days: 30
 
