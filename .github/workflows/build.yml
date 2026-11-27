@@ -62,6 +62,18 @@ jobs:
           Copy-Item -Path "build-tools\Release\wolf_sprite_voxelizer.exe" -Destination $packageDir
           Copy-Item -Path "build-audio\Release\wolf_audio_extractor.exe" -Destination $packageDir
           Copy-Item -Path "build\Release\shaders" -Destination $packageDir -Recurse
+          $requiredShaders = @(
+            "triangle.vert.spv",
+            "triangle.frag.spv",
+            "fizzle.vert.spv",
+            "fizzle.frag.spv"
+          )
+          foreach ($shader in $requiredShaders) {
+            $shaderPath = Join-Path $packageDir "shaders\$shader"
+            if (-not (Test-Path -LiteralPath $shaderPath -PathType Leaf)) {
+              throw "Required compiled shader is missing from the demo package: $shader"
+            }
+          }
           Copy-Item -Path "THIRD_PARTY_NOTICES.txt" -Destination $packageDir
 
           $instructions = @'
