@@ -3,6 +3,7 @@
 #include <math.h>
 
 #define WOLF_PLAYER_DEATH_DURATION_SECONDS 1.35f
+#define WOLF_PLAYER_DEATH_FIZZLE_DURATION_SECONDS 1.0f
 
 bool wolf_player_death_begin(WolfPlayerDeath *death)
 {
@@ -12,7 +13,7 @@ bool wolf_player_death_begin(WolfPlayerDeath *death)
 
     death->phase = WOLF_PLAYER_DEATH_ANIMATING;
     death->elapsed_seconds = 0.0f;
-    death->red_flash = 1.0f;
+    death->fizzle_progress = 0.0f;
     death->life_deducted = false;
     return true;
 }
@@ -31,7 +32,7 @@ void wolf_player_death_update(
     death->elapsed_seconds += delta_seconds;
     if (death->elapsed_seconds >= WOLF_PLAYER_DEATH_DURATION_SECONDS) {
         death->elapsed_seconds = WOLF_PLAYER_DEATH_DURATION_SECONDS;
-        death->red_flash = 0.0f;
+        death->fizzle_progress = 1.0f;
         if (!death->life_deducted) {
             --player->lives;
             death->life_deducted = true;
@@ -43,9 +44,12 @@ void wolf_player_death_update(
         return;
     }
 
-    /* Keep the initial damage red briefly, then fade it during the fall. */
-    death->red_flash = 1.0f - death->elapsed_seconds /
-        WOLF_PLAYER_DEATH_DURATION_SECONDS;
+    /* Reveal the red death screen over 70 tics, then keep it until restart. */
+    death->fizzle_progress = death->elapsed_seconds /
+        WOLF_PLAYER_DEATH_FIZZLE_DURATION_SECONDS;
+    if (death->fizzle_progress > 1.0f) {
+        death->fizzle_progress = 1.0f;
+    }
 }
 
 bool wolf_player_death_fire_pressed(
@@ -79,6 +83,6 @@ void wolf_player_death_prepare_restart(WolfPlayerDeath *death, WolfPlayerState *
 
     death->phase = WOLF_PLAYER_DEATH_ACTIVE;
     death->elapsed_seconds = 0.0f;
-    death->red_flash = 0.0f;
+    death->fizzle_progress = 0.0f;
     death->life_deducted = false;
 }
