@@ -246,6 +246,8 @@ void test_weapon_scene_loads_all_twenty_voxelizer_named_poses(void);
 void test_weapon_scene_keeps_available_subjects_when_one_file_is_missing(void);
 void test_weapon_scene_loader_rejects_invalid_arguments(void);
 
+void test_four_enemy_families_integrate_across_a_shared_door_encounter(void);
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -488,5 +490,6 @@ int main(void)
     RUN_TEST(test_simulation_clock_retains_fractional_time_between_frames);
     RUN_TEST(test_simulation_clock_rejects_invalid_time_and_arguments);
     RUN_TEST(test_simulation_clock_reset_discards_fractional_time);
+    RUN_TEST(test_four_enemy_families_integrate_across_a_shared_door_encounter);
     return UNITY_END();
 }
