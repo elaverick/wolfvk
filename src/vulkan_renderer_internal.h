@@ -157,6 +157,8 @@ bool vulkan_renderer_weapon_set_pose(
     uint32_t quad_count,
     const float view_projection[16]);
 void vulkan_renderer_weapon_record(VulkanRenderer *renderer, VkCommandBuffer command_buffer);
+/* Hide the view model without releasing its uploaded geometry. */
+void vulkan_renderer_weapon_hide(VulkanRenderer *renderer);
 void vulkan_renderer_weapon_destroy(VulkanRenderer *renderer);
 bool vulkan_renderer_geometry_create_host_buffer(
     VulkanRenderer *renderer,
