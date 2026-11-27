@@ -6,7 +6,7 @@
 
 **Implementation language and platform:** C17, Windows, SDL3 and Vulkan. Do not introduce C++.
 
-**Status:** C0–C5 are implemented and verified by the full Windows CI workflow. Guards, officers, SS soldiers and mutants now use the shared perception, pursuit and combat system with family-specific state chains. C6 four-family integration and in-game fidelity remain.
+**Status:** C0–C5 are implemented and verified. C6 now has automated four-family corridor/door integration and 30/144 FPS determinism coverage; the 241-test Windows suite and all Windows/Linux tool jobs pass. Real WL6 encounter comparison and final in-game acceptance remain.
 
 ## Goal
 
@@ -165,18 +165,26 @@ Each checkpoint is a commit boundary. Keep the changes small enough that a check
 
 ### Stage 6 — Four-enemy integration and fidelity pass
 
-- [ ] Spawn all four enemy families through the existing WL6 info-plane/difficulty rules.
-- [ ] Verify all four enemy families across representative maps, including corridors, junctions, doors, ambush positions and multiple simultaneous enemies.
-- [ ] Check enemy movement and combat at different render frame rates while preserving fixed-tic simulation.
-- [ ] Verify damage, death, player status-bar updates, voxel animations and sound effects end to end.
-- [ ] Compare representative encounters against the original game for detection, pursuit, turning, attack timing, damage and death behaviour.
-- [ ] Check actor/player/world collision edge cases and ensure enemies do not become trapped or pass through walls/doors.
-- [ ] Run the complete Windows build, unit suite, renderer integration tests and all existing tool tests.
-- [ ] Update README and the main roadmap with the implemented scope, controls, known limitations, test counts and verified CI run.
+**Progress (2026-11-27):** The automated mixed-family integration slice is implemented and verified. A synthetic corridor encounter spawns one guard, officer, SS and mutant from the original WL6 info-plane markers at Hard difficulty. A closed door blocks all four families' line of sight; opening it allows all four to alert, and the test checks each family's own shot-action event. A second integration test runs the same four-enemy chase for 140 fixed simulation tics with 30 FPS and 144 FPS render schedules, then compares actor state, position, AI random state and player values. Existing family-specific tests continue to cover their original attack sequences, damage, pain/death, scoring and drops; movement tests cover walls, doors, pushwalls, blocking statics, actor/player spacing and diagonal corners.
 
-**Checkpoint C6 — milestone complete:** Commit integration fixes, documentation and final regression coverage. Wait for and inspect the corresponding GitHub Actions run before declaring the milestone complete.
+The two C6 tests are committed on `main`:
+- Shared corridor/door encounter: `3b1fffe6d21cdb78b2176c10f02b82570c875c08`, registered in `6aba540b98a22726a3bcbb721ad5e3b389d98cac`.
+- Render-rate determinism: `cd099b2a9eed009245e1c4172fc2216cfa06d780`, registered in `0e9560f3d93a6f9292590de0ed3448e72926eb5c`.
 
-**Acceptance:** All four enemy families work together in a real WL6 level, the full CI suite passes, and the user has an opportunity to verify the Windows build in-game.
+The latest full Windows workflow passed on `0e9560f3d93a6f9292590de0ed3448e72926eb5c` in [Actions run 45963446803](https://github.com/elaverick/WolfVK/actions/runs/45963446803): Windows x64 configure/build, all 241 Unity tests including SwiftShader renderer integration, Windows/Linux sprite-voxelizer and audio-extractor builds/tests, and packaged Windows demo upload. The artifact is `WolfVK-textured-demo-windows-x64`.
+
+- [x] Spawn all four enemy families through the existing WL6 info-plane and difficulty-filtered actor collection; mixed-family integration verifies all four are present together.
+- [ ] Verify all four families on representative retail WL6 maps, including junctions, ambush placements and multiple simultaneous enemies. The new mixed encounter currently uses a deterministic synthetic corridor and one shared door; it is not a substitute for live retail-map play.
+- [x] Check enemy movement and combat at different render frame rates while preserving fixed-tic simulation; the 30 FPS and 144 FPS test compares the same 140 simulation tics.
+- [ ] Verify damage, death, status-bar changes, voxel animations and sound playback together in a live game session. The underlying systems have individual regression coverage, but a full interactive session has not yet been verified.
+- [ ] Compare representative encounters directly against the original game for detection, pursuit, turning, attack timing, damage and death behaviour.
+- [x] Check actor/player/world collision edge cases with regression coverage for walls, doors, pushwalls, blocking statics, diagonal corners, actor reservations and player clearance.
+- [x] Run the complete Windows build, unit suite, renderer integration tests and all existing Windows/Linux tool tests; the final C6 code/test commit passed in [Actions run 45963446803](https://github.com/elaverick/WolfVK/actions/runs/45963446803).
+- [x] Update README and the main roadmap with the implemented scope, test count, known limitations and verified CI run.
+
+**Checkpoint C6 — automated integration and CI:** Implemented, committed and CI-verified on `main`. The code and automated-test work is complete, but C6 is not yet declared fully complete: the definition of done requires the packaged Windows build to be run in-game against the user's WL6 files and the user to have the opportunity to verify real-map encounters.
+
+**Acceptance:** All four enemy families work together in a real WL6 level, the full CI suite passes, and the user has an opportunity to verify the Windows build in-game. Automated CI is green; real-map and in-game acceptance remain outstanding.
 
 ## Commit and CI checkpoint protocol
 
