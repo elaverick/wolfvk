@@ -158,7 +158,7 @@ struct WolfActor {
     uint16_t ai_reaction_tics;
     uint16_t ai_attack_cooldown;
     uint32_t ai_random_state;
-    /* Identifies the current state's one-shot AI action (SS has four shots per burst). */
+    /* Identifies the current state's one-shot AI action (SS bursts fire four times; mutants fire twice). */
     uint16_t ai_action_state_id;
 };
 
