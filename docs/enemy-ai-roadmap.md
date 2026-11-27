@@ -6,7 +6,7 @@
 
 **Implementation language and platform:** C17, Windows, SDL3 and Vulkan. Do not introduce C++.
 
-**Status:** C0 audit, C1 actor-animation foundation and C2 movement/collision are complete and verified by Windows CI. C3 shared perception and the guard vertical slice are next.
+**Status:** C0–C4 are implemented and verified by the full Windows CI workflow. Guards, officers and SS soldiers now use the shared perception, pursuit and combat system. C5 mutant AI and C6 integration/fidelity remain.
 
 ## Goal
 
@@ -113,33 +113,33 @@ Each checkpoint is a commit boundary. Keep the changes small enough that a check
 
 ### Stage 3 — Shared perception and guard vertical slice
 
-- [ ] Implement player detection using the original visibility/line-of-sight rules, including intervening walls and relevant door state.
-- [ ] Implement alerting and transitions from stand/patrol into pursuit.
-- [ ] Implement shared path/chase direction selection and turning based on the original rules, not modern A* navigation.
-- [ ] Implement attack eligibility, line-of-sight revalidation, attack state timing and the original hitscan/attack resolution needed by guards.
-- [ ] Connect enemy attacks to player damage and the existing player-state/status-bar update path.
-- [ ] Implement enemy health, damage reception, pain response and death-state handling.
-- [ ] Implement the guard as the first complete playable enemy, including its original standing, patrol, chase, attack, pain and death sequences.
-- [ ] Connect appropriate original guard audio cues where the source and existing audio system support them.
-- [ ] Add deterministic tests for sight blocked/unblocked, detection range/angle, alert transitions, pursuit direction, attack gating/timing, player damage, enemy damage, pain and death.
+- [x] Implement player detection using the original visibility/line-of-sight rules, including intervening walls and relevant door state.
+- [x] Implement alerting and transitions from stand/patrol into pursuit.
+- [x] Implement shared path/chase direction selection and turning based on the original rules, not modern A* navigation.
+- [x] Implement attack eligibility, line-of-sight revalidation, attack state timing and the original hitscan/attack resolution needed by guards.
+- [x] Connect enemy attacks to player damage and the existing player-state/status-bar update path.
+- [x] Implement enemy health, damage reception, pain response and death-state handling.
+- [x] Implement the guard as the first complete playable enemy, including its original standing, patrol, chase, attack, pain and death sequences.
+- [x] Connect appropriate original guard audio cues where the source and existing audio system support them.
+- [x] Add deterministic tests for sight blocked/unblocked, detection range/angle, alert transitions, pursuit direction, attack gating/timing, player damage, enemy damage, pain and death.
 
-**Checkpoint C3 — guard vertical slice:** Commit the complete shared perception/combat foundation and working guard implementation, with tests. This is a mandatory checkpoint before adding the other three enemy families.
+**Checkpoint C3 — guard vertical slice:** Complete and committed on main. The shared 70 Hz AI system implements wall/door-aware sight checks, reaction delay, alerting, original-style chase/dodge direction selection, timed attacks, player damage, player weapon hits, enemy pain/death, score and ammunition drops. The guard is the first enabled family; C3 regression coverage is included in the current 235-test suite. The implementation is also exercised by the successful full Windows workflow [Actions run 45910272589](https://github.com/elaverick/WolfVK/actions/runs/45910272589).
 
-**Acceptance:** Guards can be spawned in a real level, animate, detect and pursue the player, attack when the original conditions are met, take damage and die. The player can be damaged, and health/status-bar values update correctly. Behaviour is stable across different render frame rates.
+**Acceptance:** Met. Guards can be spawned in a real level, animate, detect and pursue the player, attack when the original conditions are met, take damage and die. The player can be damaged, and health/status-bar values update correctly. Behaviour is stable across different render frame rates.
 
 ### Stage 4 — Officers and SS soldiers
 
-- [ ] Add officer-specific state definitions, animation sequences and parameters using the shared mechanics.
-- [ ] Reproduce officer alert, pursuit, attack cadence, damage and death behaviour from the original.
-- [ ] Add SS-specific state definitions, animation sequences and parameters.
-- [ ] Reproduce SS alert, pursuit, attack cadence, damage and death behaviour from the original.
-- [ ] Preserve genuine differences in the original state chains and attributes; do not implement them as renamed guards.
-- [ ] Add tests that prove their state sequences and combat characteristics differ where the original does, while shared movement/perception remains common.
-- [ ] Verify their voxel animation names against the generated assets and report any missing source poses.
+- [x] Add officer-specific state definitions, animation sequences and parameters using the shared mechanics.
+- [x] Reproduce officer alert, pursuit, attack cadence, damage and death behaviour from the original.
+- [x] Add SS-specific state definitions, animation sequences and parameters.
+- [x] Reproduce SS alert, pursuit, attack cadence, damage and death behaviour from the original.
+- [x] Preserve genuine differences in the original state chains and attributes; do not implement them as renamed guards.
+- [x] Add tests that prove their state sequences and combat characteristics differ where the original does, while shared movement/perception remains common.
+- [x] Verify their voxel animation names against the generated assets and report any missing source poses.
 
-**Checkpoint C4 — officers and SS:** Commit each enemy family as a separate small change where practical; in all cases commit and test officers before beginning SS, then commit and test SS before moving to mutants.
+**Checkpoint C4 — officers and SS:** Complete and committed on main. Officers and SS use the shared perception, chase, movement, collision and damage paths, with family-specific state chains and combat profiles. Officers retain their 6/20/10-tic single-shot sequence, 5× patrol-speed chase and four 11-tic death poses. SS retain their nine-state firing sequence with four shot actions, 4× chase speed, improved effective-distance accuracy and their own health, score, death and sound characteristics. Their walk, shoot, pain and death VOX poses are preloaded and covered by regression tests. The final C4 code and tests passed the full Windows workflow [Actions run 45910272589](https://github.com/elaverick/WolfVK/actions/runs/45910272589), on commit 32e3905ca7eedc44bae5a560ac42ffed2ff7731a.
 
-**Acceptance:** Officers and SS soldiers work in-game with their own original animation and combat characteristics, without duplicated shared AI code or regressions to guards.
+**Acceptance:** Met. Officers and SS soldiers use their own original animation and combat characteristics without duplicating the shared AI system or regressing guards.
 
 ### Stage 5 — Mutants
 
