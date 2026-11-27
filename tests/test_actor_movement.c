@@ -145,6 +145,34 @@ void test_actor_movement_waits_for_door_to_fully_open_before_crossing(void)
     TEST_ASSERT_FLOAT_WITHIN(0.001f, world_coordinate(4u, 8u), actor.position_x);
 }
 
+/*
+ * An actor can reserve the tile beyond a doorway while its body is still
+ * crossing the door cell. Automatic closure must reverse instead of trapping it.
+ */
+void test_actor_inside_doorway_reopens_a_closing_door(void)
+{
+    WolfLevel level = open_level();
+    WolfWorldState world = {0};
+    WolfActor actor;
+
+    level.wall_tiles[3u * WOLF_LEVEL_PLANE_WIDTH + 4u] = 90u;
+    TEST_ASSERT_TRUE(wolf_world_state_init(&world, &level, 8u));
+    TEST_ASSERT_TRUE(create_actor(&actor, 1u, 5u, 3u, 1.57079632679f));
+    actor.position_x = world_coordinate(4u, 8u);
+    actor.position_z = world_coordinate(3u, 8u);
+    actor.movement_direction = WOLF_ACTOR_DIRECTION_EAST;
+    actor.movement_enabled = true;
+    actor.movement_in_progress = true;
+    world.doors[0].action = WOLF_DOOR_CLOSING;
+    world.doors[0].position = WOLF_WORLD_DOOR_OPEN_POSITION / 2u;
+
+    advance_actor(&actor, 1u, &world, -100.0f, -100.0f, 1u);
+
+    TEST_ASSERT_EQUAL(WOLF_DOOR_OPENING, world.doors[0].action);
+    TEST_ASSERT_TRUE(actor.movement_in_progress);
+    wolf_actor_collection_destroy(NULL);
+}
+
 void test_actor_movement_prevents_actor_overlap_and_reserves_destination_tiles(void)
 {
     WolfLevel level = open_level();
