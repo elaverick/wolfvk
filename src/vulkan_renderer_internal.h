@@ -50,6 +50,7 @@ struct VulkanRenderer {
     uint32_t quad_count;
     VkDeviceSize vertex_buffer_size;
     float view_projection[16];
+    float damage_flash_intensity;
 
     /* Voxel models live in their own buffers so animating doors never re-copies them. */
     VkBuffer model_vertex_buffer;
