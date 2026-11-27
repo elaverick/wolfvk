@@ -9,6 +9,10 @@ layout(location = 3) flat in uint use_texture;
 
 layout(location = 0) out vec4 fragment_colour;
 
+layout(push_constant) uniform DamageFlash {
+    layout(offset = 64) float intensity;
+} damage_flash;
+
 void main()
 {
     vec4 surface_colour = vec4(vertex_colour, 1.0);
@@ -19,5 +23,9 @@ void main()
             vec3(texture_coordinate, float(texture_layer)));
     }
 
+    /* Blend toward Wolfenstein's red damage palette without hiding the scene. */
+    surface_colour.rgb = mix(
+        surface_colour.rgb, vec3(0.65, 0.02, 0.02),
+        clamp(damage_flash.intensity, 0.0, 1.0) * 0.45);
     fragment_colour = surface_colour;
 }
