@@ -245,6 +245,25 @@ static bool advance_actor(
         return true;
     }
 
+    /*
+     * Keep a door open for the actor's physical position, not its reserved
+     * destination tile. The reservation advances to the next tile as soon as
+     * the actor starts crossing, while its body still occupies the doorway.
+     */
+    {
+        int occupied_x = (int)floorf(
+            (actor->position_x - map_origin_x(world)) / WOLF_WORLD_TILE_SIZE);
+        int occupied_y = (int)floorf(
+            (actor->position_z - map_origin_z(world)) / WOLF_WORLD_TILE_SIZE);
+
+        if (occupied_x >= 0 && occupied_y >= 0 &&
+            occupied_x < world->level.width && occupied_y < world->level.height &&
+            cell_is_door(world, (uint16_t)occupied_x, (uint16_t)occupied_y)) {
+            (void)wolf_world_state_actor_request_door_open(
+                world, (uint16_t)occupied_x, (uint16_t)occupied_y);
+        }
+    }
+
     if (actor->movement_waiting_for_door) {
         if (!wolf_world_state_actor_door_is_open(
                 world, actor->movement_door_tile_x, actor->movement_door_tile_y)) {
