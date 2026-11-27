@@ -71,7 +71,7 @@ The player can move with **WASD** and look with the mouse. Movement is relative 
 
 The application expects `MAPHEAD.WL6`, `GAMEMAPS.WL6` and `VSWAP.WL6` in the working directory. Those original game files are not included in this repository or demo package; copy them from your own WL6 installation. The user-supplied retail map files were inspected: all 60 playable maps decode as 64×64 maps, each with exactly one valid player-start marker on a floor cell. Level 1 starts at tile (29, 57), facing east.
 
-**Demo:** C5 is complete. C6's automated four-family corridor/door integration and 30/144 FPS determinism tests are committed on `main`; the full Windows workflow passed all 241 Unity tests and packaged the latest demo in [Actions run 45963446803](https://github.com/elaverick/WolfVK/actions/runs/45963446803). Real-map encounter comparison and final in-game verification remain. Copy the three original WL6 files above beside the executable, run the voxelizer with `--assets assets\\voxels` as the instructions describe, and then launch the game.
+**Demo:** C5 is complete. C6's automated four-family corridor/door integration and 30/144 FPS determinism tests are committed on `main`; the full Windows workflow passed all 241 Unity tests and packaged the latest demo in [Actions run 45963446803](https://github.com/elaverick/WolfVK/actions/runs/45963446803). Real-map encounter comparison and final in-game verification remain. Copy the three original WL6 files above beside the executable, run the voxelizer with `--assets assets\voxels` as the instructions describe, and then launch the game.
 
 ## Automated tests
 
@@ -119,7 +119,7 @@ CTest runs the suite in Windows CI. The world-state tests cover original door or
 | Spatial audio | SDL3_mixer voice pool and listener-relative spatialisation cover weapons, pickups, doors, secret walls, failed Use actions and all four enemy families, including mutant gunfire and its original death cue. Runtime playback requires the 87 named OGG effects in `assets/sounds`, generated from the original WL6 archives |
 | WL6 audio extractor | Renders all 87 AdLib effects through the pinned Opal OPL3 emulator and exports VSWAP digitised samples over matching names. Thirteen standalone tests cover decoding, DigiMap names and synthesis. Uses FFmpeg/libvorbis; the 27 music tracks remain outstanding |
 | Player voxel weapons | Implemented: knife, pistol, machine gun and chaingun, camera-anchored overlay, original attack timing, keyboard/mouse/gamepad firing. Shots and knife strikes resolve against all four humanoid enemy families, with damage, pain/death, score and ammunition drops |
-| Sprite voxelizer | Builds and passes its Windows and Linux test suites in [Actions run 45959113831](https://github.com/elaverick/WolfVK/actions/runs/45959113831) |
+| Sprite voxelizer | Builds and passes its Windows and Linux test suites in [Actions run 45963446803](https://github.com/elaverick/WolfVK/actions/runs/45963446803) |
 | Windows demo | Latest package includes the game, voxelizer, audio extractor and shaders; packaged successfully in [Actions run 45963446803](https://github.com/elaverick/WolfVK/actions/runs/45963446803) |
 | Original status bar | Implemented: decoded from VGAGRAPH, drawn at an integer scale below the view and driven by the player state; original 70 Hz random face-glance timing covered by regression tests |
 | Integer texture scaling | Next milestone; not implemented for the 3D scene (the status bar already uses integer scaling) |
@@ -173,7 +173,7 @@ Then launch:
 
 Use `--level N` to select a one-based level number; omit it to load the first level. Use `--difficulty N` (1–4, in the original menu's order) to choose which enemies spawn; omit it for "Bring 'em on!".
 
-**Controls:** W/A/S/D to move, mouse to look, **E** or **Space** to operate a door or push marked secret wall, **1–4** to select a weapon, **left mouse button** or **Left Ctrl** to fire (gamepad right shoulder/trigger also fires), Escape to quit. Locked doors require their corresponding key. The mouse is captured while the window is focused. Firing uses ammunition but does no damage yet.
+**Controls:** W/A/S/D to move, mouse to look, **E** or **Space** to operate a door or push marked secret wall, **1–4** to select a weapon, **left mouse button** or **Left Ctrl** to fire (gamepad right shoulder/trigger also fires), Escape to quit. Locked doors require their corresponding key. The mouse is captured while the window is focused. Player shots and knife strikes damage guards, officers, SS soldiers and mutants, trigger their pain/death sequences, award score and can drop ammunition.
 
 ## Tools
 
